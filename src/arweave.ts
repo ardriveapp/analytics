@@ -1,5 +1,7 @@
 import Arweave from 'arweave';
+
 const fetch = require('node-fetch')
+var graphite = require('graphite-udp')
 const arweave = Arweave.init({
     host: 'arweave.net', // Arweave Gateway
     port: 443,
@@ -33,6 +35,26 @@ interface ArDriveStat {
     tx: string,
     data: number,
     blockTimeStamp: Date
+}
+
+// Sends a message to the ArDrive Graphite server for collection
+export const sendMessageToGraphite = async (path: string, value: number) => {
+    const options = {
+        host: 'stats.ardrive.io',
+        port: 2003,
+        interval: 1000,
+        maxPacketSize: 4096,
+        prefix: 'ardrive',
+        verbose: true,
+        callback: function(error: any, metrics: any) {
+            console.log('Metrics sent', metrics)
+            if (error !== null) {
+                // 
+            }
+        }
+    }
+    const metric = graphite.createClient(options)
+    metric.add(path, value)
 }
 
 // Format byte size to something nicer.  This is minified...
@@ -171,6 +193,8 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
     let privateDataSize = 0;
     let publicFiles = 0;
     let privateFiles = 0;
+    let publicArFee = 0;
+    let privateArFee = 0;
     let firstPage : number = 2147483647; // Max size of query for GQL
     let cursor : string = "";
     try {
@@ -181,6 +205,7 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
             cursor = edge.cursor;
             const { node } = edge;
             const { data } = node;
+            const { fee } = node;
             const { block } = node;
             const { tags } = node;
             if (block !== null) {
@@ -203,10 +228,12 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
                         })
                         if (cipherIV === 'public') {
                             publicDataSize += data.size;
+                            publicArFee += +fee.ar;
                             publicFiles += 1;
                         }
                         else {
                             privateDataSize += data.size;
+                            privateArFee += +fee.ar;
                             privateFiles += 1;
                         }
 
@@ -214,11 +241,11 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
                 }
             }
         })
-    return {publicDataSize, privateDataSize, publicFiles, privateFiles}
+    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee}
     } catch (err) {
         console.log (err)
         console.log ("Error collecting total amount of uploaded data")
-        return {publicDataSize, privateDataSize, publicFiles, privateFiles}
+        return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee}
     }
 
 }
@@ -240,6 +267,9 @@ async function queryForDataUploads(firstPage: number, cursor: string) {
         edges {
           cursor
           node {
+            fee {
+                ar
+            }
             tags {
                 name
                 value

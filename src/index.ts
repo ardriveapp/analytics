@@ -1,6 +1,7 @@
-import {formatBytes, getAllArDrives, getDataPrice, getTotalDataTransactionsSize} from './arweave'
+import {formatBytes, getAllArDrives, getDataPrice, getTotalDataTransactionsSize, sendMessageToGraphite} from './arweave'
 
 async function main () {
+
 
 let today = new Date();
 console.log ("%s Starting to collect analytics", today)
@@ -93,74 +94,91 @@ const priceOf75MB = await getDataPrice(1048576*75);
 const priceOf500MB = await getDataPrice (1048576*500);
 const priceOf1GB = await getDataPrice(1073741824);
 
-console.log ("Drive, User, Data and File Counts");
-console.log ("  1 Day -");
-console.log ("      ArDrives:           ", Object.keys(allArDrives_1day).length);
-console.log ('      Wallets:            ', Object.keys(distinctArDriveUsers_1day).length);
-console.log ('      Public Drives:      ', totalPublicDrives_1day);
-console.log ('      Private Drives:     ', totalPrivateDrives_1day);
+await sendMessageToGraphite('drives.total', Object.keys(allArDrives_1day).length);
+
+console.log ('Drive, User, Data and File Counts');
+console.log ('  1 Day -');
+console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_1day).length);
+console.log ('      Total Drives:       ', Object.keys(allArDrives_1day).length);
+console.log ('          Public:         ', totalPublicDrives_1day);
+console.log ('          Private:        ', totalPrivateDrives_1day);
 console.log ('      Total Data:         ', formatBytes(totalData_1day.publicDataSize + totalData_1day.privateDataSize));
-console.log ('      Public Data:        ', formatBytes(totalData_1day.publicDataSize));
-console.log ('      Private Data:       ', formatBytes(totalData_1day.privateDataSize));
+console.log ('          Public:         ', formatBytes(totalData_1day.publicDataSize));
+console.log ('          Private:        ', formatBytes(totalData_1day.privateDataSize));
 console.log ('      Total Files:        ', (totalData_1day.publicFiles + totalData_1day.privateFiles));
-console.log ('      Public Files:       ', totalData_1day.publicFiles);
-console.log ('      Private Files:      ', totalData_1day.privateFiles);
-console.log ("  ---------------------------")
-console.log ("  7 Day -")
-console.log ("      ArDrives:           ", Object.keys(allArDrives_7day).length)
-console.log ("      Unique Wallets:     ", Object.keys(distinctArDriveUsers_7day).length)
-console.log ('      Public Drives:      ', totalPublicDrives_7day)
-console.log ('      Private Drives:     ', totalPrivateDrives_7day)
+console.log ('          Public:         ', totalData_1day.publicFiles);
+console.log ('          Private:        ', totalData_1day.privateFiles);
+console.log ('      Total Fees (AR):    ', ((totalData_1day.publicArFee + totalData_1day.privateArFee).toFixed(5)));
+console.log ('          Public:         ', totalData_1day.publicArFee.toFixed(5));
+console.log ('          Private:        ', totalData_1day.privateArFee.toFixed(5));
+console.log ('  ---------------------------')
+console.log ('  7 Day -')
+console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_7day).length)
+console.log ('      Total Drives:       ', Object.keys(allArDrives_7day).length)
+console.log ('          Public:         ', totalPublicDrives_7day)
+console.log ('          Private:        ', totalPrivateDrives_7day)
 console.log ('      Total Data:         ', formatBytes(totalData_7day.publicDataSize + totalData_7day.privateDataSize));
-console.log ('      Public Data:        ', formatBytes(totalData_7day.publicDataSize));
-console.log ('      Private Data:       ', formatBytes(totalData_7day.privateDataSize));
+console.log ('          Public:         ', formatBytes(totalData_7day.publicDataSize));
+console.log ('          Private:        ', formatBytes(totalData_7day.privateDataSize));
 console.log ('      Total Files:        ', (totalData_7day.publicFiles + totalData_7day.privateFiles));
-console.log ('      Public Files:       ', totalData_7day.publicFiles);
-console.log ('      Private Files:      ', totalData_7day.privateFiles);
-console.log ("  ---------------------------")
-console.log ("  14 Day -")
-console.log ("      ArDrives:           ", Object.keys(allArDrives_14day).length)
-console.log ("      Unique Wallets:     ", Object.keys(distinctArDriveUsers_14day).length)
-console.log ('      Public Drives:      ', totalPublicDrives_14day)
-console.log ('      Private Drives:     ', totalPrivateDrives_14day)
+console.log ('          Public:         ', totalData_7day.publicFiles);
+console.log ('          Private:        ', totalData_7day.privateFiles);
+console.log ('      Total Fees (AR):    ', ((totalData_7day.publicArFee + totalData_7day.privateArFee).toFixed(5)));
+console.log ('          Public:         ', totalData_7day.publicArFee.toFixed(5));
+console.log ('          Private:        ', totalData_7day.privateArFee.toFixed(5));
+console.log ('  ---------------------------')
+console.log ('  14 Day -')
+console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_14day).length)
+console.log ('      Total Drives:       ', Object.keys(allArDrives_14day).length)
+console.log ('          Public:         ', totalPublicDrives_14day)
+console.log ('          Private:        ', totalPrivateDrives_14day)
 console.log ('      Total Data:         ', formatBytes(totalData_14day.publicDataSize + totalData_14day.privateDataSize));
-console.log ('      Public Data:        ', formatBytes(totalData_14day.publicDataSize));
-console.log ('      Private Data:       ', formatBytes(totalData_14day.privateDataSize));
+console.log ('          Public:         ', formatBytes(totalData_14day.publicDataSize));
+console.log ('          Private:        ', formatBytes(totalData_14day.privateDataSize));
 console.log ('      Total Files:        ', (totalData_14day.publicFiles + totalData_14day.privateFiles));
-console.log ('      Public Files:       ', totalData_14day.publicFiles);
-console.log ('      Private Files:      ', totalData_14day.privateFiles);
-console.log ("  ---------------------------")
-console.log ("  30 Day -")
-console.log ("      ArDrives:           ", Object.keys(allArDrives_30day).length)
-console.log ("      Unique Wallets:     ", Object.keys(distinctArDriveUsers_30day).length)
-console.log ('      Public Drives:      ', totalPublicDrives_30day)
-console.log ('      Private Drives:     ', totalPrivateDrives_30day)
+console.log ('          Public:         ', totalData_14day.publicFiles);
+console.log ('          Private:        ', totalData_14day.privateFiles);
+console.log ('      Total Fees (AR):    ', ((totalData_14day.publicArFee + totalData_14day.privateArFee).toFixed(5)));
+console.log ('          Public:         ', totalData_14day.publicArFee.toFixed(5));
+console.log ('          Private:        ', totalData_14day.privateArFee.toFixed(5));
+console.log ('  ---------------------------')
+console.log ('  30 Day -')
+console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_30day).length)
+console.log ('      Total Drives:       ', Object.keys(allArDrives_30day).length)
+console.log ('          Public:         ', totalPublicDrives_30day)
+console.log ('          Private:        ', totalPrivateDrives_30day)
 console.log ('      Total Data:         ', formatBytes(totalData_30day.publicDataSize + totalData_30day.privateDataSize));
-console.log ('      Public Data:        ', formatBytes(totalData_30day.publicDataSize));
-console.log ('      Private Data:       ', formatBytes(totalData_30day.privateDataSize));
+console.log ('          Public:         ', formatBytes(totalData_30day.publicDataSize));
+console.log ('          Private:        ', formatBytes(totalData_30day.privateDataSize));
 console.log ('      Total Files:        ', (totalData_30day.publicFiles + totalData_30day.privateFiles));
-console.log ('      Public Files:       ', totalData_30day.publicFiles);
-console.log ('      Private Files:      ', totalData_30day.privateFiles);
-console.log ("  ---------------------------")
-console.log ("  90 Day -")
-console.log ("      ArDrives:           ", Object.keys(allArDrives_90day).length)
-console.log ("      Unique Wallets:     ", Object.keys(distinctArDriveUsers_90day).length)
-console.log ('      Public Drives:      ', totalPublicDrives_90day)
-console.log ('      Private Drives:     ', totalPrivateDrives_90day)
+console.log ('          Public:         ', totalData_30day.publicFiles);
+console.log ('          Private:        ', totalData_30day.privateFiles);
+console.log ('      Total Fees (AR):    ', ((totalData_30day.publicArFee + totalData_30day.privateArFee).toFixed(5)));
+console.log ('          Public:         ', totalData_30day.publicArFee.toFixed(5));
+console.log ('          Private:        ', totalData_30day.privateArFee.toFixed(5));
+console.log ('  ---------------------------')
+console.log ('  90 Day -')
+console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_90day).length)
+console.log ('      Total Drives:       ', Object.keys(allArDrives_90day).length)
+console.log ('          Public:         ', totalPublicDrives_90day)
+console.log ('          Private:        ', totalPrivateDrives_90day)
 console.log ('      Total Data:         ', formatBytes(totalData_90day.publicDataSize + totalData_90day.privateDataSize));
-console.log ('      Public Data:        ', formatBytes(totalData_90day.publicDataSize));
-console.log ('      Private Data:       ', formatBytes(totalData_90day.privateDataSize));
+console.log ('          Public:         ', formatBytes(totalData_90day.publicDataSize));
+console.log ('          Private:        ', formatBytes(totalData_90day.privateDataSize));
 console.log ('      Total Files:        ', (totalData_90day.publicFiles + totalData_90day.privateFiles));
-console.log ('      Public Files:       ', totalData_90day.publicFiles);
-console.log ('      Private Files:      ', totalData_90day.privateFiles);
-console.log ("")
+console.log ('          Public:         ', totalData_90day.publicFiles);
+console.log ('          Private:        ', totalData_90day.privateFiles);
+console.log ('      Total Fees (AR):    ', ((totalData_90day.publicArFee + totalData_90day.privateArFee).toFixed(5)));
+console.log ('          Public Fees:    ', totalData_90day.publicArFee.toFixed(5));
+console.log ('          Private Fees:   ', totalData_90day.privateArFee.toFixed(5));
+console.log ('')
 
 console.log ("Data Prices in AR")
-console.log ("  1 MB is:      %s AR", priceOf1MB)
-console.log ("  5 MB is:      %s AR", priceOf5MB)
-console.log ("  75MB is:      %s AR", priceOf75MB)
-console.log ("  500 MB is:    %s AR", priceOf500MB)
-console.log ("  1GB is:       %s AR", priceOf1GB)
+console.log ("  1 MB is:      %s AR", priceOf1MB.toFixed(5))
+console.log ("  5 MB is:      %s AR", priceOf5MB.toFixed(5))
+console.log ("  75MB is:      %s AR", priceOf75MB.toFixed(5))
+console.log ("  500 MB is:    %s AR", priceOf500MB.toFixed(5))
+console.log ("  1GB is:       %s AR", priceOf1GB.toFixed(5))
 console.log ("")
 
 }
