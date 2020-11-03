@@ -1,4 +1,4 @@
-import {formatBytes, getAllArDrives, getDataPrice, getTotalDataTransactionsSize, sendMessageToGraphite} from './arweave'
+import {formatBytes, getAllArDrives, getDataPrice, getTotalDataTransactionsSize} from './arweave'
 
 async function main () {
     let today = new Date();
@@ -6,6 +6,23 @@ async function main () {
     console.log ("")
 
     let start = new Date(today);
+    let minutesToRemove = 15;
+    start.setMinutes(start.getMinutes() - minutesToRemove);
+    const allArDrives_15min = await getAllArDrives(start, today)
+    const distinctArDriveUsers_15min = [...new Set(allArDrives_15min.map(x => x.address))]
+    let totalPrivateDrives_15min = 0;
+    let totalPublicDrives_15min = 0;
+    allArDrives_15min.forEach((drive: any) => {
+        if (drive.privacy === 'private') {
+            totalPublicDrives_15min += 1;
+        }
+        else if (drive.privacy === '') {
+            totalPrivateDrives_15min += 1;
+        }
+    })
+    const totalData_15min = await getTotalDataTransactionsSize(start, today)
+
+    start = new Date(today);
     start.setDate(start.getDate() - 1);
     const allArDrives_1day = await getAllArDrives(start, today)
     const distinctArDriveUsers_1day = [...new Set(allArDrives_1day.map(x => x.address))]
@@ -83,16 +100,15 @@ async function main () {
             totalPrivateDrives_90day += 1;
         }
     })
+    
     const totalData_90day = await getTotalDataTransactionsSize(start, today);
-
-
     const priceOf1MB = await getDataPrice(1048576);
     const priceOf5MB = await getDataPrice(1048576*5);
     const priceOf75MB = await getDataPrice(1048576*75);
     const priceOf500MB = await getDataPrice (1048576*500);
     const priceOf1GB = await getDataPrice(1073741824);
 
-    
+/*  
     await sendMessageToGraphite('users.total', Object.keys(distinctArDriveUsers_7day).length, today);
     await sendMessageToGraphite('drives.total', Object.keys(allArDrives_7day).length, today);
     await sendMessageToGraphite('drives.public', totalPublicDrives_7day, today);
@@ -113,8 +129,25 @@ async function main () {
     await sendMessageToGraphite('price.75mb', +priceOf75MB.toFixed(5), today)
     await sendMessageToGraphite('price.500mb', +priceOf500MB.toFixed(5), today)
     await sendMessageToGraphite('price.1gb', +priceOf1GB.toFixed(5), today)
-
+*/
     console.log ('Drive, User, Data and File Counts');
+    console.log ('  15 Min -');
+    console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_15min).length);
+    console.log ('      Total Drives:       ', Object.keys(allArDrives_15min).length);
+    console.log ('          Public:         ', totalPublicDrives_15min);
+    console.log ('          Private:        ', totalPrivateDrives_15min);
+    console.log ('      Total Data:         ', formatBytes(totalData_15min.publicDataSize + totalData_15min.privateDataSize));
+    console.log ('          Public:         ', formatBytes(totalData_15min.publicDataSize));
+    console.log ('          Private:        ', formatBytes(totalData_15min.privateDataSize));
+    console.log ('      Total Files:        ', (totalData_15min.publicFiles + totalData_15min.privateFiles));
+    console.log ('          Web:            ', totalData_15min.webAppFiles);
+    console.log ('          Desktop:        ', totalData_15min.desktopFiles);
+    console.log ('          Public:         ', totalData_15min.publicFiles);
+    console.log ('          Private:        ', totalData_15min.privateFiles);
+    console.log ('      Total Fees (AR):    ', ((totalData_15min.publicArFee + totalData_15min.privateArFee).toFixed(5)));
+    console.log ('          Public:         ', totalData_15min.publicArFee.toFixed(5));
+    console.log ('          Private:        ', totalData_15min.privateArFee.toFixed(5));
+    console.log ('  ---------------------------')
     console.log ('  1 Day -');
     console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_1day).length);
     console.log ('      Total Drives:       ', Object.keys(allArDrives_1day).length);
@@ -192,10 +225,10 @@ async function main () {
     console.log ('          Public:         ', formatBytes(totalData_90day.publicDataSize));
     console.log ('          Private:        ', formatBytes(totalData_90day.privateDataSize));
     console.log ('      Total Files:        ', (totalData_90day.publicFiles + totalData_90day.privateFiles));
-    console.log ('          Public:         ', totalData_90day.publicFiles);
-    console.log ('          Private:        ', totalData_90day.privateFiles);
     console.log ('          Web:            ', totalData_90day.webAppFiles);
     console.log ('          Desktop:        ', totalData_90day.desktopFiles);
+    console.log ('          Public:         ', totalData_90day.publicFiles);
+    console.log ('          Private:        ', totalData_90day.privateFiles);
     console.log ('      Total Fees (AR):    ', ((totalData_90day.publicArFee + totalData_90day.privateArFee).toFixed(5)));
     console.log ('          Public Fees:    ', totalData_90day.publicArFee.toFixed(5));
     console.log ('          Private Fees:   ', totalData_90day.privateArFee.toFixed(5));

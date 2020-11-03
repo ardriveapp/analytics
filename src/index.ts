@@ -2,14 +2,14 @@ import {formatBytes, getAllArDrives, getDataPrice, getTotalDataTransactionsSize,
 
 const cron = require('node-cron');
 
-async function main () {
-    let minutesToRemove=15;
+async function main_data () {
     let today = new Date();
-    console.log ("%s Starting to collect analytics", today)
+    console.log ("%s Starting to collect data analytics", today)
     console.log ("")
 
     let start = new Date(today);
-    start.setDate(start.getDate() - minutesToRemove*60000);
+    let minutesToRemove = 15;
+    start.setMinutes(start.getMinutes() - minutesToRemove);
 
     const allArDrives = await getAllArDrives(start, today)
     const distinctArDriveUsers = [...new Set(allArDrives.map(x => x.address))]
@@ -25,12 +25,6 @@ async function main () {
     })
 
     const totalData = await getTotalDataTransactionsSize(start, today)
-    const priceOf1MB = await getDataPrice(1048576);
-    const priceOf5MB = await getDataPrice(1048576*5);
-    const priceOf75MB = await getDataPrice(1048576*75);
-    const priceOf500MB = await getDataPrice (1048576*500);
-    const priceOf1GB = await getDataPrice(1073741824);
-
     await sendMessageToGraphite('users.total', Object.keys(distinctArDriveUsers).length, today);
     await sendMessageToGraphite('drives.total', Object.keys(allArDrives).length, today);
     await sendMessageToGraphite('drives.public', totalPublicDrives, today);
@@ -46,11 +40,6 @@ async function main () {
     await sendMessageToGraphite('fees.total', +((totalData.publicArFee + totalData.privateArFee).toFixed(5)), today);
     await sendMessageToGraphite('fees.public', +totalData.publicArFee.toFixed(5), today);
     await sendMessageToGraphite('fees.private', +totalData.privateArFee.toFixed(5), today);
-    await sendMessageToGraphite('price.1mb', +priceOf1MB.toFixed(5), today)
-    await sendMessageToGraphite('price.5mb', +priceOf5MB.toFixed(5), today)
-    await sendMessageToGraphite('price.75mb', +priceOf75MB.toFixed(5), today)
-    await sendMessageToGraphite('price.500mb', +priceOf500MB.toFixed(5), today)
-    await sendMessageToGraphite('price.1gb', +priceOf1GB.toFixed(5), today)
 
     console.log ('Drive, User, Data and File Counts');
     console.log ('  15 Minute -');
@@ -62,6 +51,8 @@ async function main () {
     console.log ('          Public:         ', formatBytes(totalData.publicDataSize));
     console.log ('          Private:        ', formatBytes(totalData.privateDataSize));
     console.log ('      Total Files:        ', (totalData.publicFiles + totalData.privateFiles));
+    console.log ('          Web:            ', totalData.webAppFiles);
+    console.log ('          Desktop:        ', totalData.desktopFiles);
     console.log ('          Public:         ', totalData.publicFiles);
     console.log ('          Private:        ', totalData.privateFiles);
     console.log ('      Total Fees (AR):    ', ((totalData.publicArFee + totalData.privateArFee).toFixed(5)));
@@ -69,6 +60,22 @@ async function main () {
     console.log ('          Private:        ', totalData.privateArFee.toFixed(5));
     console.log ('')
 
+}
+
+async function main_prices() {
+    let today = new Date();
+    console.log ("%s Starting to collect price info", today)
+    console.log ("")
+    const priceOf1MB = await getDataPrice(1048576);
+    const priceOf5MB = await getDataPrice(1048576*5);
+    const priceOf75MB = await getDataPrice(1048576*75);
+    const priceOf500MB = await getDataPrice (1048576*500);
+    const priceOf1GB = await getDataPrice(1073741824);
+    await sendMessageToGraphite('price.1mb', +priceOf1MB.toFixed(5), today)
+    await sendMessageToGraphite('price.5mb', +priceOf5MB.toFixed(5), today)
+    await sendMessageToGraphite('price.75mb', +priceOf75MB.toFixed(5), today)
+    await sendMessageToGraphite('price.500mb', +priceOf500MB.toFixed(5), today)
+    await sendMessageToGraphite('price.1gb', +priceOf1GB.toFixed(5), today)
     console.log ("Data Prices in AR")
     console.log ("  1 MB is:      %s AR", priceOf1MB.toFixed(5))
     console.log ("  5 MB is:      %s AR", priceOf5MB.toFixed(5))
@@ -77,8 +84,12 @@ async function main () {
     console.log ("  1GB is:       %s AR", priceOf1GB.toFixed(5))
     console.log ("")
 }
-
 cron.schedule('*/15 * * * *', function(){
     console.log('Running ArDrive Analytics Every 15 minutes');
-    main();
+    main_data();
+});
+
+cron.schedule('*/5 * * * *', function(){
+    console.log('Running ArDrive Analytics Every 5 minutes');
+    main_prices();
 });
