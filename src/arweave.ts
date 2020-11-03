@@ -184,6 +184,8 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
     let privateDataSize = 0;
     let publicFiles = 0;
     let privateFiles = 0;
+    let webAppFiles = 0;
+    let desktopFiles = 0;
     let publicArFee = 0;
     let privateArFee = 0;
     let firstPage : number = 2147483647; // Max size of query for GQL
@@ -206,12 +208,16 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
                     // We only want data transactions
                     if (data.size > 0) {
                         let cipherIV = "public";
+                        let appName = '';
                         tags.forEach((tag: any) => {
                             const key = tag.name;
                             const { value } = tag;
                             switch (key) {
                             case 'Cipher-IV':
                                 cipherIV = value;
+                                break;
+                            case 'App-Name':
+                                appName = value;
                                 break;
                             default:
                                 break;
@@ -227,16 +233,21 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
                             privateArFee += +fee.ar;
                             privateFiles += 1;
                         }
+                        if (appName === 'ArDrive-Web') {
+                            webAppFiles += 1;
+                        } else if (appName === 'ArDrive-Desktop') {
+                            desktopFiles += 1;
+                        }
 
                     }
                 }
             }
         })
-    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee}
+    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopFiles}
     } catch (err) {
         console.log (err)
         console.log ("Error collecting total amount of uploaded data")
-        return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee}
+        return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopFiles}
     }
 
 }
