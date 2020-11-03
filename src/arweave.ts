@@ -88,37 +88,39 @@ export const getAllArDrives = async (start: Date, end: Date) => {
             const { node } = edge;
             const { owner } = node;
             const { block } = node;
-            let timeStamp = new Date(block.timestamp * 1000);
-            // We only want results between our start and end dates, defined by milliseconds since epoch
-            if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
-                const { tags } = node;
-                let arDriveStat: ArDriveStat = {
-                    address: owner.address,
-                    privacy: '',
-                    appName: '',
-                    driveId: '',
-                    tx: node.id,
-                    data: 0,
-                    blockTimeStamp: timeStamp,
+            if (block !== null) {
+                let timeStamp = new Date(block.timestamp * 1000);
+                // We only want results between our start and end dates, defined by milliseconds since epoch
+                if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                    const { tags } = node;
+                    let arDriveStat: ArDriveStat = {
+                        address: owner.address,
+                        privacy: '',
+                        appName: '',
+                        driveId: '',
+                        tx: node.id,
+                        data: 0,
+                        blockTimeStamp: timeStamp,
+                    }
+                    tags.forEach((tag: any) => {
+                        const key = tag.name;
+                        const { value } = tag;
+                        switch (key) {
+                        case 'App-Name':
+                            arDriveStat.appName = value;
+                            break;
+                        case 'Drive-Privacy':
+                            arDriveStat.privacy = value;
+                            break;
+                        case 'Drive-Id':
+                            arDriveStat.driveId = value;
+                            break;
+                        default:
+                            break;
+                        };
+                    })
+                    arDriveStats.push(arDriveStat);
                 }
-                tags.forEach((tag: any) => {
-                    const key = tag.name;
-                    const { value } = tag;
-                    switch (key) {
-                    case 'App-Name':
-                        arDriveStat.appName = value;
-                        break;
-                    case 'Drive-Privacy':
-                        arDriveStat.privacy = value;
-                        break;
-                    case 'Drive-Id':
-                        arDriveStat.driveId = value;
-                        break;
-                    default:
-                        break;
-                    };
-                })
-                arDriveStats.push(arDriveStat);
             }
         })
         return arDriveStats;
