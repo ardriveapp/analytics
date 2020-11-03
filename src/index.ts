@@ -94,7 +94,24 @@ const priceOf75MB = await getDataPrice(1048576*75);
 const priceOf500MB = await getDataPrice (1048576*500);
 const priceOf1GB = await getDataPrice(1073741824);
 
-await sendMessageToGraphite('drives.total', Object.keys(allArDrives_1day).length);
+await sendMessageToGraphite('users.total', Object.keys(distinctArDriveUsers_1day).length, today);
+await sendMessageToGraphite('drives.total', Object.keys(allArDrives_1day).length, today);
+await sendMessageToGraphite('drives.public', totalPublicDrives_1day, today);
+await sendMessageToGraphite('drives.private', totalPrivateDrives_1day, today);
+await sendMessageToGraphite('data.total', (totalData_1day.publicDataSize + totalData_1day.privateDataSize), today);
+await sendMessageToGraphite('data.public', totalData_1day.publicDataSize, today);
+await sendMessageToGraphite('data.private', totalData_1day.privateDataSize, today);
+await sendMessageToGraphite('files.total', (totalData_1day.publicFiles + totalData_1day.privateFiles), today);
+await sendMessageToGraphite('files.public', totalData_1day.publicFiles, today);
+await sendMessageToGraphite('files.private',totalData_1day.privateFiles, today);
+await sendMessageToGraphite('fees.total', +((totalData_1day.publicArFee + totalData_1day.privateArFee).toFixed(5)), today);
+await sendMessageToGraphite('fees.public', +totalData_1day.publicArFee.toFixed(5), today);
+await sendMessageToGraphite('fees.private', +totalData_1day.privateArFee.toFixed(5), today);
+await sendMessageToGraphite('price.1mb', +priceOf1MB.toFixed(5), today)
+await sendMessageToGraphite('price.5mb', +priceOf5MB.toFixed(5), today)
+await sendMessageToGraphite('price.75mb', +priceOf75MB.toFixed(5), today)
+await sendMessageToGraphite('price.500mb', +priceOf500MB.toFixed(5), today)
+await sendMessageToGraphite('price.1gb', +priceOf1GB.toFixed(5), today)
 
 console.log ('Drive, User, Data and File Counts');
 console.log ('  1 Day -');

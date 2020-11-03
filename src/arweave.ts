@@ -1,7 +1,6 @@
 import Arweave from 'arweave';
 
 const fetch = require('node-fetch')
-var graphite = require('graphite-udp')
 const arweave = Arweave.init({
     host: 'arweave.net', // Arweave Gateway
     port: 443,
@@ -37,25 +36,17 @@ interface ArDriveStat {
     blockTimeStamp: Date
 }
 
-// Sends a message to the ArDrive Graphite server for collection
-export const sendMessageToGraphite = async (path: string, value: number) => {
-    const options = {
-        host: 'stats.ardrive.io',
-        port: 2003,
-        interval: 1000,
-        maxPacketSize: 4096,
-        prefix: 'ardrive',
-        verbose: true,
-        callback: function(error: any, metrics: any) {
-            console.log('Metrics sent', metrics)
-            if (error !== null) {
-                // 
-            }
-        }
-    }
-    const metric = graphite.createClient(options)
-    metric.add(path, value)
+// Sends a message to the ardrive graphite server
+export const sendMessageToGraphite = async (path: string, value: number, timeStamp: Date) => {
+    const message = path + " " + value.toString() + " " + (Math.floor(timeStamp.getTime()/1000)) + '\n';
+    let net = require('net');
+    let client = new net.Socket();
+    client.connect(2003, 'stats.ardrive.io', function() {
+        client.write(message)
+        client.end('completed!')
+    });
 }
+
 
 // Format byte size to something nicer.  This is minified...
 export const formatBytes = (bytes: number) => {
