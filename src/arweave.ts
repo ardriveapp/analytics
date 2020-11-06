@@ -13,14 +13,9 @@ const arweave = Arweave.init({
 // const communityTxId = '-8A6RexFkpfWwuyVO98wzSFZh0d6VJuI-buTJvlwOJQ';
 
 /*
-•	Unique Wallets that have created ArDrives
-•	Top wallet addresses that have uploaded data for that day
-•	Total amount of ArDrives created
-	Amount of private drives
-	Amount of public drives
-•	Amount of data uploaded
-	Total amount of data uploaded
-	Total number of files uploaded
+* add network hash
+* add weave size
+* add number of ardrive pst holders
 •	Tips sent
 	Total size of tips
 	Total number of tips distributed
@@ -192,59 +187,62 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
     let privateArFee = 0;
     let firstPage : number = 2147483647; // Max size of query for GQL
     let cursor : string = "";
+    let found = 1;
+    let timeStamp = new Date(end);
     try {
-        // Create the query to search for all ardrive transactions.
-        let transactions = await queryForDataUploads(firstPage, cursor);
-        const { edges } = transactions;
-        edges.forEach((edge: any) => {
-            cursor = edge.cursor;
-            const { node } = edge;
-            const { data } = node;
-            const { fee } = node;
-            const { block } = node;
-            const { tags } = node;
-            if (block !== null) {
-                let timeStamp = new Date(block.timestamp * 1000);
-                // We only want results from last 24 hours, defined by milliseconds since epoch
-                if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
-                    // We only want data transactions
-                    if (data.size > 0) {
-                        let cipherIV = "public";
-                        let appName = '';
-                        tags.forEach((tag: any) => {
-                            const key = tag.name;
-                            const { value } = tag;
-                            switch (key) {
-                            case 'Cipher-IV':
-                                cipherIV = value;
-                                break;
-                            case 'App-Name':
-                                appName = value;
-                                break;
-                            default:
-                                break;
-                            };
-                        })
-                        if (cipherIV === 'public') {
-                            publicDataSize += data.size;
-                            publicArFee += +fee.ar;
-                            publicFiles += 1;
+        while (found > 0) {
+            let transactions = await queryForDataUploads(firstPage, cursor);
+            const { edges } = transactions;
+            found = edges.length;
+            // Create the query to search for all ardrive transactions.
+            edges.forEach((edge: any) => {
+                cursor = edge.cursor;
+                const { node } = edge;
+                const { data } = node;
+                const { fee } = node;
+                const { block } = node;
+                const { tags } = node;
+                if (block !== null) {
+                    timeStamp = new Date(block.timestamp * 1000);
+                    if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                        // We only want data transactions
+                        if (data.size > 0) {
+                            let cipherIV = "public";
+                            let appName = '';
+                            tags.forEach((tag: any) => {
+                                const key = tag.name;
+                                const { value } = tag;
+                                switch (key) {
+                                case 'Cipher-IV':
+                                    cipherIV = value;
+                                    break;
+                                case 'App-Name':
+                                    appName = value;
+                                    break;
+                                default:
+                                    break;
+                                };
+                            })
+                            if (cipherIV === 'public') {
+                                publicDataSize += data.size;
+                                publicArFee += +fee.ar;
+                                publicFiles += 1;
+                            }
+                            else {
+                                privateDataSize += data.size;
+                                privateArFee += +fee.ar;
+                                privateFiles += 1;
+                            }
+                            if (appName === 'ArDrive-Web') {
+                                webAppFiles += 1;
+                            } else if (appName === 'ArDrive-Desktop') {
+                                desktopFiles += 1;
+                            }
                         }
-                        else {
-                            privateDataSize += data.size;
-                            privateArFee += +fee.ar;
-                            privateFiles += 1;
-                        }
-                        if (appName === 'ArDrive-Web') {
-                            webAppFiles += 1;
-                        } else if (appName === 'ArDrive-Desktop') {
-                            desktopFiles += 1;
-                        }
-
                     }
                 }
-            }
-        })
+            })
+        }
     return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopFiles}
     } catch (err) {
         console.log (err)

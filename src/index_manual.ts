@@ -1,4 +1,4 @@
-import {formatBytes, getAllArDrives, getDataPrice, getTotalDataTransactionsSize} from './arweave'
+import {formatBytes, getAllArDrives, getDataPrice, getTotalDataTransactionsSize } from './arweave'
 
 async function main () {
     let today = new Date();
@@ -22,8 +22,11 @@ async function main () {
     })
     const totalData_15min = await getTotalDataTransactionsSize(start, today)
 
+
     start = new Date(today);
-    start.setDate(start.getDate() - 1);
+    start.setDate(start.getDay() - 1);
+    console.log (start)
+    const totalData_1day = await getTotalDataTransactionsSize(start, today)
     const allArDrives_1day = await getAllArDrives(start, today)
     const distinctArDriveUsers_1day = [...new Set(allArDrives_1day.map(x => x.address))]
     let totalPrivateDrives_1day = 0;
@@ -36,10 +39,11 @@ async function main () {
             totalPrivateDrives_1day += 1;
         }
     })
-    const totalData_1day = await getTotalDataTransactionsSize(start, today)
 
     start = new Date(today);
-    start.setDate(start.getDate() - 7);
+    start.setDate(start.getDay() - 7);
+    console.log (start)
+    const totalData_7day = await getTotalDataTransactionsSize(start, today)
     const allArDrives_7day = await getAllArDrives(start, today)
     const distinctArDriveUsers_7day = [...new Set(allArDrives_7day.map(x => x.address))]
     let totalPrivateDrives_7day = 0;
@@ -52,10 +56,11 @@ async function main () {
             totalPrivateDrives_7day += 1;
         }
     })
-    const totalData_7day = await getTotalDataTransactionsSize(start, today)
 
     start = new Date(today);
-    start.setDate(start.getDate() - 14);
+    start.setDate(start.getDay() - 14);
+    console.log (start)
+    const totalData_14day = await getTotalDataTransactionsSize(start, today)
     const allArDrives_14day = await getAllArDrives(start, today)
     const distinctArDriveUsers_14day = [...new Set(allArDrives_14day.map(x => x.address))]
     let totalPrivateDrives_14day = 0;
@@ -68,10 +73,12 @@ async function main () {
             totalPrivateDrives_14day += 1;
         }
     })
-    const totalData_14day = await getTotalDataTransactionsSize(start, today)
+
 
     start = new Date(today);
-    start.setDate(start.getDate() - 30);
+    start.setDate(start.getDay() - 30);
+    console.log (start)
+    const totalData_30day = await getTotalDataTransactionsSize(start, today)
     const allArDrives_30day = await getAllArDrives(start, today)
     const distinctArDriveUsers_30day = [...new Set(allArDrives_30day.map(x => x.address))]
     let totalPrivateDrives_30day = 0;
@@ -84,10 +91,12 @@ async function main () {
             totalPrivateDrives_30day += 1;
         }
     })
-    const totalData_30day = await getTotalDataTransactionsSize(start, today)
+
 
     start = new Date(today);
-    start.setDate(start.getDate() - 90);
+    start.setDate(start.getDay() - 90);
+    console.log (start)
+    const totalData_90day = await getTotalDataTransactionsSize(start, today);
     const allArDrives_90day = await getAllArDrives(start, today)
     const distinctArDriveUsers_90day = [...new Set(allArDrives_90day.map(x => x.address))]
     let totalPrivateDrives_90day = 0;
@@ -100,36 +109,35 @@ async function main () {
             totalPrivateDrives_90day += 1;
         }
     })
-    
-    const totalData_90day = await getTotalDataTransactionsSize(start, today);
+
+
     const priceOf1MB = await getDataPrice(1048576);
     const priceOf5MB = await getDataPrice(1048576*5);
     const priceOf75MB = await getDataPrice(1048576*75);
     const priceOf500MB = await getDataPrice (1048576*500);
     const priceOf1GB = await getDataPrice(1073741824);
 
-/*  
-    await sendMessageToGraphite('users.total', Object.keys(distinctArDriveUsers_7day).length, today);
-    await sendMessageToGraphite('drives.total', Object.keys(allArDrives_7day).length, today);
-    await sendMessageToGraphite('drives.public', totalPublicDrives_7day, today);
-    await sendMessageToGraphite('drives.private', totalPrivateDrives_7day, today);
-    await sendMessageToGraphite('data.total', (totalData_7day.publicDataSize + totalData_7day.privateDataSize), today);
-    await sendMessageToGraphite('data.public', totalData_7day.publicDataSize, today);
-    await sendMessageToGraphite('data.private', totalData_7day.privateDataSize, today);
-    await sendMessageToGraphite('files.total', (totalData_7day.publicFiles + totalData_7day.privateFiles), today);
-    await sendMessageToGraphite('files.web', totalData_7day.webAppFiles, today);
-    await sendMessageToGraphite('files.desktop', totalData_7day.desktopFiles, today);
-    await sendMessageToGraphite('files.public', totalData_7day.publicFiles, today);
-    await sendMessageToGraphite('files.private',totalData_7day.privateFiles, today);
-    await sendMessageToGraphite('fees.total', +((totalData_7day.publicArFee + totalData_7day.privateArFee).toFixed(5)), today);
-    await sendMessageToGraphite('fees.public', +totalData_7day.publicArFee.toFixed(5), today);
-    await sendMessageToGraphite('fees.private', +totalData_7day.privateArFee.toFixed(5), today);
+    /*await sendMessageToGraphite('users.total', Object.keys(distinctArDriveUsers_14day).length, today);
+    await sendMessageToGraphite('drives.total', Object.keys(allArDrives_14day).length, today);
+    await sendMessageToGraphite('drives.public', totalPublicDrives_14day, today);
+    await sendMessageToGraphite('drives.private', totalPrivateDrives_14day, today);
+    await sendMessageToGraphite('data.total', (totalData_14day.publicDataSize + totalData_14day.privateDataSize), today);
+    await sendMessageToGraphite('data.public', totalData_14day.publicDataSize, today);
+    await sendMessageToGraphite('data.private', totalData_14day.privateDataSize, today);
+    await sendMessageToGraphite('files.total', (totalData_14day.publicFiles + totalData_14day.privateFiles), today);
+    await sendMessageToGraphite('files.web', totalData_14day.webAppFiles, today);
+    await sendMessageToGraphite('files.desktop', totalData_14day.desktopFiles, today);
+    await sendMessageToGraphite('files.public', totalData_14day.publicFiles, today);
+    await sendMessageToGraphite('files.private',totalData_14day.privateFiles, today);
+    await sendMessageToGraphite('fees.total', +((totalData_14day.publicArFee + totalData_14day.privateArFee).toFixed(5)), today);
+    await sendMessageToGraphite('fees.public', +totalData_14day.publicArFee.toFixed(5), today);
+    await sendMessageToGraphite('fees.private', +totalData_14day.privateArFee.toFixed(5), today);
     await sendMessageToGraphite('price.1mb', +priceOf1MB.toFixed(5), today)
     await sendMessageToGraphite('price.5mb', +priceOf5MB.toFixed(5), today)
     await sendMessageToGraphite('price.75mb', +priceOf75MB.toFixed(5), today)
     await sendMessageToGraphite('price.500mb', +priceOf500MB.toFixed(5), today)
-    await sendMessageToGraphite('price.1gb', +priceOf1GB.toFixed(5), today)
-*/
+    await sendMessageToGraphite('price.1gb', +priceOf1GB.toFixed(5), today)*/
+
     console.log ('Drive, User, Data and File Counts');
     console.log ('  15 Min -');
     console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_15min).length);
