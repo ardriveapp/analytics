@@ -1,4 +1,4 @@
-import {formatBytes, getAllArDrives, getDataPrice, getTotalDataTransactionsSize, sendMessageToGraphite} from './arweave'
+import {getAllArDrives, getDataPrice, getTotalDataTransactionsSize, sendMessageToGraphite} from './arweave'
 
 const cron = require('node-cron');
 
@@ -7,6 +7,7 @@ async function main_data () {
     console.log ("%s Starting to collect data analytics", today)
     console.log ("")
 
+    // 
     let start = new Date(today);
     let minutesToRemove = 15;
     start.setMinutes(start.getMinutes() - minutesToRemove);
@@ -41,25 +42,6 @@ async function main_data () {
     await sendMessageToGraphite('fees.public', +totalData.publicArFee.toFixed(5), today);
     await sendMessageToGraphite('fees.private', +totalData.privateArFee.toFixed(5), today);
 
-    console.log ('Drive, User, Data and File Counts');
-    console.log ('  15 Minute -');
-    console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers).length);
-    console.log ('      Total Drives:       ', Object.keys(allArDrives).length);
-    console.log ('          Public:         ', totalPublicDrives);
-    console.log ('          Private:        ', totalPrivateDrives);
-    console.log ('      Total Data:         ', formatBytes(totalData.publicDataSize + totalData.privateDataSize));
-    console.log ('          Public:         ', formatBytes(totalData.publicDataSize));
-    console.log ('          Private:        ', formatBytes(totalData.privateDataSize));
-    console.log ('      Total Files:        ', (totalData.publicFiles + totalData.privateFiles));
-    console.log ('          Web:            ', totalData.webAppFiles);
-    console.log ('          Desktop:        ', totalData.desktopFiles);
-    console.log ('          Public:         ', totalData.publicFiles);
-    console.log ('          Private:        ', totalData.privateFiles);
-    console.log ('      Total Fees (AR):    ', ((totalData.publicArFee + totalData.privateArFee).toFixed(5)));
-    console.log ('          Public:         ', totalData.publicArFee.toFixed(5));
-    console.log ('          Private:        ', totalData.privateArFee.toFixed(5));
-    console.log ('')
-
 }
 
 async function main_prices() {
@@ -76,14 +58,132 @@ async function main_prices() {
     await sendMessageToGraphite('price.75mb', +priceOf75MB.toFixed(5), today)
     await sendMessageToGraphite('price.500mb', +priceOf500MB.toFixed(5), today)
     await sendMessageToGraphite('price.1gb', +priceOf1GB.toFixed(5), today)
-    console.log ("Data Prices in AR")
-    console.log ("  1 MB is:      %s AR", priceOf1MB.toFixed(5))
-    console.log ("  5 MB is:      %s AR", priceOf5MB.toFixed(5))
-    console.log ("  75MB is:      %s AR", priceOf75MB.toFixed(5))
-    console.log ("  500 MB is:    %s AR", priceOf500MB.toFixed(5))
-    console.log ("  1GB is:       %s AR", priceOf1GB.toFixed(5))
-    console.log ("")
+
 }
+
+async function main_data_1d () {
+    let today = new Date();
+    let start = new Date(today);
+    start.setDate(start.getDay() - 1);
+    const allArDrives = await getAllArDrives(start, today)
+    const distinctArDriveUsers = [...new Set(allArDrives.map(x => x.address))]
+    let totalPrivateDrives = 0;
+    let totalPublicDrives = 0;
+    allArDrives.forEach((drive: any) => {
+        if (drive.privacy === 'private') {
+            totalPublicDrives += 1;
+        }
+        else if (drive.privacy === '') {
+            totalPrivateDrives += 1;
+        }
+    })
+
+    const totalData = await getTotalDataTransactionsSize(start, today)
+    await sendMessageToGraphite('users.total_1d', Object.keys(distinctArDriveUsers).length, today);
+    await sendMessageToGraphite('drives.total_1d', Object.keys(allArDrives).length, today);
+    await sendMessageToGraphite('drives.public_1d', totalPublicDrives, today);
+    await sendMessageToGraphite('drives.private_1d', totalPrivateDrives, today);
+    await sendMessageToGraphite('data.total_1d', (totalData.publicDataSize + totalData.privateDataSize), today);
+    await sendMessageToGraphite('data.public_1d', totalData.publicDataSize, today);
+    await sendMessageToGraphite('data.private_1d', totalData.privateDataSize, today);
+    await sendMessageToGraphite('files.total_1d', (totalData.publicFiles + totalData.privateFiles), today);
+    await sendMessageToGraphite('files.web_1d', totalData.webAppFiles, today);
+    await sendMessageToGraphite('files.desktop_1d', totalData.desktopFiles, today);
+    await sendMessageToGraphite('files.public_1d', totalData.publicFiles, today);
+    await sendMessageToGraphite('files.private_1d',totalData.privateFiles, today);
+    await sendMessageToGraphite('fees.total_1d', +((totalData.publicArFee + totalData.privateArFee).toFixed(5)), today);
+    await sendMessageToGraphite('fees.public_1d', +totalData.publicArFee.toFixed(5), today);
+    await sendMessageToGraphite('fees.private_1d', +totalData.privateArFee.toFixed(5), today);
+
+}
+
+async function main_data_7d () {
+    let today = new Date();
+    let start = new Date(today);
+    start.setDate(start.getDay() - 7);
+    const allArDrives = await getAllArDrives(start, today)
+    const distinctArDriveUsers = [...new Set(allArDrives.map(x => x.address))]
+    let totalPrivateDrives = 0;
+    let totalPublicDrives = 0;
+    allArDrives.forEach((drive: any) => {
+        if (drive.privacy === 'private') {
+            totalPublicDrives += 1;
+        }
+        else if (drive.privacy === '') {
+            totalPrivateDrives += 1;
+        }
+    })
+
+    const totalData = await getTotalDataTransactionsSize(start, today)
+    await sendMessageToGraphite('users.total_7d', Object.keys(distinctArDriveUsers).length, today);
+    await sendMessageToGraphite('drives.total_7d', Object.keys(allArDrives).length, today);
+    await sendMessageToGraphite('drives.public_7d', totalPublicDrives, today);
+    await sendMessageToGraphite('drives.private_7d', totalPrivateDrives, today);
+    await sendMessageToGraphite('data.total_7d', (totalData.publicDataSize + totalData.privateDataSize), today);
+    await sendMessageToGraphite('data.public_7d', totalData.publicDataSize, today);
+    await sendMessageToGraphite('data.private_7d', totalData.privateDataSize, today);
+    await sendMessageToGraphite('files.total_7d', (totalData.publicFiles + totalData.privateFiles), today);
+    await sendMessageToGraphite('files.web_7d', totalData.webAppFiles, today);
+    await sendMessageToGraphite('files.desktop_7d', totalData.desktopFiles, today);
+    await sendMessageToGraphite('files.public_7d', totalData.publicFiles, today);
+    await sendMessageToGraphite('files.private_7d',totalData.privateFiles, today);
+    await sendMessageToGraphite('fees.total_7d', +((totalData.publicArFee + totalData.privateArFee).toFixed(5)), today);
+    await sendMessageToGraphite('fees.public_7d', +totalData.publicArFee.toFixed(5), today);
+    await sendMessageToGraphite('fees.private_7d', +totalData.privateArFee.toFixed(5), today);
+
+}
+
+async function main_data_30d () {
+    let today = new Date();
+    let start = new Date(today);
+    start.setDate(start.getDay() - 30);
+    const allArDrives = await getAllArDrives(start, today)
+    const distinctArDriveUsers = [...new Set(allArDrives.map(x => x.address))]
+    let totalPrivateDrives = 0;
+    let totalPublicDrives = 0;
+    allArDrives.forEach((drive: any) => {
+        if (drive.privacy === 'private') {
+            totalPublicDrives += 1;
+        }
+        else if (drive.privacy === '') {
+            totalPrivateDrives += 1;
+        }
+    })
+
+    const totalData = await getTotalDataTransactionsSize(start, today)
+    await sendMessageToGraphite('users.total_30d', Object.keys(distinctArDriveUsers).length, today);
+    await sendMessageToGraphite('drives.total_30d', Object.keys(allArDrives).length, today);
+    await sendMessageToGraphite('drives.public_30d', totalPublicDrives, today);
+    await sendMessageToGraphite('drives.private_30d', totalPrivateDrives, today);
+    await sendMessageToGraphite('data.total_30d', (totalData.publicDataSize + totalData.privateDataSize), today);
+    await sendMessageToGraphite('data.public_30d', totalData.publicDataSize, today);
+    await sendMessageToGraphite('data.private_30d', totalData.privateDataSize, today);
+    await sendMessageToGraphite('files.total_30d', (totalData.publicFiles + totalData.privateFiles), today);
+    await sendMessageToGraphite('files.web_30d', totalData.webAppFiles, today);
+    await sendMessageToGraphite('files.desktop_30d', totalData.desktopFiles, today);
+    await sendMessageToGraphite('files.public_30d', totalData.publicFiles, today);
+    await sendMessageToGraphite('files.private_30d',totalData.privateFiles, today);
+    await sendMessageToGraphite('fees.total_30d', +((totalData.publicArFee + totalData.privateArFee).toFixed(5)), today);
+    await sendMessageToGraphite('fees.public_30d', +totalData.publicArFee.toFixed(5), today);
+    await sendMessageToGraphite('fees.private_30d', +totalData.privateArFee.toFixed(5), today);
+
+}
+
+cron.schedule('*/0 * * * *', function(){
+    console.log('Running ArDrive Analytics Every hour');
+    main_data_30d();
+});
+
+cron.schedule('*/0 * * * *', function(){
+    console.log('Running ArDrive Analytics Every hour');
+    main_data_7d();
+});
+
+cron.schedule('*/0 * * * *', function(){
+    console.log('Running ArDrive Analytics Every hour');
+    main_data_1d();
+});
+
 cron.schedule('*/15 * * * *', function(){
     console.log('Running ArDrive Analytics Every 15 minutes');
     main_data();
