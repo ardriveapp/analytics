@@ -169,17 +169,17 @@ async function main_data_30d () {
 
 }
 
-cron.schedule('*/0 * * * *', function(){
+cron.schedule('0 * * * *', function(){
     console.log('Running ArDrive Analytics Every hour');
     main_data_30d();
 });
 
-cron.schedule('*/0 * * * *', function(){
+cron.schedule('0 * * * *', function(){
     console.log('Running ArDrive Analytics Every hour');
     main_data_7d();
 });
 
-cron.schedule('*/0 * * * *', function(){
+cron.schedule('0 * * * *', function(){
     console.log('Running ArDrive Analytics Every hour');
     main_data_1d();
 });
