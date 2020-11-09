@@ -64,7 +64,7 @@ async function main_prices() {
 async function main_data_1d () {
     let today = new Date();
     let start = new Date(today);
-    start.setDate(start.getDay() - 1);
+    start.setDate(start.getDate() - 1);
     const allArDrives = await getAllArDrives(start, today)
     const distinctArDriveUsers = [...new Set(allArDrives.map(x => x.address))]
     let totalPrivateDrives = 0;
@@ -100,7 +100,7 @@ async function main_data_1d () {
 async function main_data_7d () {
     let today = new Date();
     let start = new Date(today);
-    start.setDate(start.getDay() - 7);
+    start.setDate(start.getDate() - 7);
     const allArDrives = await getAllArDrives(start, today)
     const distinctArDriveUsers = [...new Set(allArDrives.map(x => x.address))]
     let totalPrivateDrives = 0;
@@ -136,7 +136,7 @@ async function main_data_7d () {
 async function main_data_30d () {
     let today = new Date();
     let start = new Date(today);
-    start.setDate(start.getDay() - 30);
+    start.setDate(start.getDate() - 30);
     const allArDrives = await getAllArDrives(start, today)
     const distinctArDriveUsers = [...new Set(allArDrives.map(x => x.address))]
     let totalPrivateDrives = 0;
@@ -190,6 +190,6 @@ cron.schedule('*/15 * * * *', function(){
 });
 
 cron.schedule('*/5 * * * *', function(){
-    console.log('Running ArDrive Analytics Every 5 minutes');
+    console.log('Running ArDrive Price Analytics Every 5 minutes');
     main_prices();
 });

@@ -1,4 +1,4 @@
-import {formatBytes, getAllArDrives, getDataPrice, getTotalDataTransactionsSize } from './arweave'
+import {formatBytes, getAllArDrives, getDataPrice, getTotalDataTransactionsSize, get_24_hour_ardrive_transactions } from './arweave'
 
 async function main () {
     let today = new Date();
@@ -8,6 +8,7 @@ async function main () {
     let start = new Date(today);
     let minutesToRemove = 15;
     start.setMinutes(start.getMinutes() - minutesToRemove);
+    console.log (start)
     const allArDrives_15min = await getAllArDrives(start, today)
     const distinctArDriveUsers_15min = [...new Set(allArDrives_15min.map(x => x.address))]
     let totalPrivateDrives_15min = 0;
@@ -22,9 +23,8 @@ async function main () {
     })
     const totalData_15min = await getTotalDataTransactionsSize(start, today)
 
-
     start = new Date(today);
-    start.setDate(start.getDay() - 1);
+    start.setDate(start.getDate() - 1);
     console.log (start)
     const totalData_1day = await getTotalDataTransactionsSize(start, today)
     const allArDrives_1day = await getAllArDrives(start, today)
@@ -41,7 +41,7 @@ async function main () {
     })
 
     start = new Date(today);
-    start.setDate(start.getDay() - 7);
+    start.setDate(start.getDate() - 7);
     console.log (start)
     const totalData_7day = await getTotalDataTransactionsSize(start, today)
     const allArDrives_7day = await getAllArDrives(start, today)
@@ -58,25 +58,7 @@ async function main () {
     })
 
     start = new Date(today);
-    start.setDate(start.getDay() - 14);
-    console.log (start)
-    const totalData_14day = await getTotalDataTransactionsSize(start, today)
-    const allArDrives_14day = await getAllArDrives(start, today)
-    const distinctArDriveUsers_14day = [...new Set(allArDrives_14day.map(x => x.address))]
-    let totalPrivateDrives_14day = 0;
-    let totalPublicDrives_14day = 0;
-    allArDrives_14day.forEach((drive: any) => {
-        if (drive.privacy === 'private') {
-            totalPublicDrives_14day += 1;
-        }
-        else if (drive.privacy === '') {
-            totalPrivateDrives_14day += 1;
-        }
-    })
-
-
-    start = new Date(today);
-    start.setDate(start.getDay() - 30);
+    start.setDate(start.getDate() - 30);
     console.log (start)
     const totalData_30day = await getTotalDataTransactionsSize(start, today)
     const allArDrives_30day = await getAllArDrives(start, today)
@@ -92,9 +74,8 @@ async function main () {
         }
     })
 
-
     start = new Date(today);
-    start.setDate(start.getDay() - 90);
+    start.setDate(start.getDate() - 90);
     console.log (start)
     const totalData_90day = await getTotalDataTransactionsSize(start, today);
     const allArDrives_90day = await getAllArDrives(start, today)
@@ -110,7 +91,7 @@ async function main () {
         }
     })
 
-
+    // Get all prices
     const priceOf1MB = await getDataPrice(1048576);
     const priceOf5MB = await getDataPrice(1048576*5);
     const priceOf75MB = await getDataPrice(1048576*75);
@@ -190,23 +171,6 @@ async function main () {
     console.log ('          Public:         ', totalData_7day.publicArFee.toFixed(5));
     console.log ('          Private:        ', totalData_7day.privateArFee.toFixed(5));
     console.log ('  ---------------------------')
-    console.log ('  14 Day -')
-    console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_14day).length)
-    console.log ('      Total Drives:       ', Object.keys(allArDrives_14day).length)
-    console.log ('          Public:         ', totalPublicDrives_14day)
-    console.log ('          Private:        ', totalPrivateDrives_14day)
-    console.log ('      Total Data:         ', formatBytes(totalData_14day.publicDataSize + totalData_14day.privateDataSize));
-    console.log ('          Public:         ', formatBytes(totalData_14day.publicDataSize));
-    console.log ('          Private:        ', formatBytes(totalData_14day.privateDataSize));
-    console.log ('      Total Files:        ', (totalData_14day.publicFiles + totalData_14day.privateFiles));
-    console.log ('          Web:            ', totalData_14day.webAppFiles);
-    console.log ('          Desktop:        ', totalData_14day.desktopFiles);
-    console.log ('          Public:         ', totalData_14day.publicFiles);
-    console.log ('          Private:        ', totalData_14day.privateFiles);
-    console.log ('      Total Fees (AR):    ', ((totalData_14day.publicArFee + totalData_14day.privateArFee).toFixed(5)));
-    console.log ('          Public:         ', totalData_14day.publicArFee.toFixed(5));
-    console.log ('          Private:        ', totalData_14day.privateArFee.toFixed(5));
-    console.log ('  ---------------------------')
     console.log ('  30 Day -')
     console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_30day).length)
     console.log ('      Total Drives:       ', Object.keys(allArDrives_30day).length)
@@ -248,6 +212,8 @@ async function main () {
     console.log ("  500 MB is:    %s AR", priceOf500MB.toFixed(5))
     console.log ("  1GB is:       %s AR", priceOf1GB.toFixed(5))
     console.log ("")
+
+    get_24_hour_ardrive_transactions();
 }
 
 main();
