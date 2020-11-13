@@ -15,10 +15,10 @@ async function main () {
     let totalPublicDrives_15min = 0;
     allArDrives_15min.forEach((drive: any) => {
         if (drive.privacy === 'private') {
-            totalPublicDrives_15min += 1;
-        }
-        else if (drive.privacy === '') {
             totalPrivateDrives_15min += 1;
+        }
+        else {
+            totalPublicDrives_15min += 1;
         }
     })
     const totalData_15min = await getTotalDataTransactionsSize(start, today)
@@ -33,10 +33,10 @@ async function main () {
     let totalPublicDrives_1day = 0;
     allArDrives_1day.forEach((drive: any) => {
         if (drive.privacy === 'private') {
-            totalPublicDrives_1day += 1;
-        }
-        else if (drive.privacy === '') {
             totalPrivateDrives_1day += 1;
+        }
+        else {
+            totalPublicDrives_1day += 1;
         }
     })
 
@@ -52,7 +52,7 @@ async function main () {
         if (drive.privacy === 'private') {
             totalPublicDrives_7day += 1;
         }
-        else if (drive.privacy === '') {
+        else {
             totalPrivateDrives_7day += 1;
         }
     })
@@ -67,10 +67,10 @@ async function main () {
     let totalPublicDrives_30day = 0;
     allArDrives_30day.forEach((drive: any) => {
         if (drive.privacy === 'private') {
-            totalPublicDrives_30day += 1;
-        }
-        else if (drive.privacy === '') {
             totalPrivateDrives_30day += 1;
+        }
+        else {
+            totalPublicDrives_30day += 1;
         }
     })
 
@@ -84,10 +84,10 @@ async function main () {
     let totalPublicDrives_90day = 0;
     allArDrives_90day.forEach((drive: any) => {
         if (drive.privacy === 'private') {
-            totalPublicDrives_90day += 1;
-        }
-        else if (drive.privacy === '') {
             totalPrivateDrives_90day += 1;
+        }
+        else {
+            totalPublicDrives_90day += 1;
         }
     })
 

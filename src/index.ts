@@ -18,10 +18,10 @@ async function main_data () {
     let totalPublicDrives = 0;
     allArDrives.forEach((drive: any) => {
         if (drive.privacy === 'private') {
-            totalPublicDrives += 1;
-        }
-        else if (drive.privacy === '') {
             totalPrivateDrives += 1;
+        }
+        else {
+            totalPublicDrives += 1;
         }
     })
 
@@ -71,10 +71,10 @@ async function main_data_1d () {
     let totalPublicDrives = 0;
     allArDrives.forEach((drive: any) => {
         if (drive.privacy === 'private') {
-            totalPublicDrives += 1;
-        }
-        else if (drive.privacy === '') {
             totalPrivateDrives += 1;
+        }
+        else {
+            totalPublicDrives += 1;
         }
     })
 
@@ -107,10 +107,10 @@ async function main_data_7d () {
     let totalPublicDrives = 0;
     allArDrives.forEach((drive: any) => {
         if (drive.privacy === 'private') {
-            totalPublicDrives += 1;
-        }
-        else if (drive.privacy === '') {
             totalPrivateDrives += 1;
+        }
+        else {
+            totalPublicDrives += 1;
         }
     })
 
@@ -143,10 +143,10 @@ async function main_data_30d () {
     let totalPublicDrives = 0;
     allArDrives.forEach((drive: any) => {
         if (drive.privacy === 'private') {
-            totalPublicDrives += 1;
-        }
-        else if (drive.privacy === '') {
             totalPrivateDrives += 1;
+        }
+        else {
+            totalPublicDrives += 1;
         }
     })
 
