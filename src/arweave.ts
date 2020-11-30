@@ -8,17 +8,21 @@ const arweave = Arweave.init({
     timeout: 600000,
   });
 
-  export interface AstatineItem {
+export interface AstatineItem {
     address: string,
     weight: number,
-  }
+}
+
+export interface BlockInfo {
+    weaveSize: number,
+    cumulativeDifficulty: number,
+    blockSize: number,
+}
 // ArDrive Profit Sharing Community Smart Contract
 // import Community from 'community-js';
 // const communityTxId = '-8A6RexFkpfWwuyVO98wzSFZh0d6VJuI-buTJvlwOJQ';
 
 /*
-* add network hash
-* add weave size
 * add number of ardrive pst holders
 •	Tips sent
 	Total size of tips
@@ -34,6 +38,7 @@ interface ArDriveStat {
     data: number,
     blockTimeStamp: Date
 }
+
 
 // Sends a message to the ardrive graphite server
 export const sendMessageToGraphite = async (path: string, value: number, timeStamp: Date) => {
@@ -72,6 +77,28 @@ export const getDataPrice = async (bytes: number) => {
     const winstonAmount = await response.json();
     const arweaveAmount = +winstonAmount * 0.000000000001;
     return arweaveAmount;
+};
+
+// Gets the price of AR based on amount of data
+export const getCurrentBlockHeight = async () => {
+    const response = await fetch(`https://arweave.net/height/`);
+    const height = await response.json()
+    return height;
+};
+
+// Gets the total weave size from the latest block
+export const getLatestBlockInfo = async (height: number) => {
+    let latestBlock : BlockInfo = {
+        weaveSize: 0,
+        cumulativeDifficulty: 0,
+        blockSize: 0,
+    }
+    const response = await fetch(`https://arweave.net/block/height/${height}`);
+    const blockInfo = await response.json()
+    latestBlock.weaveSize = blockInfo['weave_size']
+    latestBlock.cumulativeDifficulty = blockInfo['cumulative_diff']
+    latestBlock.blockSize = blockInfo['block_size']
+    return latestBlock;
 };
 
 // Gets ArDrive information from a start and and date

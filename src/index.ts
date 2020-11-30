@@ -1,4 +1,4 @@
-import {getAllArDrives, getDataPrice, getTotalDataTransactionsSize, sendMessageToGraphite} from './arweave'
+import {BlockInfo, getAllArDrives, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getTotalDataTransactionsSize, sendMessageToGraphite} from './arweave'
 
 const cron = require('node-cron');
 const Api = require('@limestonefi/api');
@@ -45,24 +45,41 @@ async function main_data () {
 
 }
 
-async function main_prices() {
+async function main_info() {
     let today = new Date();
-    console.log ("%s Starting to collect price info", today)
+    
+    console.log ("%s Starting to collect latest block and price info", today)
     console.log ("")
+
+    let height = await getCurrentBlockHeight();
+    await sendMessageToGraphite('weave.height', +height, today)
+    let latestBlock : BlockInfo = await getLatestBlockInfo(height)
+    await sendMessageToGraphite('weave.totalSize', latestBlock.weaveSize, today)
+    await sendMessageToGraphite('weave.cumulativeDifficulty', latestBlock.cumulativeDifficulty, today)
+    await sendMessageToGraphite('weave.lastBlockSize', latestBlock.blockSize, today)
+
+    // Get price of AR in USD
+    let limestoneQuote = await Api.getPrice("AR");
+    await sendMessageToGraphite('price.usd', +limestoneQuote.price, today)
+
+    // Get data prices of different data sizes in AR
     const priceOf1MB = await getDataPrice(1048576);
     const priceOf5MB = await getDataPrice(1048576*5);
     const priceOf75MB = await getDataPrice(1048576*75);
     const priceOf500MB = await getDataPrice (1048576*500);
     const priceOf1GB = await getDataPrice(1073741824);
-    await sendMessageToGraphite('price.1mb', +priceOf1MB.toFixed(5), today)
-    await sendMessageToGraphite('price.5mb', +priceOf5MB.toFixed(5), today)
-    await sendMessageToGraphite('price.75mb', +priceOf75MB.toFixed(5), today)
-    await sendMessageToGraphite('price.500mb', +priceOf500MB.toFixed(5), today)
-    await sendMessageToGraphite('price.1gb', +priceOf1GB.toFixed(5), today)
+    await sendMessageToGraphite('price.ar.1mb', +priceOf1MB.toFixed(5), today)
+    await sendMessageToGraphite('price.ar.5mb', +priceOf5MB.toFixed(5), today)
+    await sendMessageToGraphite('price.ar.75mb', +priceOf75MB.toFixed(5), today)
+    await sendMessageToGraphite('price.ar.500mb', +priceOf500MB.toFixed(5), today)
+    await sendMessageToGraphite('price.ar.1gb', +priceOf1GB.toFixed(5), today)
 
-    // Get price of AR in USD
-    let limestoneQuote = await Api.getPrice("AR");
-    await sendMessageToGraphite('price.usd', +limestoneQuote.price, today)
+    // Get the data prices in USD
+    await sendMessageToGraphite('price.usd.1mb', +(+priceOf1MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
+    await sendMessageToGraphite('price.usd.5mb', +(+priceOf5MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
+    await sendMessageToGraphite('price.usd.75mb', +(+priceOf75MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
+    await sendMessageToGraphite('price.usd.500mb', +(+priceOf500MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
+    await sendMessageToGraphite('price.usd.1gb', +(+priceOf1GB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
 
 }
 
@@ -174,13 +191,13 @@ async function main_data_30d () {
 
 }
 
-cron.schedule('0 * * * *', function(){
-    console.log('Running ArDrive 30 Day Analytics Every hour');
+cron.schedule('0 */12 * * *', function(){
+    console.log('Running ArDrive 30 Day Analytics Every 12 hours');
     main_data_30d();
 });
 
-cron.schedule('0 * * * *', function(){
-    console.log('Running ArDrive 7 Day Analytics Every hour');
+cron.schedule('0 */4 * * *', function(){
+    console.log('Running ArDrive 7 Day Analytics Every 4 hours');
     main_data_7d();
 });
 
@@ -195,6 +212,6 @@ cron.schedule('*/15 * * * *', function(){
 });
 
 cron.schedule('*/5 * * * *', function(){
-    console.log('Running ArDrive Price Collection Analytics Every 5 minutes');
-    main_prices();
+    console.log('Running ArDrive Block Info and Price Collection Analytics Every 5 minutes');
+    main_info();
 });
