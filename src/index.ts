@@ -65,19 +65,22 @@ async function main_info() {
     // Get data prices of different data sizes in AR
     const priceOf1MB = await getDataPrice(1048576);
     const priceOf5MB = await getDataPrice(1048576*5);
-    const priceOf75MB = await getDataPrice(1048576*75);
+    const priceOf25MB = await getDataPrice(1048576*25);
+    const priceOf100MB = await getDataPrice(1048576*100);
     const priceOf500MB = await getDataPrice (1048576*500);
     const priceOf1GB = await getDataPrice(1073741824);
     await sendMessageToGraphite('price.ar.1mb', +priceOf1MB.toFixed(5), today)
     await sendMessageToGraphite('price.ar.5mb', +priceOf5MB.toFixed(5), today)
-    await sendMessageToGraphite('price.ar.75mb', +priceOf75MB.toFixed(5), today)
+    await sendMessageToGraphite('price.ar.25mb', +priceOf25MB.toFixed(5), today)
+    await sendMessageToGraphite('price.ar.100mb', +priceOf100MB.toFixed(5), today)
     await sendMessageToGraphite('price.ar.500mb', +priceOf500MB.toFixed(5), today)
     await sendMessageToGraphite('price.ar.1gb', +priceOf1GB.toFixed(5), today)
 
     // Get the data prices in USD
     await sendMessageToGraphite('price.usd.1mb', +(+priceOf1MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
     await sendMessageToGraphite('price.usd.5mb', +(+priceOf5MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
-    await sendMessageToGraphite('price.usd.75mb', +(+priceOf75MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
+    await sendMessageToGraphite('price.usd.25mb', +(+priceOf25MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
+    await sendMessageToGraphite('price.usd.100mb', +(+priceOf100MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
     await sendMessageToGraphite('price.usd.500mb', +(+priceOf500MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
     await sendMessageToGraphite('price.usd.1gb', +(+priceOf1GB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
 

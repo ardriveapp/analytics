@@ -1,10 +1,14 @@
-import {formatBytes, getAllArDrives, getDataPrice, getTotalDataTransactionsSize, get_24_hour_ardrive_transactions } from './arweave'
+import {BlockInfo, formatBytes, getAllArDrives, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getTotalDataTransactionsSize, get_24_hour_ardrive_transactions } from './arweave'
 const Api = require('@limestonefi/api');
 
 async function main () {
     let today = new Date();
+
     console.log ("%s Starting to collect analytics", today)
     console.log ("")
+
+    let height = await getCurrentBlockHeight();
+    let latestBlock : BlockInfo = await getLatestBlockInfo(height)  
 
     let start = new Date(today);
     let minutesToRemove = 15;
@@ -58,7 +62,7 @@ async function main () {
         }
     })
 
-    start = new Date(today);
+    /*start = new Date(today);
     start.setDate(start.getDate() - 30);
     console.log (start)
     const totalData_30day = await getTotalDataTransactionsSize(start, today)
@@ -90,12 +94,13 @@ async function main () {
         else {
             totalPublicDrives_90day += 1;
         }
-    })
+    })*/
 
     // Get all prices
     const priceOf1MB = await getDataPrice(1048576);
     const priceOf5MB = await getDataPrice(1048576*5);
-    const priceOf75MB = await getDataPrice(1048576*75);
+    const priceOf25MB = await getDataPrice(1048576*25);
+    const priceOf100MB = await getDataPrice(1048576*100);
     const priceOf500MB = await getDataPrice (1048576*500);
     const priceOf1GB = await getDataPrice(1073741824);
 
@@ -175,7 +180,7 @@ async function main () {
     console.log ('          Public:         ', totalData_7day.publicArFee.toFixed(5));
     console.log ('          Private:        ', totalData_7day.privateArFee.toFixed(5));
     console.log ('  ---------------------------')
-    console.log ('  30 Day -')
+    /*console.log ('  30 Day -')
     console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_30day).length)
     console.log ('      Total Drives:       ', Object.keys(allArDrives_30day).length)
     console.log ('          Public:         ', totalPublicDrives_30day)
@@ -208,16 +213,28 @@ async function main () {
     console.log ('      Total Fees (AR):    ', ((totalData_90day.publicArFee + totalData_90day.privateArFee).toFixed(5)));
     console.log ('          Public Fees:    ', totalData_90day.publicArFee.toFixed(5));
     console.log ('          Private Fees:   ', totalData_90day.privateArFee.toFixed(5));
-    console.log ('')
+    console.log ('') */
     console.log ("Data Prices in AR")
     console.log ("  1 MB is:      %s AR", priceOf1MB.toFixed(5))
     console.log ("  5 MB is:      %s AR", priceOf5MB.toFixed(5))
-    console.log ("  75MB is:      %s AR", priceOf75MB.toFixed(5))
+    console.log ("  25MB is:      %s AR", priceOf25MB.toFixed(5))
+    console.log ("  100MB is:     %s AR", priceOf100MB.toFixed(5))
     console.log ("  500 MB is:    %s AR", priceOf500MB.toFixed(5))
     console.log ("  1GB is:       %s AR", priceOf1GB.toFixed(5))
     console.log ("")
     console.log ("AR/USD Price: %s USD", +limestoneQuote.price)
-
+    console.log ("Data Prices in USD")
+    console.log ("  1 MB is:      %s USD", (+priceOf1MB.toFixed(5) * +limestoneQuote.price).toFixed(2))
+    console.log ("  5 MB is:      %s USD", (+priceOf5MB.toFixed(5) * +limestoneQuote.price).toFixed(2))
+    console.log ("  25MB is:      %s USD", (+priceOf25MB.toFixed(5) * +limestoneQuote.price).toFixed(2))
+    console.log ("  100MB is:     %s USD", (+priceOf100MB.toFixed(5) * +limestoneQuote.price).toFixed(2))
+    console.log ("  500 MB is:    %s USD", (+priceOf500MB.toFixed(5) * +limestoneQuote.price).toFixed(2))
+    console.log ("  1GB is:       %s USD", (+priceOf1GB.toFixed(5) * +limestoneQuote.price).toFixed(2))
+    console.log ("")
+    console.log ("Latest block is: %s", height)
+    console.log ("Weave size is: %s", latestBlock.weaveSize)
+    console.log ("Last block size is: %s", latestBlock.blockSize)
+    console.log ("Cumulative difficulty is: %s", latestBlock.cumulativeDifficulty)
     get_24_hour_ardrive_transactions();
 }
 
