@@ -1,6 +1,7 @@
 import {getAllArDrives, getDataPrice, getTotalDataTransactionsSize, sendMessageToGraphite} from './arweave'
 
 const cron = require('node-cron');
+const Api = require('@limestonefi/api');
 
 async function main_data () {
     let today = new Date();
@@ -58,6 +59,10 @@ async function main_prices() {
     await sendMessageToGraphite('price.75mb', +priceOf75MB.toFixed(5), today)
     await sendMessageToGraphite('price.500mb', +priceOf500MB.toFixed(5), today)
     await sendMessageToGraphite('price.1gb', +priceOf1GB.toFixed(5), today)
+
+    // Get price of AR in USD
+    let limestoneQuote = await Api.getPrice("AR");
+    await sendMessageToGraphite('price.usd', +limestoneQuote.price, today)
 
 }
 
@@ -170,26 +175,26 @@ async function main_data_30d () {
 }
 
 cron.schedule('0 * * * *', function(){
-    console.log('Running ArDrive Analytics Every hour');
+    console.log('Running ArDrive 30 Day Analytics Every hour');
     main_data_30d();
 });
 
 cron.schedule('0 * * * *', function(){
-    console.log('Running ArDrive Analytics Every hour');
+    console.log('Running ArDrive 7 Day Analytics Every hour');
     main_data_7d();
 });
 
 cron.schedule('0 * * * *', function(){
-    console.log('Running ArDrive Analytics Every hour');
+    console.log('Running ArDrive 1 Day Analytics Every hour');
     main_data_1d();
 });
 
 cron.schedule('*/15 * * * *', function(){
-    console.log('Running ArDrive Analytics Every 15 minutes');
+    console.log('Running ArDrive 15 Min Analytics Every 15 minutes');
     main_data();
 });
 
 cron.schedule('*/5 * * * *', function(){
-    console.log('Running ArDrive Price Analytics Every 5 minutes');
+    console.log('Running ArDrive Price Collection Analytics Every 5 minutes');
     main_prices();
 });

@@ -1,4 +1,5 @@
 import {formatBytes, getAllArDrives, getDataPrice, getTotalDataTransactionsSize, get_24_hour_ardrive_transactions } from './arweave'
+const Api = require('@limestonefi/api');
 
 async function main () {
     let today = new Date();
@@ -97,6 +98,9 @@ async function main () {
     const priceOf75MB = await getDataPrice(1048576*75);
     const priceOf500MB = await getDataPrice (1048576*500);
     const priceOf1GB = await getDataPrice(1073741824);
+
+    // Get price of AR in USD
+    let limestoneQuote = await Api.getPrice("AR");
 
     /*await sendMessageToGraphite('users.total', Object.keys(distinctArDriveUsers_14day).length, today);
     await sendMessageToGraphite('drives.total', Object.keys(allArDrives_14day).length, today);
@@ -212,6 +216,7 @@ async function main () {
     console.log ("  500 MB is:    %s AR", priceOf500MB.toFixed(5))
     console.log ("  1GB is:       %s AR", priceOf1GB.toFixed(5))
     console.log ("")
+    console.log ("AR/USD Price: %s USD", +limestoneQuote.price)
 
     get_24_hour_ardrive_transactions();
 }
