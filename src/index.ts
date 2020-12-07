@@ -59,8 +59,15 @@ async function main_info() {
     await sendMessageToGraphite('weave.lastBlockSize', latestBlock.blockSize, today)
 
     // Get price of AR in USD
-    let limestoneQuote = await Api.getPrice("AR");
-    await sendMessageToGraphite('price.usd', +limestoneQuote.price, today)
+    let limestonePrice : number = 2.20 // Default value
+    try {
+        let limestoneQuote = await Api.getPrice("AR");
+        limestonePrice = limestoneQuote.price;
+        await sendMessageToGraphite('price.usd', limestonePrice, today)
+    } catch (err) {
+        console.log ("Error getting limestone USD information")
+    }
+
 
     // Get data prices of different data sizes in AR
     const priceOf1MB = await getDataPrice(1048576);
@@ -77,12 +84,12 @@ async function main_info() {
     await sendMessageToGraphite('price.ar.1gb', +priceOf1GB.toFixed(5), today)
 
     // Get the data prices in USD
-    await sendMessageToGraphite('price.usd.1mb', +(+priceOf1MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
-    await sendMessageToGraphite('price.usd.5mb', +(+priceOf5MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
-    await sendMessageToGraphite('price.usd.25mb', +(+priceOf25MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
-    await sendMessageToGraphite('price.usd.100mb', +(+priceOf100MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
-    await sendMessageToGraphite('price.usd.500mb', +(+priceOf500MB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
-    await sendMessageToGraphite('price.usd.1gb', +(+priceOf1GB.toFixed(5) * +limestoneQuote.price).toFixed(2), today)
+    await sendMessageToGraphite('price.usd.1mb', +(+priceOf1MB.toFixed(5) * limestonePrice).toFixed(2), today)
+    await sendMessageToGraphite('price.usd.5mb', +(+priceOf5MB.toFixed(5) * limestonePrice).toFixed(2), today)
+    await sendMessageToGraphite('price.usd.25mb', +(+priceOf25MB.toFixed(5) * limestonePrice).toFixed(2), today)
+    await sendMessageToGraphite('price.usd.100mb', +(+priceOf100MB.toFixed(5) * limestonePrice).toFixed(2), today)
+    await sendMessageToGraphite('price.usd.500mb', +(+priceOf500MB.toFixed(5) * limestonePrice).toFixed(2), today)
+    await sendMessageToGraphite('price.usd.1gb', +(+priceOf1GB.toFixed(5) * limestonePrice).toFixed(2), today)
 
 }
 
