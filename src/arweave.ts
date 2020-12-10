@@ -54,6 +54,7 @@ export const sendMessageToGraphite = async (path: string, value: number, timeSta
 
 // Format byte size to something nicer.  This is minified...
 export const formatBytes = (bytes: number) => {
+    console.log ("Bytes: %s", bytes)
     const marker = 1024; // Change to 1000 if required
     const decimal = 3; // Change as required
     const kiloBytes = marker; // One Kilobyte is 1024 bytes
@@ -255,12 +256,12 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
                                 };
                             })
                             if (cipherIV === 'public') {
-                                publicDataSize += data.size;
+                                publicDataSize += +data.size;
                                 publicArFee += +fee.ar;
                                 publicFiles += 1;
                             }
                             else {
-                                privateDataSize += data.size;
+                                privateDataSize += +data.size;
                                 privateArFee += +fee.ar;
                                 privateFiles += 1;
                             }
@@ -358,21 +359,21 @@ export async function get_24_hour_ardrive_transactions() : Promise<AstatineItem[
             // We only want results from last 24 hours, defined by milliseconds since epoch
             if (yesterday.getTime() <= timeStamp.getTime()) {
               // We only want data transactions
-              if (data.size > 0) {
+              if (+data.size > 0) {
                 // Does this wallet address exist in our array?
                 let objIndex = weightedList.findIndex((obj => obj.address === owner.address));
                 if (objIndex >= 0) {
                 // If it exists, then we increment the existing data amount
                   // console.log ("Existing wallet found %s with %s data", weightedList[objIndex].address, weightedList[objIndex].weight);
-                  // console.log("Adding ", data.size);
-                  weightedList[objIndex].weight += data.size;
+                  // console.log("Adding ", +data.size);
+                  weightedList[objIndex].weight += +data.size;
                 } 
                 else {
                   // Else we add a new user into our Astatine List
                   // console.log("Adding new wallet ", owner.address);
                   let arDriveUser: AstatineItem = {
                     address: owner.address,
-                    weight: data.size,
+                    weight: +data.size,
                   };
                   weightedList.push(arDriveUser);
                 }
