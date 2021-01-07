@@ -1,4 +1,4 @@
-import {BlockInfo, getAllArDrives, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getTotalDataTransactionsSize, sendMessageToGraphite} from './arweave'
+import {BlockInfo, getAllArDrives, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getTotalArDriveCommunityFees, getTotalBundledDataTransactionsSize, getTotalDataTransactionsSize, sendMessageToGraphite} from './arweave'
 
 const cron = require('node-cron');
 const Api = require('@limestonefi/api');
@@ -8,7 +8,6 @@ async function main_data () {
     console.log ("%s Starting to collect data analytics", today)
     console.log ("")
 
-    // 
     let start = new Date(today);
     let minutesToRemove = 15;
     start.setMinutes(start.getMinutes() - minutesToRemove);
@@ -27,11 +26,16 @@ async function main_data () {
     })
 
     const totalData = await getTotalDataTransactionsSize(start, today)
+    const totalBundledData = await getTotalBundledDataTransactionsSize(start, today)
+    const totalFees = await getTotalArDriveCommunityFees(start, today)
     await sendMessageToGraphite('users.total', Object.keys(distinctArDriveUsers).length, today);
     await sendMessageToGraphite('drives.total', Object.keys(allArDrives).length, today);
     await sendMessageToGraphite('drives.public', totalPublicDrives, today);
     await sendMessageToGraphite('drives.private', totalPrivateDrives, today);
-    await sendMessageToGraphite('data.total', (totalData.publicDataSize + totalData.privateDataSize), today);
+    await sendMessageToGraphite('data.total', (totalBundledData.bundledDataSize), today);
+    await sendMessageToGraphite('data.desktop', (totalBundledData.desktopDataSize), today);
+    await sendMessageToGraphite('data.webapp', (totalBundledData.webAppDataSize), today);
+    // await sendMessageToGraphite('data.total', (totalData.publicDataSize + totalData.privateDataSize), today);
     await sendMessageToGraphite('data.public', totalData.publicDataSize, today);
     await sendMessageToGraphite('data.private', totalData.privateDataSize, today);
     await sendMessageToGraphite('files.total', (totalData.publicFiles + totalData.privateFiles), today);
@@ -39,12 +43,15 @@ async function main_data () {
     await sendMessageToGraphite('files.desktop', totalData.desktopFiles, today);
     await sendMessageToGraphite('files.public', totalData.publicFiles, today);
     await sendMessageToGraphite('files.private',totalData.privateFiles, today);
-    await sendMessageToGraphite('fees.total', +((totalData.publicArFee + totalData.privateArFee).toFixed(5)), today);
-    await sendMessageToGraphite('fees.public', +totalData.publicArFee.toFixed(5), today);
-    await sendMessageToGraphite('fees.private', +totalData.privateArFee.toFixed(5), today);
+    await sendMessageToGraphite('fees.total', +(totalFees.totalFees.toFixed(5)), today);
+    await sendMessageToGraphite('fees.desktop', +totalFees.desktopFees.toFixed(5), today);
+    await sendMessageToGraphite('fees.webapp', +totalFees.webAppFees.toFixed(5), today);
 
 }
 
+// Gets non-GQL related data
+// Includes Weave height, size, difficulty and last block size
+// Includes LimeStone API call for AR/USD price
 async function main_info() {
     let today = new Date();
     
@@ -93,6 +100,7 @@ async function main_info() {
 
 }
 
+/*
 async function main_data_1d () {
     let today = new Date();
     let start = new Date(today);
@@ -200,21 +208,22 @@ async function main_data_30d () {
     await sendMessageToGraphite('fees.private_30d', +totalData.privateArFee.toFixed(5), today);
 
 }
+*/
 
-cron.schedule('0 */12 * * *', function(){
-    console.log('Running ArDrive 30 Day Analytics Every 12 hours');
-    main_data_30d();
-});
+//cron.schedule('0 */12 * * *', function(){
+//    console.log('Running ArDrive 30 Day Analytics Every 12 hours');
+//    main_data_30d();
+//});
 
-cron.schedule('0 */4 * * *', function(){
-    console.log('Running ArDrive 7 Day Analytics Every 4 hours');
-    main_data_7d();
-});
+//cron.schedule('0 */4 * * *', function(){
+//    console.log('Running ArDrive 7 Day Analytics Every 4 hours');
+//    main_data_7d();
+//});
 
-cron.schedule('0 * * * *', function(){
-    console.log('Running ArDrive 1 Day Analytics Every hour');
-    main_data_1d();
-});
+//cron.schedule('0 * * * *', function(){
+//    console.log('Running ArDrive 1 Day Analytics Every hour');
+//    main_data_1d();
+//}); 
 
 cron.schedule('*/15 * * * *', function(){
     console.log('Running ArDrive 15 Min Analytics Every 15 minutes');

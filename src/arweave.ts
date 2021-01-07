@@ -104,7 +104,7 @@ export const getLatestBlockInfo = async (height: number) => {
 
 // Gets ArDrive information from a start and and date
 export const getAllArDrives = async (start: Date, end: Date) => {
-    let firstPage : number = 2147483647; // Max size of query for GQL
+    let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let arDriveStats : ArDriveStat[] = [];
     try {
@@ -207,6 +207,64 @@ const queryForAllArDrives = async (firstPage: number, cursor: string) => {
     }
 }
 
+// Sums up every bundled data transaction for a start and end period.
+export const getTotalBundledDataTransactionsSize = async (start: Date, end: Date) => {
+    let bundledDataSize = 0;
+    let webAppDataSize = 0;
+    let desktopDataSize = 0;
+    let firstPage : number = 100; // Max size of query for GQL
+    let cursor : string = "";
+    let found = 1;
+    let timeStamp = new Date(end);
+    try {
+        while (found > 0) {
+            let transactions = await queryForBundledDataUploads(firstPage, cursor);
+            const { edges } = transactions;
+            found = edges.length;
+            // Create the query to search for all ardrive transactions.
+            edges.forEach((edge: any) => {
+                cursor = edge.cursor;
+                const { node } = edge;
+                const { data } = node;
+                const { block } = node;
+                const { tags } = node;
+                if (block !== null) {
+                    timeStamp = new Date(block.timestamp * 1000);
+                    if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                        // We only want data transactions
+                        if (data.size > 0) {
+                            let appName = '';
+                            tags.forEach((tag: any) => {
+                                const key = tag.name;
+                                const { value } = tag;
+                                switch (key) {
+                                case 'App-Name':
+                                    appName = value;
+                                    break;
+                                default:
+                                    break;
+                                };
+                            })
+                            bundledDataSize += +data.size;
+                            if (appName === 'ArDrive-Web') {
+                                webAppDataSize += +data.size;
+                            } else if (appName === 'ArDrive-Desktop') {
+                                desktopDataSize += +data.size;
+                            }
+                        }
+                    }
+                }
+            })
+        }
+    return {bundledDataSize, webAppDataSize, desktopDataSize}
+    } catch (err) {
+        console.log (err)
+        console.log ("Error collecting total amount of uploaded data")
+        return {bundledDataSize, webAppDataSize, desktopDataSize}
+    }
+
+}
+
 // Sums up every data transaction for a start and end period.
 export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
     let publicDataSize = 0;
@@ -217,7 +275,7 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
     let desktopFiles = 0;
     let publicArFee = 0;
     let privateArFee = 0;
-    let firstPage : number = 2147483647; // Max size of query for GQL
+    let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let found = 1;
     let timeStamp = new Date(end);
@@ -284,13 +342,67 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
 
 }
 
+// Sums up all ArDrive Community Tips/Fees
+export const getTotalArDriveCommunityFees = async (start: Date, end: Date) => {
+  let totalFees = 0;
+  let desktopFees = 0;
+  let webAppFees = 0;
+  let firstPage : number = 100; // Max size of query for GQL
+  let cursor : string = "";
+  let found = 1;
+  let timeStamp = new Date(end);
+  try {
+      while (found > 0) {
+        let transactions = await queryForArDriveCommunityFees(firstPage, cursor);
+        const { edges } = transactions;
+        found = edges.length;
+        // Create the query to search for all ardrive transactions.
+        edges.forEach((edge: any) => {
+            cursor = edge.cursor;
+            const { node } = edge;
+            const { fee } = node;
+            const { block } = node;
+            const { tags } = node;
+            if (block !== null) {
+                timeStamp = new Date(block.timestamp * 1000);
+                if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                  let appName = '';
+                  tags.forEach((tag: any) => {
+                      const key = tag.name;
+                      const { value } = tag;
+                      switch (key) {
+                      case 'App-Name':
+                          appName = value;
+                          break;
+                      default:
+                          break;
+                      };
+                  })
+                  totalFees += +fee.ar;
+                  if (appName === 'ArDrive-Web') {
+                    webAppFees += +fee.ar;
+                  } else if (appName === 'ArDrive-Desktop') {
+                    desktopFees += +fee.ar;
+                  }
+                }
+            }
+        })
+      }
+  return {totalFees, webAppFees, desktopFees};
+  } catch (err) {
+      console.log (err)
+      console.log ("Error collecting total amount of fees")
+      return {totalFees, webAppFees, desktopFees};
+  }
+
+}
+
 // Creates a GraphQL Query to search for all ArDrive Data transactions and requests it from the primary Arweave gateway
 async function queryForDataUploads(firstPage: number, cursor: string) {
     try {
     const query = {
       query: `query {
       transactions(
-        sort: HEIGHT_DESC
         tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
         first: ${firstPage}
         after: "${cursor}"
@@ -335,10 +447,105 @@ async function queryForDataUploads(firstPage: number, cursor: string) {
   }
 }
 
+// Creates a GraphQL Query to search for all ArDrive Data transactions and requests it from the primary Arweave gateway
+async function queryForBundledDataUploads(firstPage: number, cursor: string) {
+    try {
+    const query = {
+      query: `query {
+      transactions(
+        tags: [
+            { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+            { name: "Bundle-Format", values: "json"}
+        ]
+        first: ${firstPage}
+        after: "${cursor}"
+      ) {
+        pageInfo {
+          hasNextPage
+        }
+        edges {
+          cursor
+          node {
+            tags {
+                name
+                value
+            }
+            data {
+              size
+            }
+            block {
+              timestamp
+            }
+          }
+        }
+      }
+    }`,
+    };
+    // Call the Arweave Graphql Endpoint
+    const response = await arweave.api
+      .request()
+      .post('https://arweave.net/graphql', query);
+    const { data } = response.data;
+    const { transactions } = data;
+    return transactions;
+  } catch (err) {
+    console.log (err)
+    console.log ("uh oh cant query")
+  }
+}
+
+// Creates a GraphQL Query to search for all ArDrive Community Fees
+async function queryForArDriveCommunityFees(firstPage: number, cursor: string) {
+  try {
+      const query = {
+        query: `query {
+        transactions(
+          tags: [
+              { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+              { name: "Tip-Type", values: "data upload"}
+          ]
+          first: ${firstPage}
+          after: "${cursor}"
+        ) {
+          pageInfo {
+            hasNextPage
+          }
+          edges {
+            cursor
+            node {
+              tags {
+                name
+                value
+              }
+              fee {
+                  ar
+              }
+              block {
+                timestamp
+              }
+            }
+          }
+        }
+      }`,
+      };
+      // Call the Arweave Graphql Endpoint
+      const response = await arweave.api
+        .request()
+        .post('https://arweave.net/graphql', query);
+      const { data } = response.data;
+      const { transactions } = data;
+      return transactions;
+    } catch (err) {
+      console.log (err)
+      console.log ("uh oh cant query")
+    }
+}
+
+// This is used specifically for testing Astatine, and is not invoked with the Analytics script
 export async function get_24_hour_ardrive_transactions() : Promise<AstatineItem[]> {
     let completed : Boolean = false;
     let weightedList : AstatineItem[] = [];
-    let firstPage : number = 2147483647; // Max size of query for GQL
+    let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let timeStamp = new Date();
     let yesterday = new Date(timeStamp);

@@ -1,4 +1,4 @@
-import {BlockInfo, formatBytes, getAllArDrives, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getTotalDataTransactionsSize, get_24_hour_ardrive_transactions } from './arweave'
+import {BlockInfo, formatBytes, getAllArDrives, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getTotalArDriveCommunityFees, getTotalBundledDataTransactionsSize, getTotalDataTransactionsSize, /*get_24_hour_ardrive_transactions*/ } from './arweave'
 const Api = require('@limestonefi/api');
 
 async function main () {
@@ -14,6 +14,9 @@ async function main () {
     let minutesToRemove = 15;
     start.setMinutes(start.getMinutes() - minutesToRemove);
     console.log (start)
+    const totalData_15min = await getTotalDataTransactionsSize(start, today)
+    const totalFees_15min = await getTotalArDriveCommunityFees(start, today)
+    const totalBundledData_15min = await getTotalBundledDataTransactionsSize(start, today)
     const allArDrives_15min = await getAllArDrives(start, today)
     const distinctArDriveUsers_15min = [...new Set(allArDrives_15min.map(x => x.address))]
     let totalPrivateDrives_15min = 0;
@@ -26,12 +29,14 @@ async function main () {
             totalPublicDrives_15min += 1;
         }
     })
-    const totalData_15min = await getTotalDataTransactionsSize(start, today)
+
 
     start = new Date(today);
     start.setDate(start.getDate() - 1);
     console.log (start)
     const totalData_1day = await getTotalDataTransactionsSize(start, today)
+    const totalBundledData_1day = await getTotalBundledDataTransactionsSize(start, today)
+    const totalFees_1day = await getTotalArDriveCommunityFees(start, today)
     const allArDrives_1day = await getAllArDrives(start, today)
     const distinctArDriveUsers_1day = [...new Set(allArDrives_1day.map(x => x.address))]
     let totalPrivateDrives_1day = 0;
@@ -45,7 +50,7 @@ async function main () {
         }
     })
 
-    start = new Date(today);
+    /*start = new Date(today);
     start.setDate(start.getDate() - 7);
     console.log (start)
     const totalData_7day = await getTotalDataTransactionsSize(start, today)
@@ -62,7 +67,7 @@ async function main () {
         }
     })
 
-    /*start = new Date(today);
+    start = new Date(today);
     start.setDate(start.getDate() - 30);
     console.log (start)
     const totalData_30day = await getTotalDataTransactionsSize(start, today)
@@ -105,8 +110,12 @@ async function main () {
     const priceOf1GB = await getDataPrice(1073741824);
 
     // Get price of AR in USD
-    let limestoneQuote = await Api.getPrice("AR");
-
+    let limestoneQuote;
+    try { 
+        limestoneQuote = await Api.getPrice("AR");
+    } catch (err) {
+        console.log ("Cannot get Limestone Quote")
+    }
     /*await sendMessageToGraphite('users.total', Object.keys(distinctArDriveUsers_14day).length, today);
     await sendMessageToGraphite('drives.total', Object.keys(allArDrives_14day).length, today);
     await sendMessageToGraphite('drives.public', totalPublicDrives_14day, today);
@@ -134,23 +143,25 @@ async function main () {
     console.log ('      Total Drives:       ', Object.keys(allArDrives_15min).length);
     console.log ('          Public:         ', totalPublicDrives_15min);
     console.log ('          Private:        ', totalPrivateDrives_15min);
-    console.log ('      Total Data:         ', formatBytes(totalData_15min.publicDataSize + totalData_15min.privateDataSize));
-    console.log ('          Public:         ', formatBytes(totalData_15min.publicDataSize));
-    console.log ('          Private:        ', formatBytes(totalData_15min.privateDataSize));
+    console.log ('      Total BundledData:  ', (formatBytes(totalBundledData_15min.bundledDataSize)));
+    console.log ('      Total Data:         ', (formatBytes(totalData_15min.publicDataSize + totalData_15min.privateDataSize)));
+    console.log ('          Public:         ', (formatBytes(totalData_15min.publicDataSize)));
+    console.log ('          Private:        ', (formatBytes(totalData_15min.privateDataSize)));
     console.log ('      Total Files:        ', (totalData_15min.publicFiles + totalData_15min.privateFiles));
     console.log ('          Web:            ', totalData_15min.webAppFiles);
     console.log ('          Desktop:        ', totalData_15min.desktopFiles);
     console.log ('          Public:         ', totalData_15min.publicFiles);
     console.log ('          Private:        ', totalData_15min.privateFiles);
-    console.log ('      Total Fees (AR):    ', ((totalData_15min.publicArFee + totalData_15min.privateArFee).toFixed(5)));
-    console.log ('          Public:         ', totalData_15min.publicArFee.toFixed(5));
-    console.log ('          Private:        ', totalData_15min.privateArFee.toFixed(5));
+    console.log ('      Total Fees (AR):    ', totalFees_15min.totalFees.toFixed(5));
+    console.log ('          Desktop:        ', totalFees_15min.desktopFees.toFixed(5));
+    console.log ('          WebApp:         ', totalFees_15min.webAppFees.toFixed(5));
     console.log ('  ---------------------------')
     console.log ('  1 Day -');
     console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_1day).length);
     console.log ('      Total Drives:       ', Object.keys(allArDrives_1day).length);
     console.log ('          Public:         ', totalPublicDrives_1day);
     console.log ('          Private:        ', totalPrivateDrives_1day);
+    console.log ('      Total BundledData:  ', formatBytes(totalBundledData_1day.bundledDataSize));
     console.log ('      Total Data:         ', formatBytes(totalData_1day.publicDataSize + totalData_1day.privateDataSize));
     console.log ('          Public:         ', formatBytes(totalData_1day.publicDataSize));
     console.log ('          Private:        ', formatBytes(totalData_1day.privateDataSize));
@@ -159,11 +170,11 @@ async function main () {
     console.log ('          Desktop:        ', totalData_1day.desktopFiles);
     console.log ('          Public:         ', totalData_1day.publicFiles);
     console.log ('          Private:        ', totalData_1day.privateFiles);
-    console.log ('      Total Fees (AR):    ', ((totalData_1day.publicArFee + totalData_1day.privateArFee).toFixed(5)));
-    console.log ('          Public:         ', totalData_1day.publicArFee.toFixed(5));
-    console.log ('          Private:        ', totalData_1day.privateArFee.toFixed(5));
+    console.log ('      Total Fees (AR):    ', totalFees_1day.totalFees.toFixed(5));
+    console.log ('          Desktop:        ', totalFees_1day.desktopFees.toFixed(5));
+    console.log ('          WebApp:         ', totalFees_1day.webAppFees.toFixed(5));
     console.log ('  ---------------------------')
-    console.log ('  7 Day -')
+    /*console.log ('  7 Day -')
     console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_7day).length)
     console.log ('      Total Drives:       ', Object.keys(allArDrives_7day).length)
     console.log ('          Public:         ', totalPublicDrives_7day)
@@ -180,7 +191,7 @@ async function main () {
     console.log ('          Public:         ', totalData_7day.publicArFee.toFixed(5));
     console.log ('          Private:        ', totalData_7day.privateArFee.toFixed(5));
     console.log ('  ---------------------------')
-    /*console.log ('  30 Day -')
+    console.log ('  30 Day -')
     console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_30day).length)
     console.log ('      Total Drives:       ', Object.keys(allArDrives_30day).length)
     console.log ('          Public:         ', totalPublicDrives_30day)
@@ -235,7 +246,9 @@ async function main () {
     console.log ("Weave size is: %s", latestBlock.weaveSize)
     console.log ("Last block size is: %s", latestBlock.blockSize)
     console.log ("Cumulative difficulty is: %s", latestBlock.cumulativeDifficulty)
-    get_24_hour_ardrive_transactions();
+
+    // Used to test Astatine
+    // get_24_hour_ardrive_transactions();
 }
 
 main();
