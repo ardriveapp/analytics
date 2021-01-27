@@ -1,5 +1,8 @@
 import Arweave from 'arweave';
 
+const appName = "ArDrive-Desktop";
+const webAppName = "ArDrive-Web";
+
 const fetch = require('node-fetch')
 const arweave = Arweave.init({
     host: 'arweave.net', // Arweave Gateway
@@ -15,7 +18,7 @@ export interface AstatineItem {
 
 export interface BlockInfo {
     weaveSize: number,
-    cumulativeDifficulty: number,
+    difficulty: number,
     blockSize: number,
 }
 // ArDrive Profit Sharing Community Smart Contract
@@ -39,6 +42,13 @@ interface ArDriveStat {
     blockTimeStamp: Date
 }
 
+// Asyncronous ForEach function
+export const asyncForEach = async (array: any[], callback: any) => {
+  for (let index = 0; index < array.length; index += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    await callback(array[index], index, array);
+  }
+};
 
 // Sends a message to the ardrive graphite server
 export const sendMessageToGraphite = async (path: string, value: number, timeStamp: Date) => {
@@ -54,7 +64,6 @@ export const sendMessageToGraphite = async (path: string, value: number, timeSta
 
 // Format byte size to something nicer.  This is minified...
 export const formatBytes = (bytes: number) => {
-    console.log ("Bytes: %s", bytes)
     const marker = 1024; // Change to 1000 if required
     const decimal = 3; // Change as required
     const kiloBytes = marker; // One Kilobyte is 1024 bytes
@@ -72,6 +81,22 @@ export const formatBytes = (bytes: number) => {
     return `${(bytes / gigaBytes).toFixed(decimal)} GB`;
   };
 
+// Gets the latest price of Arweave in USD
+export const getArUSDPrice = async () : Promise<number> => {
+  let usdPrice = 0;
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=arweave&vs_currencies=usd"
+    );
+    usdPrice = (await res.clone().json()).arweave.usd;
+    return usdPrice;
+  }
+  catch (err) {
+    console.log ("Error getting AR/USD price from Coingecko")
+    return 0;
+  }
+};
+
 // Gets the price of AR based on amount of data
 export const getDataPrice = async (bytes: number) => {
     const response = await fetch(`https://arweave.net/price/${bytes}`);
@@ -80,7 +105,7 @@ export const getDataPrice = async (bytes: number) => {
     return arweaveAmount;
 };
 
-// Gets the price of AR based on amount of data
+// Gets the latest block height
 export const getCurrentBlockHeight = async () => {
     const response = await fetch(`https://arweave.net/height/`);
     const height = await response.json()
@@ -91,13 +116,13 @@ export const getCurrentBlockHeight = async () => {
 export const getLatestBlockInfo = async (height: number) => {
     let latestBlock : BlockInfo = {
         weaveSize: 0,
-        cumulativeDifficulty: 0,
+        difficulty: 0,
         blockSize: 0,
     }
     const response = await fetch(`https://arweave.net/block/height/${height}`);
     const blockInfo = await response.json()
     latestBlock.weaveSize = blockInfo['weave_size']
-    latestBlock.cumulativeDifficulty = blockInfo['cumulative_diff']
+    latestBlock.difficulty = blockInfo['diff']
     latestBlock.blockSize = blockInfo['block_size']
     return latestBlock;
 };
@@ -107,9 +132,12 @@ export const getAllArDrives = async (start: Date, end: Date) => {
     let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let arDriveStats : ArDriveStat[] = [];
+    let found = 1;
     try {
+      while (found > 0) {
         let transactions = await queryForAllArDrives(firstPage, cursor);
         const { edges } = transactions;
+        found = edges.length;
         edges.forEach((edge: any) => {
             cursor = edge.cursor;
             const { node } = edge;
@@ -150,7 +178,8 @@ export const getAllArDrives = async (start: Date, end: Date) => {
                 }
             }
         })
-        return arDriveStats;
+      }
+      return arDriveStats;
     } catch (err) {
         console.log (err)
         console.log ("Error collecting total number of ArDrives")
@@ -164,7 +193,6 @@ const queryForAllArDrives = async (firstPage: number, cursor: string) => {
         const query = {
         query: `query {
             transactions(
-                sort: HEIGHT_DESC
                 tags: [
                     { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
                     { name: "Entity-Type", values: "drive" }
@@ -394,7 +422,78 @@ export const getTotalArDriveCommunityFees = async (start: Date, end: Date) => {
       console.log ("Error collecting total amount of fees")
       return {totalFees, webAppFees, desktopFees};
   }
+}
 
+// Sums up all transactions for a drive
+export const getTotalDriveSize = async (owner: string) => {
+  let totalDriveSize = 0;
+  let totalDriveTransactions = 0
+  let firstPage : number = 100; // Max size of query for GQL
+  let cursor : string = "";
+  let found = 1;
+  try {
+    while (found > 0) {
+      let transactions = await queryForDriveSize(owner, firstPage, cursor);
+      const { edges } = transactions;
+      found = edges.length;
+      // Create the query to search for all ardrive transactions.
+      edges.forEach((edge: any) => {
+          cursor = edge.cursor;
+          const { node } = edge;
+          const { data } = node;
+          if (data !== null) {
+              totalDriveSize += +data.size;
+              totalDriveTransactions += 1;
+          }
+      })
+    }
+  const formattedSize = formatBytes(totalDriveSize)
+  return {owner, totalDriveSize, formattedSize, totalDriveTransactions};
+  } catch (err) {
+      console.log (err)
+      console.log ("Error getting all sizes of an owners drives")
+      return {owner, totalDriveSize, totalDriveTransactions};
+  }
+}
+// Creates a GraphQL Query to return all transactions for a drive
+async function queryForDriveSize(owner: string, firstPage: number, cursor: string) {
+  try {
+    const query = {
+      query: `query {
+        transactions(
+          owners: ["${owner}"]
+          tags: [
+            { name: "App-Name", values: ["${appName}", "${webAppName}"]}
+          ]
+          first: ${firstPage}
+          after: "${cursor}"
+        ) {
+          pageInfo {
+            hasNextPage
+          }
+          edges {
+            cursor
+            node {
+              id
+              data {
+                size
+              }
+            }
+          }
+        }
+      }`,
+    };
+  // Call the Arweave Graphql Endpoint
+  const response = await arweave.api
+    .request()
+    .post('https://arweave.net/graphql', query);
+  const { data } = response.data;
+  const { transactions } = data;
+  return transactions;
+} catch (err) {
+  console.log (err)
+  console.log ("uh oh cant query")
+}
 }
 
 // Creates a GraphQL Query to search for all ArDrive Data transactions and requests it from the primary Arweave gateway
@@ -608,4 +707,14 @@ function dataCompare(a: any, b: any) {
       comparison = -1;
     }
     return comparison * -1;
+}
+
+export function userSizeCompare(a: any, b: any) {
+  let comparison = 0;
+  if (a.totalDriveSize > b.totalDriveSize) {
+    comparison = 1;
+  } else if (a.totalDriveSize < b.totalDriveSize) {
+    comparison = -1;
+  }
+  return comparison * -1;
 }

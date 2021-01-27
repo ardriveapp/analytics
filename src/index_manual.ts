@@ -1,5 +1,4 @@
-import {BlockInfo, formatBytes, getAllArDrives, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getTotalArDriveCommunityFees, getTotalBundledDataTransactionsSize, getTotalDataTransactionsSize, /*get_24_hour_ardrive_transactions*/ } from './arweave'
-const Api = require('@limestonefi/api');
+import {asyncForEach, BlockInfo, formatBytes, getAllArDrives, getArUSDPrice, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getTotalArDriveCommunityFees, getTotalBundledDataTransactionsSize, getTotalDataTransactionsSize, getTotalDriveSize, userSizeCompare, /*get_24_hour_ardrive_transactions*/ } from './arweave'
 
 async function main () {
     let today = new Date();
@@ -30,10 +29,10 @@ async function main () {
         }
     })
 
-
     start = new Date(today);
     start.setDate(start.getDate() - 1);
     console.log (start)
+    let allOwnerStats_1day : any[] = [];
     const totalData_1day = await getTotalDataTransactionsSize(start, today)
     const totalBundledData_1day = await getTotalBundledDataTransactionsSize(start, today)
     const totalFees_1day = await getTotalArDriveCommunityFees(start, today)
@@ -50,56 +49,38 @@ async function main () {
         }
     })
 
-    /*start = new Date(today);
-    start.setDate(start.getDate() - 7);
+    await asyncForEach (distinctArDriveUsers_1day, async (owner: string) => {
+        // Get Drive Size
+        allOwnerStats_1day.push(await getTotalDriveSize(owner))
+    })
+    allOwnerStats_1day.sort(userSizeCompare);
+
+    start = new Date(today);
+    start.setDate(start.getDate() - 120);
     console.log (start)
-    const totalData_7day = await getTotalDataTransactionsSize(start, today)
-    const allArDrives_7day = await getAllArDrives(start, today)
-    const distinctArDriveUsers_7day = [...new Set(allArDrives_7day.map(x => x.address))]
-    let totalPrivateDrives_7day = 0;
-    let totalPublicDrives_7day = 0;
-    allArDrives_7day.forEach((drive: any) => {
+    let allOwnerStats_120day : any[] = [];
+    const totalData_120day = await getTotalDataTransactionsSize(start, today)
+    const totalBundledData_120day = await getTotalBundledDataTransactionsSize(start, today)
+    const totalFees_120day = await getTotalArDriveCommunityFees(start, today)
+    const allFees_120day = totalFees_120day.totalFees + totalData_120day.publicArFee + totalData_120day.privateArFee;
+    const allArDrives_120day = await getAllArDrives(start, today)
+    const distinctArDriveUsers_120day = [...new Set(allArDrives_120day.map(x => x.address))]
+    let totalPrivateDrives_120day = 0;
+    let totalPublicDrives_120day = 0;
+    allArDrives_120day.forEach((drive: any) => {
         if (drive.privacy === 'private') {
-            totalPublicDrives_7day += 1;
+            totalPrivateDrives_120day += 1;
         }
         else {
-            totalPrivateDrives_7day += 1;
+            totalPublicDrives_120day += 1;
         }
     })
 
-    start = new Date(today);
-    start.setDate(start.getDate() - 30);
-    console.log (start)
-    const totalData_30day = await getTotalDataTransactionsSize(start, today)
-    const allArDrives_30day = await getAllArDrives(start, today)
-    const distinctArDriveUsers_30day = [...new Set(allArDrives_30day.map(x => x.address))]
-    let totalPrivateDrives_30day = 0;
-    let totalPublicDrives_30day = 0;
-    allArDrives_30day.forEach((drive: any) => {
-        if (drive.privacy === 'private') {
-            totalPrivateDrives_30day += 1;
-        }
-        else {
-            totalPublicDrives_30day += 1;
-        }
+    await asyncForEach (distinctArDriveUsers_120day, async (owner: string) => {
+        // Get Drive Size
+        allOwnerStats_120day.push(await getTotalDriveSize(owner))
     })
-
-    start = new Date(today);
-    start.setDate(start.getDate() - 90);
-    console.log (start)
-    const totalData_90day = await getTotalDataTransactionsSize(start, today);
-    const allArDrives_90day = await getAllArDrives(start, today)
-    const distinctArDriveUsers_90day = [...new Set(allArDrives_90day.map(x => x.address))]
-    let totalPrivateDrives_90day = 0;
-    let totalPublicDrives_90day = 0;
-    allArDrives_90day.forEach((drive: any) => {
-        if (drive.privacy === 'private') {
-            totalPrivateDrives_90day += 1;
-        }
-        else {
-            totalPublicDrives_90day += 1;
-        }
-    })*/
+    allOwnerStats_120day.sort(userSizeCompare);
 
     // Get all prices
     const priceOf1MB = await getDataPrice(1048576);
@@ -110,12 +91,8 @@ async function main () {
     const priceOf1GB = await getDataPrice(1073741824);
 
     // Get price of AR in USD
-    let limestoneQuote;
-    try { 
-        limestoneQuote = await Api.getPrice("AR");
-    } catch (err) {
-        console.log ("Cannot get Limestone Quote")
-    }
+    let arUSDPrice = await getArUSDPrice()
+
     /*await sendMessageToGraphite('users.total', Object.keys(distinctArDriveUsers_14day).length, today);
     await sendMessageToGraphite('drives.total', Object.keys(allArDrives_14day).length, today);
     await sendMessageToGraphite('drives.public', totalPublicDrives_14day, today);
@@ -137,6 +114,7 @@ async function main () {
     await sendMessageToGraphite('price.500mb', +priceOf500MB.toFixed(5), today)
     await sendMessageToGraphite('price.1gb', +priceOf1GB.toFixed(5), today)*/
 
+    console.log ('  ---------------------------')
     console.log ('Drive, User, Data and File Counts');
     console.log ('  15 Min -');
     console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_15min).length);
@@ -174,57 +152,60 @@ async function main () {
     console.log ('          Desktop:        ', totalFees_1day.desktopFees.toFixed(5));
     console.log ('          WebApp:         ', totalFees_1day.webAppFees.toFixed(5));
     console.log ('  ---------------------------')
-    /*console.log ('  7 Day -')
-    console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_7day).length)
-    console.log ('      Total Drives:       ', Object.keys(allArDrives_7day).length)
-    console.log ('          Public:         ', totalPublicDrives_7day)
-    console.log ('          Private:        ', totalPrivateDrives_7day)
-    console.log ('      Total Data:         ', formatBytes(totalData_7day.publicDataSize + totalData_7day.privateDataSize));
-    console.log ('          Public:         ', formatBytes(totalData_7day.publicDataSize));
-    console.log ('          Private:        ', formatBytes(totalData_7day.privateDataSize));
-    console.log ('      Total Files:        ', (totalData_7day.publicFiles + totalData_7day.privateFiles));
-    console.log ('          Web:            ', totalData_7day.webAppFiles);
-    console.log ('          Desktop:        ', totalData_7day.desktopFiles);
-    console.log ('          Public:         ', totalData_7day.publicFiles);
-    console.log ('          Private:        ', totalData_7day.privateFiles);
-    console.log ('      Total Fees (AR):    ', ((totalData_7day.publicArFee + totalData_7day.privateArFee).toFixed(5)));
-    console.log ('          Public:         ', totalData_7day.publicArFee.toFixed(5));
-    console.log ('          Private:        ', totalData_7day.privateArFee.toFixed(5));
+    console.log ('  120 Day -');
+    console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_120day).length);
+    console.log ('      Total Drives:       ', Object.keys(allArDrives_120day).length);
+    console.log ('          Public:         ', totalPublicDrives_120day);
+    console.log ('          Private:        ', totalPrivateDrives_120day);
+    console.log ('      Total BundledData:  ', formatBytes(totalBundledData_120day.bundledDataSize));
+    console.log ('      Total Data:         ', formatBytes(totalData_120day.publicDataSize + totalData_120day.privateDataSize));
+    console.log ('          Public:         ', formatBytes(totalData_120day.publicDataSize));
+    console.log ('          Private:        ', formatBytes(totalData_120day.privateDataSize));
+    console.log ('      Total Files:        ', (totalData_120day.publicFiles + totalData_120day.privateFiles));
+    console.log ('          Web:            ', totalData_120day.webAppFiles);
+    console.log ('          Desktop:        ', totalData_120day.desktopFiles);
+    console.log ('          Public:         ', totalData_120day.publicFiles);
+    console.log ('          Private:        ', totalData_120day.privateFiles);
+    console.log ('      Total Fees (AR):    ', totalFees_120day.totalFees.toFixed(5));
+    console.log ('          Desktop:        ', totalFees_120day.desktopFees.toFixed(5));
+    console.log ('          WebApp:         ', totalFees_120day.webAppFees.toFixed(5));
     console.log ('  ---------------------------')
-    console.log ('  30 Day -')
-    console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_30day).length)
-    console.log ('      Total Drives:       ', Object.keys(allArDrives_30day).length)
-    console.log ('          Public:         ', totalPublicDrives_30day)
-    console.log ('          Private:        ', totalPrivateDrives_30day)
-    console.log ('      Total Data:         ', formatBytes(totalData_30day.publicDataSize + totalData_30day.privateDataSize));
-    console.log ('          Public:         ', formatBytes(totalData_30day.publicDataSize));
-    console.log ('          Private:        ', formatBytes(totalData_30day.privateDataSize));
-    console.log ('      Total Files:        ', (totalData_30day.publicFiles + totalData_30day.privateFiles));
-    console.log ('          Web:            ', totalData_30day.webAppFiles);
-    console.log ('          Desktop:        ', totalData_30day.desktopFiles);
-    console.log ('          Public:         ', totalData_30day.publicFiles);
-    console.log ('          Private:        ', totalData_30day.privateFiles);
-    console.log ('      Total Fees (AR):    ', ((totalData_30day.publicArFee + totalData_30day.privateArFee).toFixed(5)));
-    console.log ('          Public:         ', totalData_30day.publicArFee.toFixed(5));
-    console.log ('          Private:        ', totalData_30day.privateArFee.toFixed(5));
-    console.log ('  ---------------------------')
-    console.log ('  90 Day -')
-    console.log ('      Unique Wallets:     ', Object.keys(distinctArDriveUsers_90day).length)
-    console.log ('      Total Drives:       ', Object.keys(allArDrives_90day).length)
-    console.log ('          Public:         ', totalPublicDrives_90day)
-    console.log ('          Private:        ', totalPrivateDrives_90day)
-    console.log ('      Total Data:         ', formatBytes(totalData_90day.publicDataSize + totalData_90day.privateDataSize));
-    console.log ('          Public:         ', formatBytes(totalData_90day.publicDataSize));
-    console.log ('          Private:        ', formatBytes(totalData_90day.privateDataSize));
-    console.log ('      Total Files:        ', (totalData_90day.publicFiles + totalData_90day.privateFiles));
-    console.log ('          Web:            ', totalData_90day.webAppFiles);
-    console.log ('          Desktop:        ', totalData_90day.desktopFiles);
-    console.log ('          Public:         ', totalData_90day.publicFiles);
-    console.log ('          Private:        ', totalData_90day.privateFiles);
-    console.log ('      Total Fees (AR):    ', ((totalData_90day.publicArFee + totalData_90day.privateArFee).toFixed(5)));
-    console.log ('          Public Fees:    ', totalData_90day.publicArFee.toFixed(5));
-    console.log ('          Private Fees:   ', totalData_90day.privateArFee.toFixed(5));
-    console.log ('') */
+    console.log ('')
+
+    let averageUserSize = 0;
+    let averageUserFiles = 0;
+    allOwnerStats_120day.forEach((ownerStat: any) => {
+        averageUserSize += ownerStat.totalDriveSize;
+        averageUserFiles += ownerStat.totalDriveTransactions
+    })
+    averageUserSize = averageUserSize / +Object.keys(allOwnerStats_120day).length 
+    averageUserFiles = averageUserFiles / +Object.keys(allOwnerStats_120day).length
+
+    console.log ("All Owner Stats %s", +Object.keys(allOwnerStats_120day).length)
+    console.log ("Average User Upload Amount %s", averageUserSize)
+    console.log ("Average User Files %s", averageUserFiles)
+    console.log ("")
+
+    console.log ("Top 10 Drives in the past day")
+    allOwnerStats_1day = allOwnerStats_1day.slice(0, 9);
+    allOwnerStats_1day.forEach((ownerStat: any) => {
+        console.log ("Owner: %s", ownerStat.owner)
+        console.log ("Size: %s Files: %s", formatBytes(ownerStat.totalDriveSize), ownerStat.totalDriveTransactions)
+    })
+    console.log ("")
+
+    console.log ("Top 10 Drives of all time")
+    allOwnerStats_120day = allOwnerStats_120day.slice(0, 9);
+    allOwnerStats_120day.forEach((ownerStat: any) => {
+        console.log ("Owner: %s", ownerStat.owner)
+        console.log ("Size: %s Files: %s", formatBytes(ownerStat.totalDriveSize), ownerStat.totalDriveTransactions)
+    })
+    console.log ("")
+
+    console.log ("Mining Fees Paid %s, $%s", allFees_120day, (allFees_120day * arUSDPrice))
+    console.log ("Community Fees Paid %s, $%s", (allFees_120day * .15), ((allFees_120day * .15) * arUSDPrice))
+    console.log ("")
+    
     console.log ("Data Prices in AR")
     console.log ("  1 MB is:      %s AR", priceOf1MB.toFixed(5))
     console.log ("  5 MB is:      %s AR", priceOf5MB.toFixed(5))
@@ -233,19 +214,19 @@ async function main () {
     console.log ("  500 MB is:    %s AR", priceOf500MB.toFixed(5))
     console.log ("  1GB is:       %s AR", priceOf1GB.toFixed(5))
     console.log ("")
-    console.log ("AR/USD Price: %s USD", +limestoneQuote.price)
+    console.log ("AR/USD Price: %s USD", arUSDPrice)
     console.log ("Data Prices in USD")
-    console.log ("  1 MB is:      %s USD", (+priceOf1MB.toFixed(5) * +limestoneQuote.price).toFixed(2))
-    console.log ("  5 MB is:      %s USD", (+priceOf5MB.toFixed(5) * +limestoneQuote.price).toFixed(2))
-    console.log ("  25MB is:      %s USD", (+priceOf25MB.toFixed(5) * +limestoneQuote.price).toFixed(2))
-    console.log ("  100MB is:     %s USD", (+priceOf100MB.toFixed(5) * +limestoneQuote.price).toFixed(2))
-    console.log ("  500 MB is:    %s USD", (+priceOf500MB.toFixed(5) * +limestoneQuote.price).toFixed(2))
-    console.log ("  1GB is:       %s USD", (+priceOf1GB.toFixed(5) * +limestoneQuote.price).toFixed(2))
+    console.log ("  1 MB is:      %s USD", (+priceOf1MB.toFixed(5) * arUSDPrice))
+    console.log ("  5 MB is:      %s USD", (+priceOf5MB.toFixed(5) * arUSDPrice))
+    console.log ("  25MB is:      %s USD", (+priceOf25MB.toFixed(5) * arUSDPrice))
+    console.log ("  100MB is:     %s USD", (+priceOf100MB.toFixed(5) * arUSDPrice))
+    console.log ("  500 MB is:    %s USD", (+priceOf500MB.toFixed(5) * arUSDPrice))
+    console.log ("  1GB is:       %s USD", (+priceOf1GB.toFixed(5) * arUSDPrice))
     console.log ("")
     console.log ("Latest block is: %s", height)
     console.log ("Weave size is: %s", latestBlock.weaveSize)
     console.log ("Last block size is: %s", latestBlock.blockSize)
-    console.log ("Cumulative difficulty is: %s", latestBlock.cumulativeDifficulty)
+    console.log ("Cumulative difficulty is: %s", latestBlock.difficulty)
 
     // Used to test Astatine
     // get_24_hour_ardrive_transactions();

@@ -1,13 +1,12 @@
 {
   "name": "ardrive-analytics",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Pulls different statics for ArDrive usage from Arweave.",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "dependencies": {
-    "@limestonefi/api": "^0.1.2",
     "@types/node": "^14.11.2",
-    "arweave": "^1.9.1",
+    "arweave": "^1.10.2",
     "community-js": "^1.1.4",
     "node-cron": "^2.0.3",
     "node-fetch": "^2.6.1",
