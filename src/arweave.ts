@@ -425,12 +425,13 @@ export const getTotalArDriveCommunityFees = async (start: Date, end: Date) => {
 }
 
 // Sums up all transactions for a drive
-export const getTotalDriveSize = async (owner: string) => {
+export const getTotalDriveSize = async (owner: string, start: Date, end: Date) => {
   let totalDriveSize = 0;
   let totalDriveTransactions = 0
   let firstPage : number = 100; // Max size of query for GQL
   let cursor : string = "";
   let found = 1;
+  let timeStamp = new Date(end);
   try {
     while (found > 0) {
       let transactions = await queryForDriveSize(owner, firstPage, cursor);
@@ -441,9 +442,15 @@ export const getTotalDriveSize = async (owner: string) => {
           cursor = edge.cursor;
           const { node } = edge;
           const { data } = node;
-          if (data !== null) {
-              totalDriveSize += +data.size;
-              totalDriveTransactions += 1;
+          const { block } = node;
+          if (block !== null) {
+            timeStamp = new Date(block.timestamp * 1000);
+            if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+              if (data !== null) {
+                totalDriveSize += +data.size;
+                totalDriveTransactions += 1;
+              }
+            }
           }
       })
     }
@@ -455,6 +462,7 @@ export const getTotalDriveSize = async (owner: string) => {
       return {owner, totalDriveSize, totalDriveTransactions};
   }
 }
+
 // Creates a GraphQL Query to return all transactions for a drive
 async function queryForDriveSize(owner: string, firstPage: number, cursor: string) {
   try {
@@ -477,6 +485,9 @@ async function queryForDriveSize(owner: string, firstPage: number, cursor: strin
               id
               data {
                 size
+              }
+              block {
+                timestamp
               }
             }
           }

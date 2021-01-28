@@ -30,7 +30,7 @@ async function main_data_12hour () {
     const distinctArDriveUsers = [...new Set(allArDrives.map(x => x.address))]
     await asyncForEach (distinctArDriveUsers, async (owner: string) => {
         // Get Drive Size
-        allOwnerStats.push(await getTotalDriveSize(owner))
+        allOwnerStats.push(await getTotalDriveSize(owner, start, today))
     })
     allOwnerStats.sort(userSizeCompare);
 
