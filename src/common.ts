@@ -211,7 +211,6 @@ export const asyncForEach = async (array: any[], callback: any) => {
 // Sends a message to the ardrive graphite server
 export const sendMessageToGraphite = async (path: string, value: number, timeStamp: Date) => {
     const message = path + " " + value.toString() + " " + (Math.floor(timeStamp.getTime()/1000)) + '\n';
-    console.log (message)
     let net = require('net');
     let client = new net.Socket();
     client.connect(2003, 'stats.ardrive.io', function() {
