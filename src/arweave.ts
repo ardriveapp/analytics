@@ -1,7 +1,14 @@
 import Arweave from 'arweave';
+import { dataCompare, formatBytes } from './common';
+import { BlockInfo, ArDriveStat, ContentType, AstatineItem } from './types';
+import { readContract } from "smartweave";
 
 const appName = "ArDrive-Desktop";
 const webAppName = "ArDrive-Web";
+
+// ArDrive Profit Sharing Community Smart Contract
+const communityTxId = '-8A6RexFkpfWwuyVO98wzSFZh0d6VJuI-buTJvlwOJQ';
+
 
 const fetch = require('node-fetch')
 const arweave = Arweave.init({
@@ -11,75 +18,7 @@ const arweave = Arweave.init({
     timeout: 600000,
   });
 
-export interface AstatineItem {
-    address: string,
-    weight: number,
-}
 
-export interface BlockInfo {
-    weaveSize: number,
-    difficulty: number,
-    blockSize: number,
-}
-// ArDrive Profit Sharing Community Smart Contract
-// import Community from 'community-js';
-// const communityTxId = '-8A6RexFkpfWwuyVO98wzSFZh0d6VJuI-buTJvlwOJQ';
-
-/*
-* add number of ardrive pst holders
-•	Tips sent
-	Total size of tips
-	Total number of tips distributed
-*/
-
-interface ArDriveStat {
-    address: string,
-    privacy: string,
-    appName: string,
-    driveId: string,
-    tx: string,
-    data: number,
-    blockTimeStamp: Date
-}
-
-// Asyncronous ForEach function
-export const asyncForEach = async (array: any[], callback: any) => {
-  for (let index = 0; index < array.length; index += 1) {
-    // eslint-disable-next-line no-await-in-loop
-    await callback(array[index], index, array);
-  }
-};
-
-// Sends a message to the ardrive graphite server
-export const sendMessageToGraphite = async (path: string, value: number, timeStamp: Date) => {
-    const message = path + " " + value.toString() + " " + (Math.floor(timeStamp.getTime()/1000)) + '\n';
-    let net = require('net');
-    let client = new net.Socket();
-    client.connect(2003, 'stats.ardrive.io', function() {
-        client.write(message)
-        client.end('completed!')
-    });
-}
-
-
-// Format byte size to something nicer.  This is minified...
-export const formatBytes = (bytes: number) => {
-    const marker = 1024; // Change to 1000 if required
-    const decimal = 3; // Change as required
-    const kiloBytes = marker; // One Kilobyte is 1024 bytes
-    const megaBytes = marker * marker; // One MB is 1024 KB
-    const gigaBytes = marker * marker * marker; // One GB is 1024 MB
-    // const teraBytes = marker * marker * marker * marker; // One TB is 1024 GB
-  
-    // return bytes if less than a KB
-    if (bytes < kiloBytes) return `${bytes} Bytes`;
-    // return KB if less than a MB
-    if (bytes < megaBytes) return `${(bytes / kiloBytes).toFixed(decimal)} KB`;
-    // return MB if less than a GB
-    if (bytes < gigaBytes) return `${(bytes / megaBytes).toFixed(decimal)} MB`;
-    // return GB if less than a TB
-    return `${(bytes / gigaBytes).toFixed(decimal)} GB`;
-  };
 
 // Gets the latest price of Arweave in USD
 export const getArUSDPrice = async () : Promise<number> => {
@@ -147,6 +86,7 @@ export const getAllArDrives = async (start: Date, end: Date) => {
                 let timeStamp = new Date(block.timestamp * 1000);
                 // We only want results between our start and end dates, defined by milliseconds since epoch
                 if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                    //console.log ("Matching ardrive transaction: ", timeStamp)
                     const { tags } = node;
                     let arDriveStat: ArDriveStat = {
                         address: owner.address,
@@ -175,6 +115,11 @@ export const getAllArDrives = async (start: Date, end: Date) => {
                         };
                     })
                     arDriveStats.push(arDriveStat);
+                } else if (timeStamp.getTime() > end.getTime()) {
+                  // console.log ("Result too old")
+                  found = 0;
+                } else {
+                  // result too early
                 }
             }
         })
@@ -186,54 +131,6 @@ export const getAllArDrives = async (start: Date, end: Date) => {
         return arDriveStats;
     }
 };
-
-// Creates a GraphQL Query to search for all ArDrive entities and requests it from the primary Arweave gateway
-const queryForAllArDrives = async (firstPage: number, cursor: string) => {
-    try {
-        const query = {
-        query: `query {
-            transactions(
-                tags: [
-                    { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
-                    { name: "Entity-Type", values: "drive" }
-                  ]
-                first: ${firstPage}
-                after: "${cursor}"
-            ) {
-                pageInfo {
-                    hasNextPage
-                }
-                edges {
-                    cursor
-                    node {
-                        id
-                        owner {
-                            address
-                        }
-                        tags {
-                            name
-                            value
-                        }
-                        block {
-                            timestamp
-                        }
-                    }
-                }
-            }
-        }`,
-        };
-        // Call the Arweave Graphql Endpoint
-        const response = await arweave.api
-        .request()
-        .post('https://arweave.net/graphql', query);
-        const { data } = response.data;
-        const { transactions } = data;
-        return transactions;
-    } catch (err) {
-        console.log (err)
-        console.log ("Cannot query for all ArDrives")
-    }
-}
 
 // Sums up every bundled data transaction for a start and end period.
 export const getTotalBundledDataTransactionsSize = async (start: Date, end: Date) => {
@@ -261,6 +158,7 @@ export const getTotalBundledDataTransactionsSize = async (start: Date, end: Date
                     if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
                         // We only want data transactions
                         if (data.size > 0) {
+                            //console.log ("Matching bundled data transaction: ", timeStamp)
                             let appName = '';
                             tags.forEach((tag: any) => {
                                 const key = tag.name;
@@ -280,6 +178,11 @@ export const getTotalBundledDataTransactionsSize = async (start: Date, end: Date
                                 desktopDataSize += +data.size;
                             }
                         }
+                    } else if (timeStamp.getTime() > end.getTime()) {
+                      // console.log ("Result too old")
+                      found = 0;
+                    } else {
+                      // result too early
                     }
                 }
             })
@@ -295,6 +198,7 @@ export const getTotalBundledDataTransactionsSize = async (start: Date, end: Date
 
 // Sums up every data transaction for a start and end period.
 export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
+    let lastBlock = 1;
     let publicDataSize = 0;
     let privateDataSize = 0;
     let publicFiles = 0;
@@ -303,13 +207,24 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
     let desktopFiles = 0;
     let publicArFee = 0;
     let privateArFee = 0;
+    let contentType : string = '';
+    let contentTypes : ContentType[] = [];
     let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let found = 1;
     let timeStamp = new Date(end);
+    let today = new Date();
+
+    // To calculate the no. of days between two dates
+    const blocksPerDay = 670;
+    let height = await getCurrentBlockHeight();
+    const startDays = today.getTime() - start.getTime()
+    const startDaysDiff = Math.floor(startDays / (1000 * 3600 * 24));
+    const minBlock = height - (blocksPerDay * startDaysDiff)
+
     try {
         while (found > 0) {
-            let transactions = await queryForDataUploads(firstPage, cursor);
+            let transactions = await queryForDataUploads(minBlock, firstPage, cursor);
             const { edges } = transactions;
             found = edges.length;
             // Create the query to search for all ardrive transactions.
@@ -322,9 +237,11 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
                 const { tags } = node;
                 if (block !== null) {
                     timeStamp = new Date(block.timestamp * 1000);
+                    lastBlock = block.height;
                     if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
                         // We only want data transactions
                         if (data.size > 0) {
+                          //console.log ("Matching data transaction: %s %s", node.id, timeStamp)
                             let cipherIV = "public";
                             let appName = '';
                             tags.forEach((tag: any) => {
@@ -332,19 +249,37 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
                                 const { value } = tag;
                                 switch (key) {
                                 case 'Cipher-IV':
-                                    cipherIV = value;
-                                    break;
+                                  cipherIV = value;
+                                  break;
+                                case 'Content-Type':
+                                  contentType = value;
+                                  break;
                                 case 'App-Name':
-                                    appName = value;
-                                    break;
+                                  appName = value;
+                                  break;
                                 default:
-                                    break;
+                                  break;
                                 };
                             })
                             if (cipherIV === 'public') {
                                 publicDataSize += +data.size;
                                 publicArFee += +fee.ar;
                                 publicFiles += 1;
+                                // Does this content type exist in our array?
+                                let objIndex = contentTypes.findIndex((obj => obj.contentType === contentType));
+                                if (objIndex >= 0) {
+                                  // If it exists, then we increment the existing data amount
+                                  contentTypes[objIndex].count += 1;
+                                } 
+                                else {
+                                  // Else we add a content type to our Content Types list
+                                  // console.log ("New Content Type Found %s ", contentType)
+                                  let newContentType: ContentType = {
+                                    contentType,
+                                    count: 1
+                                  };
+                                  contentTypes.push(newContentType);
+                                }
                             }
                             else {
                                 privateDataSize += +data.size;
@@ -357,15 +292,20 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
                                 desktopFiles += 1;
                             }
                         }
+                    } else if (timeStamp.getTime() > end.getTime()) {
+                      // console.log ("Result too old")
+                      found = 0;
+                    } else {
+                      // result too early
                     }
                 }
             })
         }
-    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopFiles}
+    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopFiles, contentTypes, lastBlock}
     } catch (err) {
         console.log (err)
         console.log ("Error collecting total amount of uploaded data")
-        return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopFiles}
+        return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopFiles, lastBlock}
     }
 
 }
@@ -394,6 +334,7 @@ export const getTotalArDriveCommunityFees = async (start: Date, end: Date) => {
             if (block !== null) {
                 timeStamp = new Date(block.timestamp * 1000);
                 if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                  //console.log ("Matching community fee transaction: ", timeStamp)
                   let appName = '';
                   tags.forEach((tag: any) => {
                       const key = tag.name;
@@ -412,6 +353,11 @@ export const getTotalArDriveCommunityFees = async (start: Date, end: Date) => {
                   } else if (appName === 'ArDrive-Desktop') {
                     desktopFees += +fee.ar;
                   }
+                } else if (timeStamp.getTime() > end.getTime()) {
+                  // console.log ("Result too old")
+                  found = 0;
+                } else {
+                  // result too early
                 }
             }
         })
@@ -463,6 +409,55 @@ export const getTotalDriveSize = async (owner: string, start: Date, end: Date) =
   }
 }
 
+// Creates a GraphQL Query to search for all ArDrive entities and requests it from the primary Arweave gateway
+const queryForAllArDrives = async (firstPage: number, cursor: string) => {
+  try {
+      const query = {
+      query: `query {
+          transactions(
+              tags: [
+                  { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+                  { name: "Entity-Type", values: "drive" }
+                ]
+              sort: HEIGHT_ASC
+              first: ${firstPage}
+              after: "${cursor}"
+          ) {
+              pageInfo {
+                  hasNextPage
+              }
+              edges {
+                  cursor
+                  node {
+                      id
+                      owner {
+                          address
+                      }
+                      tags {
+                          name
+                          value
+                      }
+                      block {
+                          timestamp
+                      }
+                  }
+              }
+          }
+      }`,
+      };
+      // Call the Arweave Graphql Endpoint
+      const response = await arweave.api
+      .request()
+      .post('https://arweave.net/graphql', query);
+      const { data } = response.data;
+      const { transactions } = data;
+      return transactions;
+  } catch (err) {
+      console.log (err)
+      console.log ("Cannot query for all ArDrives")
+  }
+}
+
 // Creates a GraphQL Query to return all transactions for a drive
 async function queryForDriveSize(owner: string, firstPage: number, cursor: string) {
   try {
@@ -508,12 +503,14 @@ async function queryForDriveSize(owner: string, firstPage: number, cursor: strin
 }
 
 // Creates a GraphQL Query to search for all ArDrive Data transactions and requests it from the primary Arweave gateway
-async function queryForDataUploads(firstPage: number, cursor: string) {
+async function queryForDataUploads(minBlock: number, firstPage: number, cursor: string) {
     try {
     const query = {
       query: `query {
       transactions(
         tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+        block: {min: ${minBlock}}
+        sort: HEIGHT_ASC
         first: ${firstPage}
         after: "${cursor}"
       ) {
@@ -523,6 +520,7 @@ async function queryForDataUploads(firstPage: number, cursor: string) {
         edges {
           cursor
           node {
+            id
             owner {
                 address
             }
@@ -537,6 +535,7 @@ async function queryForDataUploads(firstPage: number, cursor: string) {
               size
             }
             block {
+              height
               timestamp
             }
           }
@@ -567,6 +566,7 @@ async function queryForBundledDataUploads(firstPage: number, cursor: string) {
             { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
             { name: "Bundle-Format", values: "json"}
         ]
+        sort: HEIGHT_ASC
         first: ${firstPage}
         after: "${cursor}"
       ) {
@@ -651,6 +651,26 @@ async function queryForArDriveCommunityFees(firstPage: number, cursor: string) {
     }
 }
 
+// Gets the count of ArDrive token holders
+export async function getTokenHolderCount() : Promise<number>  {
+  try {
+    // Read the ArDrive Smart Contract to get the latest state
+    const state = await readContract(arweave, communityTxId);
+    const balances = state.balances;
+
+    // Get the total number of token holders with balance > 0
+    let total = 0;
+    for (const addr of Object.keys(balances)) {
+      total += balances[addr];
+    }
+    return total;
+  } catch (err) {
+    console.log (err)
+    console.log ("Error getting token holder count")
+    return 0;
+  }
+}
+
 // This is used specifically for testing Astatine, and is not invoked with the Analytics script
 export async function get_24_hour_ardrive_transactions() : Promise<AstatineItem[]> {
     let completed : Boolean = false;
@@ -660,10 +680,10 @@ export async function get_24_hour_ardrive_transactions() : Promise<AstatineItem[
     let timeStamp = new Date();
     let yesterday = new Date(timeStamp);
     yesterday.setDate(yesterday.getDate() - 1);
-  
+
     while (!completed) {
       // Create the query to search for all ardrive transactions.
-      let transactions = await queryForDataUploads(firstPage, cursor);
+      let transactions = await queryForDataUploads(0, firstPage, cursor);
       const { edges } = transactions;
       edges.forEach((edge: any) => {
         cursor = edge.cursor;
@@ -708,24 +728,4 @@ export async function get_24_hour_ardrive_transactions() : Promise<AstatineItem[
     weightedList.sort(dataCompare);
     console.log ("weighted list: ", weightedList.slice(0, 9));
     return weightedList;
-}
-
-function dataCompare(a: any, b: any) {
-    let comparison = 0;
-    if (a.weight > b.weight) {
-      comparison = 1;
-    } else if (a.weight < b.weight) {
-      comparison = -1;
-    }
-    return comparison * -1;
-}
-
-export function userSizeCompare(a: any, b: any) {
-  let comparison = 0;
-  if (a.totalDriveSize > b.totalDriveSize) {
-    comparison = 1;
-  } else if (a.totalDriveSize < b.totalDriveSize) {
-    comparison = -1;
-  }
-  return comparison * -1;
 }

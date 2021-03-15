@@ -1,10 +1,24 @@
-import {asyncForEach, BlockInfo, formatBytes, getAllArDrives, getArUSDPrice, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getTotalArDriveCommunityFees, getTotalBundledDataTransactionsSize, getTotalDataTransactionsSize, getTotalDriveSize, userSizeCompare, /*get_24_hour_ardrive_transactions*/ } from './arweave'
+import { 
+    getAllArDrives, 
+    getArUSDPrice, 
+    getCurrentBlockHeight, 
+    getDataPrice, 
+    getLatestBlockInfo, 
+    getTotalArDriveCommunityFees, 
+    getTotalBundledDataTransactionsSize, 
+    getTotalDataTransactionsSize, 
+    getTotalDriveSize, 
+    /*get_24_hour_ardrive_transactions*/ 
+} from './arweave'
+import { contentTypeCountCompare, asyncForEach, userSizeCompare, formatBytes } from './common';
+import { BlockInfo } from './types';
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 async function main () {
-    const days = 1 // Number of days to query for data
-    const start = new Date(2021, 0, 28); // The starting range for the query eg. const start = new Date(2021, 0, 28);
-    const end = new Date(start)
-    end.setDate(start.getDate() - days); // How far back we should query for data
+    const days = 190 // Number of days to query for data
+    const end = new Date(); // The end range for the query eg. const start = new Date(2021, 0, 28);
+    const start = new Date()
+    start.setDate(start.getDate() - days); // When should the query start
     getMetrics(start, end, days)
     // Used to test Astatine
     // get_24_hour_ardrive_transactions();
@@ -13,15 +27,16 @@ async function main () {
 async function getMetrics (start: Date, end: Date, days: number) {
 
     //var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    console.log ("Pulling metrics from %s EST to %s EST", end.toLocaleString(), start.toLocaleString())
+    console.log ("Pulling metrics from %s EST to %s EST", start.toLocaleString(), end.toLocaleString())
     let allOwnerStats : any[] = [];
     let totalPrivateDrives = 0;
     let totalPublicDrives = 0;
-    const totalData = await getTotalDataTransactionsSize(end, start)
-    const totalBundledData = await getTotalBundledDataTransactionsSize(end, start)
-    const totalFees = await getTotalArDriveCommunityFees(end, start)
+    const totalData = await getTotalDataTransactionsSize(start, end)
+    totalData.contentTypes?.sort(contentTypeCountCompare)
+    const totalBundledData = await getTotalBundledDataTransactionsSize(start, end)
+    const totalFees = await getTotalArDriveCommunityFees(start, end)
     const allFees = totalFees.totalFees + totalData.publicArFee + totalData.privateArFee;
-    const allNewArDrives = await getAllArDrives(end, start)
+    const allNewArDrives = await getAllArDrives(start, end)
     allNewArDrives.forEach((drive: any) => {
         if (drive.privacy === 'private') {
             totalPrivateDrives += 1;
@@ -39,12 +54,18 @@ async function getMetrics (start: Date, end: Date, days: number) {
     allTime.setDate(end.getDate() - 365);
     const allArDrives = await getAllArDrives(allTime, start)
     const distinctArDriveUsers = [...new Set(allArDrives.map(x => x.address))]
+    console.log ("Total Users Found %s", distinctArDriveUsers.length)
     await asyncForEach (distinctArDriveUsers, async (owner: string) => {
         // Get Drive Size
-        allOwnerStats.push(await getTotalDriveSize(owner, end, start))
+        let ownerStat = await getTotalDriveSize(owner, start, end)
+        if (ownerStat.totalDriveSize >= 5000)
+        {
+            allOwnerStats.push(ownerStat)
+        }
+        // else drive is too small and we do not count it
     })
     allOwnerStats.sort(userSizeCompare);
-
+    console.log ("Total Real Users found %s", +Object.keys(allOwnerStats).length)
     // Get all prices
     const priceOf1MB = await getDataPrice(1048576);
     const priceOf5MB = await getDataPrice(1048576*5);
@@ -80,15 +101,20 @@ async function getMetrics (start: Date, end: Date, days: number) {
     console.log ('          WebApp:         ', totalFees.webAppFees.toFixed(5));
     console.log ('  ---------------------------')
 
-    console.log ("Total users found %s", +Object.keys(allOwnerStats).length)
-    console.log ("Top 10 Uploaders This Period")
-    console.log ("Starting: %s", end.toLocaleString());
-    console.log ("Ending: %s", start.toLocaleString());
-    allOwnerStats = allOwnerStats.slice(0, 10);
-    allOwnerStats.forEach((ownerStat: any) => {
-        console.log ("Owner: %s", ownerStat.owner)
-        console.log ("Size: %s Files: %s", formatBytes(ownerStat.totalDriveSize), ownerStat.totalDriveTransactions)
-    })
+    const csvWriter = createCsvWriter({
+        path: 'AllOwnerStats.csv',
+        header: [
+            {id: 'owner', title: 'Owner'},
+            {id: 'totalDriveSize', title: 'Total Drive Size'},
+            {id: 'totalDriveTransactions', title: 'Total Drive Transactions'},
+        ]
+    });
+    csvWriter
+        .writeRecords(allOwnerStats)
+        .then(()=> console.log('The CSV file was written successfully'));
+
+    console.log ("Content Types Found %s", totalData.contentTypes?.length)
+    console.log (totalData.contentTypes);
     console.log ('  ---------------------------')
     let averageUserSize = 0;
     let averageUserFiles = 0;
@@ -96,11 +122,20 @@ async function getMetrics (start: Date, end: Date, days: number) {
         averageUserSize += ownerStat.totalDriveSize;
         averageUserFiles += ownerStat.totalDriveTransactions
     })
-    averageUserSize = averageUserSize / +Object.keys(allOwnerStats).length 
-    averageUserFiles = averageUserFiles / +Object.keys(allOwnerStats).length
+    averageUserSize = averageUserSize / +allOwnerStats.length 
+    averageUserFiles = averageUserFiles / +allOwnerStats.length
 
-    console.log ("Average User Upload Amount %s", averageUserSize)
+    console.log ("Average User Upload Amount %s", formatBytes(averageUserSize))
     console.log ("Average User Files %s", averageUserFiles)
+    console.log ('  ---------------------------')
+    console.log ("Top 20 Uploaders This Period")
+    console.log ("Starting: %s", end.toLocaleString());
+    console.log ("Ending: %s", start.toLocaleString());
+    allOwnerStats = allOwnerStats.slice(0, 20);
+    allOwnerStats.forEach((ownerStat: any) => {
+        console.log ("Owner: %s", ownerStat.owner)
+        console.log ("Size: %s Files: %s", formatBytes(ownerStat.totalDriveSize), ownerStat.totalDriveTransactions)
+    })
     console.log ('  ---------------------------')
     console.log ("Mining Fees Paid %s, $%s", allFees, (allFees * arUSDPrice))
     console.log ("Community Fees Paid %s, $%s", (allFees * .15), ((allFees * .15) * arUSDPrice))
