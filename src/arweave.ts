@@ -510,7 +510,6 @@ async function queryForDataUploads(minBlock: number, firstPage: number, cursor: 
       transactions(
         tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
         block: {min: ${minBlock}}
-        sort: HEIGHT_ASC
         first: ${firstPage}
         after: "${cursor}"
       ) {
@@ -673,8 +672,10 @@ export async function getTokenHolderCount() : Promise<number>  {
 
 // This is used specifically for testing Astatine, and is not invoked with the Analytics script
 export async function get_24_hour_ardrive_transactions() : Promise<AstatineItem[]> {
+
     let completed : Boolean = false;
     let weightedList : AstatineItem[] = [];
+    let trimmedWeightedList : AstatineItem[] = [];
     let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let timeStamp = new Date();
@@ -702,7 +703,6 @@ export async function get_24_hour_ardrive_transactions() : Promise<AstatineItem[
                 if (objIndex >= 0) {
                 // If it exists, then we increment the existing data amount
                   // console.log ("Existing wallet found %s with %s data", weightedList[objIndex].address, weightedList[objIndex].weight);
-                  // console.log("Adding ", +data.size);
                   weightedList[objIndex].weight += +data.size;
                 } 
                 else {
@@ -726,6 +726,14 @@ export async function get_24_hour_ardrive_transactions() : Promise<AstatineItem[
   
     // lets sort the list based on data amount
     weightedList.sort(dataCompare);
-    console.log ("weighted list: ", weightedList.slice(0, 9));
-    return weightedList;
+
+    // Trim the list of any users who have not uploaded the minimum
+    let minUploadAmount = 1048576 * 50 // 50 MB
+    weightedList.forEach((item: AstatineItem) => {
+      if (item.weight >= minUploadAmount) {
+        trimmedWeightedList.push(item);
+      }
+    })
+    
+    return trimmedWeightedList;
 }
