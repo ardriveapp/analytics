@@ -92,10 +92,7 @@ export async function getMetrics (start: Date, end: Date, days: number) : Promis
     await asyncForEach (distinctNewArDriveUsers, async (owner: string) => {
         // Get Drive Size
         let ownerStat = await getTotalDriveSize(owner, start, end)
-        if (ownerStat.totalDriveSize >= 5000)
-        {
-            allOwnerStats.push(ownerStat)
-        }
+        allOwnerStats.push(ownerStat)
         // else drive is too small and we do not count it
     })
     allOwnerStats.sort(userSizeCompare);
@@ -137,11 +134,11 @@ export async function getMetrics (start: Date, end: Date, days: number) : Promis
         averageUserSize += ownerStat.totalDriveSize;
         averageUserFiles += ownerStat.totalDriveTransactions;
     })
-    averageUserSize = +averageUserSize / +allOwnerStats.length ;
-    averageUserFiles = +averageUserFiles / +allOwnerStats.length;
+    averageUserSize = +averageUserSize / allOwnerStats.length ;
+    averageUserFiles = +averageUserFiles / allOwnerStats.length;
 
-    console.log ("Average User Upload Amount %s", averageUserSize);
-    console.log ("Average User Files %s", averageUserFiles);
+    console.log ("Average User Upload Size %s", formatBytes(averageUserSize));
+    console.log ("Average User Files %s", formatBytes(averageUserFiles));
     console.log ('  ---------------------------');
     console.log ("Top 10 Uploaders This Period");
     console.log ("Starting: %s", end.toLocaleString());
