@@ -59,8 +59,8 @@ async function networkAnalytics() {
     }
 }
 
-cron.schedule('0 0 * * *', function(){
-    console.log('Running ArDrive Daiy Analytics Every 24 hours at midnight');
+cron.schedule('0 11 * * *', function(){
+    console.log('Running ArDrive Daiy Analytics Every 24 hours at 11am');
     dailyArDriveUsageAnalytics();
 });
 
