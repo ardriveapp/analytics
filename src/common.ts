@@ -55,19 +55,22 @@ export async function sendResultsToGraphite (results: Results) {
 }
 
 export async function getMetrics (start: Date, end: Date, days: number) : Promise<Results> {
-
-    console.log ("Pulling metrics from %s EST to %s EST", start.toLocaleString(), end.toLocaleString())
+    console.log ("Pulling metrics from %s EST to %s EST", start.toLocaleString(), end.toLocaleString());
 
     let totalPrivateDrives = 0;
     let totalPublicDrives = 0;
-    console.log ("Getting all data transactions")
+    console.log ("- Getting all data transactions");
     const totalData = await getTotalDataTransactionsSize(start, end)
     const totalDataSize = totalData.publicDataSize + totalData.privateDataSize;
     const totalFiles = totalData.publicFiles + totalData.privateFiles;
     totalData.contentTypes?.sort(contentTypeCountCompare)
+    console.log ("- Getting all bundled data transactions");
     const totalBundledData = await getTotalBundledDataTransactionsSize(start, end)
+    console.log ("- Getting ArDrive Community fees");
     const totalCommunityFees = await getTotalArDriveCommunityFees(start, end)
     const totalMiningFees = totalData.publicArFee + totalData.privateArFee;
+
+    console.log ("- Getting all drives");
     const allNewArDrives = await getAllArDrives(start, end)
     allNewArDrives.forEach((drive: any) => {
         if (drive.privacy === 'private') {
@@ -79,15 +82,17 @@ export async function getMetrics (start: Date, end: Date, days: number) : Promis
     })
 
     // Determine how many drives in this period
-    const distinctNewArDriveUsers = [...new Set(allNewArDrives.map(x => x.address))]
+    const distinctNewArDriveUsers = [...new Set(allNewArDrives.map(x => x.address))];
 
     // Determine amount of total users
+    console.log ("- Getting total amount of ArDrive users");
     let allTimeStart = new Date();
     allTimeStart.setDate(end.getDate() - 365);
     const allArDrives = await getAllArDrives(allTimeStart, end)
     const distinctArDriveUsers = [...new Set(allArDrives.map(x => x.address))]
 
     // filter out low drive sizes
+    console.log ("- Getting total drive sizes");
     let allOwnerStats : any[] = [];
     await asyncForEach (distinctNewArDriveUsers, async (owner: string) => {
         // Get Drive Size
@@ -98,11 +103,14 @@ export async function getMetrics (start: Date, end: Date, days: number) : Promis
     allOwnerStats.sort(userSizeCompare);
 
     // Get total number of ArDrive token holders
+    console.log ("- Getting token holder count");
     const tokenHolders = await getTokenHolderCount();
 
-    console.log ("Total Unique Users Found:  %s", distinctArDriveUsers.length);
-    console.log ("Total Token Holders Found: %s", tokenHolders);
+    console.log ("COMPLETED!");
+
     console.log ('  ---------------------------');
+    console.log ("Total Unique Users Found: ", distinctArDriveUsers.length);
+    console.log ("Total Token Holders Found:", tokenHolders);
     console.log ('  %s Day(s) -', days);
     console.log ("      Total Users:        ", distinctNewArDriveUsers.length);
     console.log ("          Real Users      ", +Object.keys(allOwnerStats).length);

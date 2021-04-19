@@ -7,7 +7,10 @@ const cron = require('node-cron');
 
 async function dailyArDriveUsageAnalytics () {
     let today = new Date();
-    let start = new Date(today.getDate() - 1);
+    let start = new Date();
+
+    // Take off one day
+    start.setDate(start.getDate() - 1);
 
     const dailyResults : Results = await getMetrics(start, today, 1);
     await sendResultsToGraphite(dailyResults);
@@ -59,8 +62,8 @@ async function networkAnalytics() {
     }
 }
 
-cron.schedule('0 11 * * *', function(){
-    console.log('Running ArDrive Daiy Analytics Every 24 hours at 11am');
+cron.schedule('0 17 * * *', function(){
+    console.log('Running ArDrive Daiy Analytics Every 24 hours at 1pm');
     dailyArDriveUsageAnalytics();
 });
 

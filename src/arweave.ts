@@ -366,6 +366,175 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
     return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopFiles, contentTypes, lastBlock}
 }
 
+// Sums up every data transaction for a start and end period.
+// Uses an estimate of block time to try to reduce query size
+export const getTotalDataTransactionsSize_WithBlocks = async (start: Date, end: Date) => {
+  let lastBlock = 1;
+  let publicDataSize = 0;
+  let privateDataSize = 0;
+  let publicFiles = 0;
+  let privateFiles = 0;
+  let webAppFiles = 0;
+  let desktopFiles = 0;
+  let publicArFee = 0;
+  let privateArFee = 0;
+  let contentType : string = '';
+  let contentTypes : ContentType[] = [];
+  let firstPage : number = 100; // Max size of query for GQL
+  let cursor : string = "";
+  let timeStamp = new Date(end);
+  let today = new Date();
+  let found = 1;
+
+  // To calculate the no. of days between two dates
+  const blocksPerDay = 670;
+  let height = await getCurrentBlockHeight();
+  const startDays = today.getTime() - start.getTime()
+  const startDaysDiff = Math.floor(startDays / (1000 * 3600 * 24));
+  const minBlock = height - (blocksPerDay * startDaysDiff)
+  let gqlUrl = primaryGraphQLUrl;
+  let tries = 0;
+  while (found > 0) {
+      const query = {
+        query: `query {
+        transactions(
+          tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+          sort: HEIGHT_ASC
+          block: {min: ${minBlock}}
+          first: ${firstPage}
+          after: "${cursor}"
+        ) {
+          pageInfo {
+            hasNextPage
+          }
+          edges {
+            cursor
+            node {
+              id
+              owner {
+                  address
+              }
+              fee {
+                  ar
+              }
+              tags {
+                  name
+                  value
+              }
+              data {
+                size
+              }
+              block {
+                height
+                timestamp
+              }
+            }
+          }
+        }
+      }`,
+      };
+      try {
+        // Call the Arweave Graphql Endpoint
+        const response = await arweave.api
+          .request()
+          .post(gqlUrl, query);
+        const { data } = response.data;
+        const { transactions } = data;
+        const { edges } = transactions;
+        // Create the query to search for all ardrive transactions.
+        edges.forEach((edge: any) => {
+            cursor = edge.cursor;
+            const { node } = edge;
+            const { data } = node;
+            const { fee } = node;
+            const { block } = node;
+            const { tags } = node;
+            if (block !== null) {
+                timeStamp = new Date(block.timestamp * 1000);
+                lastBlock = block.height;
+                if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                    // We only want data transactions
+                    // console.log ("Matching data transaction: %s %s", node.id, timeStamp)
+                    if (data.size > 0) {
+                        let cipherIV = "public";
+                        let appName = '';
+                        tags.forEach((tag: any) => {
+                            const key = tag.name;
+                            const { value } = tag;
+                            switch (key) {
+                            case 'Cipher-IV':
+                              cipherIV = value;
+                              break;
+                            case 'Content-Type':
+                              contentType = value;
+                              break;
+                            case 'App-Name':
+                              appName = value;
+                              break;
+                            default:
+                              break;
+                            };
+                        })
+                        if (cipherIV === 'public') {
+                            publicDataSize += +data.size;
+                            publicArFee += +fee.ar;
+                            publicFiles += 1;
+                            // Does this content type exist in our array?
+                            let objIndex = contentTypes.findIndex((obj => obj.contentType === contentType));
+                            if (objIndex >= 0) {
+                              // If it exists, then we increment the existing data amount
+                              contentTypes[objIndex].count += 1;
+                            } 
+                            else {
+                              // Else we add a content type to our Content Types list
+                              // console.log ("New Content Type Found %s ", contentType)
+                              let newContentType: ContentType = {
+                                contentType,
+                                count: 1
+                              };
+                              contentTypes.push(newContentType);
+                            }
+                        }
+                        else {
+                            privateDataSize += +data.size;
+                            privateArFee += +fee.ar;
+                            privateFiles += 1;
+                        }
+                        if (appName === 'ArDrive-Web') {
+                            webAppFiles += 1;
+                        } else if (appName === 'ArDrive-Desktop') {
+                            desktopFiles += 1;
+                        }
+                    }
+                } else if (timeStamp.getTime() > end.getTime()) {
+                  // console.log ("Result too old")
+                  found = 0;
+                } else {
+                  //console.log ("Result too early")
+                }
+            }
+        })
+      } catch (err) {
+        //console.log(err);
+        if (tries < 5) {
+          tries += 1;
+          console.log(
+            'Error getting total data transaction size , trying again.');
+        } else {
+          tries = 0;
+          if (gqlUrl.includes('.dev')) {
+            console.log('Backup gateway is having issues, stopping.');
+            found = 0;
+          } else {
+            console.log('Primary gateway is having issues, switching to backup.');
+            gqlUrl = backupGraphQLUrl; // Change to the backup URL and try 5 times
+          }
+        }
+      }
+  }
+  return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopFiles, contentTypes, lastBlock}
+}
+
 // Sums up all ArDrive Community Tips/Fees
 export const getTotalArDriveCommunityFees = async (start: Date, end: Date) => {
   let totalFees = 0;
