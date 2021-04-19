@@ -61,6 +61,8 @@ async function networkAnalytics() {
         await sendMessageToGraphite('ardrive.price.usd.1gb', (+priceOf1GB.toFixed(5) * arUSDPrice), today)
     }
 }
+console.log ("Start ArDrive Analytics Cron Jobs");
+console.log ("---------------------------------");
 
 cron.schedule('0 17 * * *', function(){
     console.log('Running ArDrive Daiy Analytics Every 24 hours at 1pm');
