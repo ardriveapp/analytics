@@ -47,7 +47,7 @@ async function networkAnalytics() {
 
     // Get data prices of different data sizes in AR
     if (arUSDPrice !== 0) {
-        console.log ("Price of AR is: $%s", arUSDPrice)
+        console.log ("Price of AR is: $%s", arUSDPrice);
 
         // Include the 15% fee
         const priceOf1MB = await getDataPrice(1048576) * 1.15;
