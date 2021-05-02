@@ -17,7 +17,6 @@ export interface BlockInfo {
 export interface Results {
   startDate: Date,
   endDate: Date,
-  days: number,
   totalArDriveUsers: number,
   newArDriveUsers: number,
   drivesFound: number,

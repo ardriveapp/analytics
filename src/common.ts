@@ -54,7 +54,8 @@ export async function sendResultsToGraphite (results: Results) {
     return "Success";
 }
 
-export async function getMetrics (start: Date, end: Date, days: number) : Promise<Results> {
+// Gets a set of metrics for a period of days or hours
+export async function getMetrics (start: Date, end: Date, days?: number, hours?: number) : Promise<Results> {
     console.log ("Pulling metrics from %s EST to %s EST", start.toLocaleString(), end.toLocaleString());
 
     let totalPrivateDrives = 0;
@@ -111,9 +112,13 @@ export async function getMetrics (start: Date, end: Date, days: number) : Promis
     console.log ('  ---------------------------');
     console.log ("Total Unique Users Found: ", distinctArDriveUsers.length);
     console.log ("Total Token Holders Found:", tokenHolders);
-    console.log ('  %s Day(s) -', days);
+    if (days) {
+      console.log ('  %s Day(s) -', days);
+    } else if (hours) {
+      console.log ('  %s Hour(s) -', hours);
+    }
     console.log ("      Total Users:        ", distinctNewArDriveUsers.length);
-    console.log ("          Real Users      ", +Object.keys(allOwnerStats).length);
+    console.log ("          Real Users      ", Object.keys(allOwnerStats).length);
     console.log ('      Total Drives:       ', Object.keys(allNewArDrives).length);
     console.log ('          Public:         ', totalPublicDrives);
     console.log ('          Private:        ', totalPrivateDrives);
@@ -169,7 +174,6 @@ export async function getMetrics (start: Date, end: Date, days: number) : Promis
     const metrics : Results = {
         startDate: start,
         endDate: end,
-        days,
         totalArDriveUsers: distinctArDriveUsers.length,
         newArDriveUsers: distinctNewArDriveUsers.length,
         drivesFound: allNewArDrives.length,

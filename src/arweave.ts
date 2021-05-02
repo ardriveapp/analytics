@@ -9,8 +9,15 @@ const webAppName = "ArDrive-Web";
 
 // ArDrive Profit Sharing Community Smart Contract
 const communityTxId = '-8A6RexFkpfWwuyVO98wzSFZh0d6VJuI-buTJvlwOJQ';
+
+// GraphQLURLs
+/*const gqlURLs: string[] = [
+  'https://arweave.net/graphql',
+  ''http://gateway.ardrive.io/graphql''
+];*/
+
 const primaryGraphQLUrl = 'https://arweave.net/graphql';
-const backupGraphQLUrl = 'https://arweave.dev/graphql';
+const backupGraphQLUrl = 'https://arweave.net/graphql';
 
 const fetch = require('node-fetch')
 const arweave = Arweave.init({
@@ -73,12 +80,12 @@ export const getAllArDrives = async (start: Date, end: Date) => {
     let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let arDriveStats : ArDriveStat[] = [];
-    let found = 1;
+    let hasNextPage = true;
     try {
-      while (found > 0) {
-        let transactions = await queryForAllArDrives(firstPage, cursor);
+      while (hasNextPage) {
+        const transactions = await queryForAllDrives(firstPage, cursor, primaryGraphQLUrl);
         const { edges } = transactions;
-        found = edges.length;
+        hasNextPage = transactions.pageInfo.hasNextPage
         edges.forEach((edge: any) => {
             cursor = edge.cursor;
             const { node } = edge;
@@ -119,7 +126,7 @@ export const getAllArDrives = async (start: Date, end: Date) => {
                     arDriveStats.push(arDriveStat);
                 } else if (timeStamp.getTime() > end.getTime()) {
                   // console.log ("Result too old")
-                  found = 0;
+                  hasNextPage = false;
                 } else {
                   // result too early
                 }
@@ -141,13 +148,13 @@ export const getTotalBundledDataTransactionsSize = async (start: Date, end: Date
     let desktopDataSize = 0;
     let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
-    let found = 1;
+    let hasNextPage = true;
     let timeStamp = new Date(end);
     try {
-        while (found > 0) {
-            let transactions = await queryForBundledDataUploads(firstPage, cursor);
+        while (hasNextPage) {
+            const transactions = await queryForBundledDataUploads(firstPage, cursor, primaryGraphQLUrl);
             const { edges } = transactions;
-            found = edges.length;
+            hasNextPage = transactions.pageInfo.hasNextPage
             // Create the query to search for all ardrive transactions.
             edges.forEach((edge: any) => {
                 cursor = edge.cursor;
@@ -182,7 +189,7 @@ export const getTotalBundledDataTransactionsSize = async (start: Date, end: Date
                         }
                     } else if (timeStamp.getTime() > end.getTime()) {
                       // console.log ("Result too old")
-                      found = 0;
+                      hasNextPage = false;
                     } else {
                       // result too early
                     }
@@ -215,7 +222,7 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
     let cursor : string = "";
     let timeStamp = new Date(end);
     let today = new Date();
-    let found = 1;
+    let hasNextPage = true;
 
     // To calculate the no. of days between two dates
     const blocksPerDay = 1000;
@@ -223,14 +230,16 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
     const startDays = today.getTime() - start.getTime()
     const startDaysDiff = Math.floor(startDays / (1000 * 3600 * 24));
     const minBlock = height - (blocksPerDay * startDaysDiff)
+    console.log ("Min block is: ", minBlock)
     let gqlUrl = primaryGraphQLUrl;
     let tries = 0;
-    while (found > 0) {
+
+    while (hasNextPage) {
         const query = {
           query: `query {
           transactions(
             tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
-            sort: HEIGHT_ASC
+            sort: HEIGHT_DESC
             block: {min: ${minBlock}}
             first: ${firstPage}
             after: "${cursor}"
@@ -271,6 +280,7 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
             .post(gqlUrl, query);
           const { data } = response.data;
           const { transactions } = data;
+          hasNextPage = transactions.pageInfo.hasNextPage;
           const { edges } = transactions;
           // Create the query to search for all ardrive transactions.
           edges.forEach((edge: any) => {
@@ -283,6 +293,8 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
               if (block !== null) {
                   timeStamp = new Date(block.timestamp * 1000);
                   lastBlock = block.height;
+                  console.log ("Block height is: ", lastBlock);
+                  console.log ("Timestamp is ", timeStamp.toLocaleString());
                   if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
                       // We only want data transactions
                       // console.log ("Matching data transaction: %s %s", node.id, timeStamp)
@@ -338,24 +350,26 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
                           }
                       }
                   } else if (timeStamp.getTime() > end.getTime()) {
-                    // console.log ("Result too old")
-                    found = 0;
+                    // If the result is sooner than we want, continue to crawl
+                    // console.log ("Result too early")
                   } else {
-                    //console.log ("Result too early")
+                    // if the result is older than we want, then stop querying
+                    // console.log ("Result too old")
+                    hasNextPage = false;
                   }
               }
           })
         } catch (err) {
-          //console.log(err);
+          console.log(err);
           if (tries < 5) {
             tries += 1;
             console.log(
-              'Error getting total data transaction size , trying again.');
+              'Error getting total data transaction size, trying again.');
           } else {
             tries = 0;
-            if (gqlUrl.includes('.dev')) {
-              console.log('Backup gateway is having issues, stopping.');
-              found = 0;
+            if (gqlUrl === backupGraphQLUrl) {
+              console.log('Backup gateway is also having issues, stopping.');
+              hasNextPage = false;
             } else {
               console.log('Primary gateway is having issues, switching to backup.');
               gqlUrl = backupGraphQLUrl; // Change to the backup URL and try 5 times
@@ -542,13 +556,13 @@ export const getTotalArDriveCommunityFees = async (start: Date, end: Date) => {
   let webAppFees = 0;
   let firstPage : number = 100; // Max size of query for GQL
   let cursor : string = "";
-  let found = 1;
+  let hasNextPage = false;
   let timeStamp = new Date(end);
   try {
-      while (found > 0) {
-        let transactions = await queryForArDriveCommunityFees(firstPage, cursor);
+      while (hasNextPage) {
+        const transactions = await queryForArDriveCommunityFees(firstPage, cursor, primaryGraphQLUrl);
         const { edges } = transactions;
-        found = edges.length;
+        hasNextPage = transactions.pageInfo.hasNextPage
         // Create the query to search for all ardrive transactions.
         edges.forEach((edge: any) => {
             cursor = edge.cursor;
@@ -580,7 +594,7 @@ export const getTotalArDriveCommunityFees = async (start: Date, end: Date) => {
                   }
                 } else if (timeStamp.getTime() > end.getTime()) {
                   // console.log ("Result too old")
-                  found = 0;
+                  hasNextPage = false;
                 } else {
                   // result too early
                 }
@@ -601,13 +615,13 @@ export const getTotalDriveSize = async (owner: string, start: Date, end: Date) =
   let totalDriveTransactions = 0
   let firstPage : number = 100; // Max size of query for GQL
   let cursor : string = "";
-  let found = 1;
   let timeStamp = new Date(end);
+  let hasNextPage = true;
   try {
-    while (found > 0) {
-      let transactions = await queryForDriveSize(owner, firstPage, cursor);
+    while (hasNextPage) {
+      const transactions = await queryForOwnerSize(owner, firstPage, cursor, primaryGraphQLUrl);
       const { edges } = transactions;
-      found = edges.length;
+      hasNextPage = transactions.pageInfo.hasNextPage;
       // Create the query to search for all ardrive transactions.
       edges.forEach((edge: any) => {
           cursor = edge.cursor;
@@ -635,7 +649,7 @@ export const getTotalDriveSize = async (owner: string, start: Date, end: Date) =
 }
 
 // Creates a GraphQL Query to search for all ArDrive entities and requests it from the primary Arweave gateway
-const queryForAllArDrives = async (firstPage: number, cursor: string) => {
+const queryForAllDrives = async (firstPage: number, cursor: string, gqlUrl: string): Promise<any> => {
   try {
       const query = {
       query: `query {
@@ -673,18 +687,24 @@ const queryForAllArDrives = async (firstPage: number, cursor: string) => {
       // Call the Arweave Graphql Endpoint
       const response = await arweave.api
       .request()
-      .post('https://arweave.net/graphql', query);
+      .post(gqlUrl, query);
       const { data } = response.data;
       const { transactions } = data;
       return transactions;
   } catch (err) {
-      console.log (err)
-      console.log ("Cannot query for all ArDrives")
+    console.log (err)
+    console.log ("Cannot query for all drives.  Gateway error %s", gqlUrl)
+    if (gqlUrl = primaryGraphQLUrl) {
+      // Run backup graphql query
+      return await queryForAllDrives(firstPage, cursor, backupGraphQLUrl) ;
+    } else {
+      return false;
+    }
   }
 }
 
-// Creates a GraphQL Query to return all transactions for a drive
-async function queryForDriveSize(owner: string, firstPage: number, cursor: string) {
+// Creates a GraphQL Query to return all transactions for an owner
+async function queryForOwnerSize(owner: string, firstPage: number, cursor: string, gqlUrl: string): Promise<any> {
   try {
     const query = {
       query: `query {
@@ -714,21 +734,27 @@ async function queryForDriveSize(owner: string, firstPage: number, cursor: strin
         }
       }`,
     };
-  // Call the Arweave Graphql Endpoint
-  const response = await arweave.api
-    .request()
-    .post('https://arweave.net/graphql', query);
-  const { data } = response.data;
-  const { transactions } = data;
-  return transactions;
-} catch (err) {
-  console.log (err)
-  console.log ("uh oh cant query")
-}
+    // Call the Arweave Graphql Endpoint
+    const response = await arweave.api
+      .request()
+      .post(gqlUrl, query);
+    const { data } = response.data;
+    const { transactions } = data;
+    return transactions;
+  } catch (err) {
+    console.log (err)
+    console.log ("Cannot query for owner size.  Gateway error %s", gqlUrl)
+    if (gqlUrl = primaryGraphQLUrl) {
+      // Run backup graphql query
+      return await  queryForOwnerSize(owner, firstPage, cursor, backupGraphQLUrl) ;
+    } else {
+      return false;
+    }
+  }
 }
 
 // Creates a GraphQL Query to search for all ArDrive Data transactions and requests it from the primary Arweave gateway
-async function queryForDataUploads(minBlock: number, firstPage: number, cursor: string, gqlUrl: string) {
+async function queryForDataUploads(minBlock: number, firstPage: number, cursor: string, gqlUrl: string): Promise<any> {
     try {
     const query = {
       query: `query {
@@ -778,12 +804,18 @@ async function queryForDataUploads(minBlock: number, firstPage: number, cursor: 
     return transactions;
   } catch (err) {
     console.log (err)
-    return "Error"
+    console.log ("Cannot query for data transactions.  Gateway error %s", gqlUrl)
+    if (gqlUrl = primaryGraphQLUrl) {
+      // Run backup graphql query
+      return await queryForDataUploads(minBlock, firstPage, cursor, backupGraphQLUrl) ;
+    } else {
+      return false;
+    }
   }
 }
 
 // Creates a GraphQL Query to search for all ArDrive Data transactions and requests it from the primary Arweave gateway
-async function queryForBundledDataUploads(firstPage: number, cursor: string) {
+async function queryForBundledDataUploads(firstPage: number, cursor: string, gqlUrl: string): Promise<any> {
     try {
     const query = {
       query: `query {
@@ -820,18 +852,24 @@ async function queryForBundledDataUploads(firstPage: number, cursor: string) {
     // Call the Arweave Graphql Endpoint
     const response = await arweave.api
       .request()
-      .post('https://arweave.net/graphql', query);
+      .post(gqlUrl, query);
     const { data } = response.data;
     const { transactions } = data;
     return transactions;
   } catch (err) {
     console.log (err)
-    console.log ("uh oh cant query")
+    console.log ("Cannot query for data bundles.  Gateway error %s", gqlUrl)
+    if (gqlUrl = primaryGraphQLUrl) {
+      // Run backup graphql query
+      return await queryForBundledDataUploads(firstPage, cursor, backupGraphQLUrl) ;
+    } else {
+      return false;
+    }
   }
 }
 
 // Creates a GraphQL Query to search for all ArDrive Community Fees
-async function queryForArDriveCommunityFees(firstPage: number, cursor: string) {
+async function queryForArDriveCommunityFees(firstPage: number, cursor: string, gqlUrl: string): Promise<any> {
   try {
       const query = {
         query: `query {
@@ -871,13 +909,19 @@ async function queryForArDriveCommunityFees(firstPage: number, cursor: string) {
       // Call the Arweave Graphql Endpoint
       const response = await arweave.api
         .request()
-        .post('https://arweave.net/graphql', query);
+        .post(gqlUrl, query);
       const { data } = response.data;
       const { transactions } = data;
       return transactions;
     } catch (err) {
       console.log (err)
-      console.log ("uh oh cant query")
+      console.log ("Cannot query for ArDrive Community Fees. Gateway error %s", gqlUrl)
+      if (gqlUrl = primaryGraphQLUrl) {
+        // Run backup graphql query
+        return await queryForArDriveCommunityFees(firstPage, cursor, backupGraphQLUrl) ;
+      } else {
+        return false;
+      }
     }
 }
 

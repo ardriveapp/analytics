@@ -5,7 +5,7 @@ import { Results, BlockInfo } from './types';
 // Used for scheduling the jobs
 const cron = require('node-cron');
 
-async function dailyArDriveUsageAnalytics () {
+export async function dailyArDriveUsageAnalytics () {
     let today = new Date();
     let start = new Date();
 
@@ -13,6 +13,17 @@ async function dailyArDriveUsageAnalytics () {
     start.setDate(start.getDate() - 1);
 
     const dailyResults : Results = await getMetrics(start, today, 1);
+    await sendResultsToGraphite(dailyResults);
+}
+
+async function hourlyArDriveUsageAnalytics (hours: number) {
+    let today = new Date();
+    let start = new Date();
+
+    // Take off one day
+    start.setDate(start.getHours() - hours);
+
+    const dailyResults : Results = await getMetrics(start, today, hours);
     await sendResultsToGraphite(dailyResults);
 }
 
@@ -36,6 +47,7 @@ async function networkAnalytics() {
 
     // Get data prices of different data sizes in AR
     if (arUSDPrice !== 0) {
+        console.log ("Price of AR is: $%s", arUSDPrice)
 
         // Include the 15% fee
         const priceOf1MB = await getDataPrice(1048576) * 1.15;
@@ -45,12 +57,12 @@ async function networkAnalytics() {
         const priceOf500MB = await getDataPrice (1048576*500) * 1.15;
         const priceOf1GB = await getDataPrice(1073741824) * 1.15;
         await sendMessageToGraphite('arweave.price.usd', arUSDPrice, today)
-        await sendMessageToGraphite('ardrive.price.ar.1mb', +priceOf1MB.toFixed(5), today)
-        await sendMessageToGraphite('ardrive.price.ar.5mb', +priceOf5MB.toFixed(5), today)
-        await sendMessageToGraphite('ardrive.price.ar.25mb', +priceOf25MB.toFixed(5), today)
-        await sendMessageToGraphite('ardrive.price.ar.100mb', +priceOf100MB.toFixed(5), today)
-        await sendMessageToGraphite('ardrive.price.ar.500mb', +priceOf500MB.toFixed(5), today)
-        await sendMessageToGraphite('ardrive.price.ar.1gb', +priceOf1GB.toFixed(5), today)
+        await sendMessageToGraphite('ardrive.price.ar.1mb', (+priceOf1MB.toFixed(5)), today)
+        await sendMessageToGraphite('ardrive.price.ar.5mb', (+priceOf5MB.toFixed(5)), today)
+        await sendMessageToGraphite('ardrive.price.ar.25mb', (+priceOf25MB.toFixed(5)), today)
+        await sendMessageToGraphite('ardrive.price.ar.100mb', (+priceOf100MB.toFixed(5)), today)
+        await sendMessageToGraphite('ardrive.price.ar.500mb', (+priceOf500MB.toFixed(5)), today)
+        await sendMessageToGraphite('ardrive.price.ar.1gb', (+priceOf1GB.toFixed(5)), today)
     
         // Get the data prices in USD
         await sendMessageToGraphite('ardrive.price.usd.1mb', (+priceOf1MB.toFixed(5) * arUSDPrice), today)
@@ -64,12 +76,17 @@ async function networkAnalytics() {
 console.log ("Start ArDrive Analytics Cron Jobs");
 console.log ("---------------------------------");
 
-cron.schedule('0 17 * * *', function(){
+/*cron.schedule('0 17 * * *', function(){
     console.log('Running ArDrive Daiy Analytics Every 24 hours at 1pm');
     dailyArDriveUsageAnalytics();
+});*/
+
+cron.schedule('0 */12 * * *', function(){
+    console.log('Running ArDrive Daiy Analytics Every 12 hours');
+    hourlyArDriveUsageAnalytics(12);
 });
 
-cron.schedule('*/5 * * * *', function(){
-    console.log('Running ArDrive Block Info and Price Collection Analytics Every 5 minutes');
+cron.schedule('*/15 * * * *', function(){
+    console.log('Running ArDrive Block Info and Price Collection Analytics Every 15 minutes');
     networkAnalytics();
 });

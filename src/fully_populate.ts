@@ -2,7 +2,9 @@ import { getMetrics, sendResultsToGraphite } from "./common";
 
 async function main () {
     let today = new Date();
-    const start = new Date(2020, 8, 26)
+    
+    // const start = new Date(2020, 8, 26)
+    const start = new Date(2021, 3, 27)
     console.log ("Today ", today)
     console.log ("Start ", start)
     while (start <= today) {
