@@ -23,7 +23,7 @@ async function hourlyArDriveUsageAnalytics (hours: number) {
     // Take off one day
     start.setDate(start.getHours() - hours);
 
-    const dailyResults : Results = await getMetrics(start, today, hours);
+    const dailyResults : Results = await getMetrics(start, today, 0, hours);
     await sendResultsToGraphite(dailyResults);
 }
 

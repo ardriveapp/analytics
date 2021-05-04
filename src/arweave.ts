@@ -293,8 +293,6 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
               if (block !== null) {
                   timeStamp = new Date(block.timestamp * 1000);
                   lastBlock = block.height;
-                  console.log ("Block height is: ", lastBlock);
-                  console.log ("Timestamp is ", timeStamp.toLocaleString());
                   if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
                       // We only want data transactions
                       // console.log ("Matching data transaction: %s %s", node.id, timeStamp)
@@ -401,7 +399,7 @@ export const getTotalDataTransactionsSize_WithBlocks = async (start: Date, end: 
   let found = 1;
 
   // To calculate the no. of days between two dates
-  const blocksPerDay = 670;
+  const blocksPerDay = 1000;
   let height = await getCurrentBlockHeight();
   const startDays = today.getTime() - start.getTime()
   const startDaysDiff = Math.floor(startDays / (1000 * 3600 * 24));

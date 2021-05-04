@@ -4,7 +4,8 @@ async function main () {
     let today = new Date();
     
     // const start = new Date(2020, 8, 26)
-    const start = new Date(2021, 3, 27)
+    // const start = new Date(2021, 3, 27)
+    const start = new Date(today)
     console.log ("Today ", today)
     console.log ("Start ", start)
     while (start <= today) {
