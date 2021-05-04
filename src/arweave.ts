@@ -349,12 +349,13 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
                           }
                       }
                   } else if (timeStamp.getTime() > end.getTime()) {
-                    // If the result is sooner than we want, continue to crawl
+                    // If the result is sooner than we want, then stop querying
                     // console.log ("Result too early")
+                    hasNextPage = false; // Used for HEIGHT_ASC
                   } else {
                     // if the result is older than we want, then stop querying
                     // console.log ("Result too old")
-                    hasNextPage = false;
+                    // hasNextPage = false; // Used for HEIGHT_DESC
                   }
               }
           })
