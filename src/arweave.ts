@@ -225,7 +225,7 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
     let hasNextPage = true;
 
     // To calculate the no. of days between two dates
-    const blocksPerDay = 1000;
+    const blocksPerDay = 1200;
     let height = await getCurrentBlockHeight();
     const startDays = today.getTime() - start.getTime()
     const startDaysDiff = Math.floor(startDays / (1000 * 3600 * 24));
