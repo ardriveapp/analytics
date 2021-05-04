@@ -56,13 +56,6 @@ export async function sendResultsToGraphite (results: Results) {
 
 // Gets a set of metrics for a period of days or hours
 export async function getMetrics (start: Date, end: Date, days?: number, hours?: number) : Promise<Results> {
-    if (hours) {
-      console.log ("hours is ", hours)
-      start = end;
-      console.log (start)
-      start.setHours(start.getHours() - hours);
-      console.log (start)
-    }
     console.log ("Pulling metrics from %s EST to %s EST", start.toLocaleString(), end.toLocaleString());
 
     let totalPrivateDrives = 0;

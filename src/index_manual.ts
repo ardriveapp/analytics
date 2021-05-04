@@ -8,6 +8,8 @@ async function main () {
     let today = new Date();
     let start = new Date();
     let hours = 12;
+    // Take off one day
+    start.setHours(start.getHours() - hours);
 
     const dailyResults : Results = await getMetrics(start, today, 0, hours);
     await sendResultsToGraphite(dailyResults);
