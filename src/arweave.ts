@@ -239,7 +239,7 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
           query: `query {
           transactions(
             tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
-            sort: HEIGHT_DESC
+            sort: HEIGHT_ASC
             block: {min: ${minBlock}}
             first: ${firstPage}
             after: "${cursor}"
