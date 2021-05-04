@@ -758,7 +758,7 @@ async function queryForDataUploads(minBlock: number, firstPage: number, cursor: 
       query: `query {
       transactions(
         tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
-        sort: HEIGHT_DSC
+        sort: HEIGHT_DESC
         block: {min: ${minBlock}}
         first: ${firstPage}
         after: "${cursor}"
