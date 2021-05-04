@@ -758,7 +758,7 @@ async function queryForDataUploads(minBlock: number, firstPage: number, cursor: 
       query: `query {
       transactions(
         tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
-        sort: HEIGHT_ASC
+        sort: HEIGHT_DSC
         block: {min: ${minBlock}}
         first: ${firstPage}
         after: "${cursor}"
@@ -822,7 +822,7 @@ async function queryForBundledDataUploads(firstPage: number, cursor: string, gql
             { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
             { name: "Bundle-Format", values: "json"}
         ]
-        sort: HEIGHT_ASC
+        sort: HEIGHT_DESC
         first: ${firstPage}
         after: "${cursor}"
       ) {
