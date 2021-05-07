@@ -27,12 +27,23 @@ const arweave = Arweave.init({
     timeout: 600000,
   });
 
-  export interface BlockDate {
+export interface BlockDate {
     blockHeight: number;
     blockTimeStamp: number;
     blockHash: string;
     friendlyDate: string;
-  }
+}
+
+export interface ArDriveCommunityFee {
+  appName: string,
+  appVersion: string,
+  tip: string,
+  type: string,
+  amount: number,
+  blockHeight: number,
+  blockTime: number,
+  friendlyDate: string
+}
 
 // Gets the latest price of Arweave in USD
 export const getArUSDPrice = async () : Promise<number> => {
@@ -620,6 +631,81 @@ export const getTotalArDriveCommunityFees = async (start: Date, end: Date) => {
   }
 }
 
+// Sums up all ArDrive Community Tips/Fees for a particular public address
+export const getMyTotalArDriveCommunityFees = async (owner: string, start: Date, end: Date): Promise<ArDriveCommunityFee[]> => {
+  let firstPage : number = 100; // Max size of query for GQL
+  let cursor : string = "";
+  let hasNextPage = false;
+  let timeStamp = new Date(end);
+  let myFees: ArDriveCommunityFee[] = [];
+  try {
+      while (hasNextPage) {
+        const transactions = await queryForMyArDriveCommunityFees(owner, firstPage, cursor, primaryGraphQLUrl);
+        const { edges } = transactions;
+        hasNextPage = transactions.pageInfo.hasNextPage
+        // Create the query to search for all ardrive transactions.
+        edges.forEach((edge: any) => {
+            let myFee: ArDriveCommunityFee = {
+              appName: '',
+              appVersion: '',
+              tip: '',
+              type: '',
+              amount: 0,
+              blockHeight: 0,
+              blockTime: 0,
+              friendlyDate: ''
+            }
+            cursor = edge.cursor;
+            const { node } = edge;
+            const { quantity } = node;
+            const { block } = node;
+            const { tags } = node;
+            if (block !== null) {
+                timeStamp = new Date(block.timestamp * 1000);
+                if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                  //console.log ("Matching community fee transaction: ", timeStamp)
+                  myFee.amount = quantity.ar;
+                  myFee.blockTime = block.timestamp;
+                  myFee.blockHeight = block.height;
+                  myFee.friendlyDate = timeStamp.toLocaleString();
+                  tags.forEach((tag: any) => {
+                      const key = tag.name;
+                      const { value } = tag;
+                      switch (key) {
+                      case 'App-Name':
+                          myFee.appName = value;
+                          break;
+                      case 'App-Version':
+                          myFee.appVersion = value;
+                           break;
+                      case 'Type':
+                          myFee.type = value;
+                          break;
+                      case 'Tip-Type':
+                          myFee.tip = value;
+                          break;
+                      default:
+                          break;
+                      };
+                  })
+                  myFees.push(myFee);
+                } else if (timeStamp.getTime() > end.getTime()) {
+                  // console.log ("Result too old")
+                  hasNextPage = false;
+                } else {
+                  // result too early
+                }
+            }
+        })
+      }
+  return myFees;
+  } catch (err) {
+      console.log (err)
+      console.log ("Error collecting total amount of fees")
+      return myFees;
+  }
+}
+
 // Sums up all transactions for a drive
 export const getTotalDriveSize = async (owner: string, start: Date, end: Date) => {
   let totalDriveSize = 0;
@@ -911,6 +997,7 @@ async function queryForArDriveCommunityFees(firstPage: number, cursor: string, g
               }
               block {
                 timestamp
+                height
               }
             }
           }
@@ -930,6 +1017,65 @@ async function queryForArDriveCommunityFees(firstPage: number, cursor: string, g
       if (gqlUrl = primaryGraphQLUrl) {
         // Run backup graphql query
         return await queryForArDriveCommunityFees(firstPage, cursor, backupGraphQLUrl) ;
+      } else {
+        return false;
+      }
+    }
+}
+
+// Creates a GraphQL Query to search for all ArDrive Community Fees
+async function queryForMyArDriveCommunityFees(owner: string, firstPage: number, cursor: string, gqlUrl: string): Promise<any> {
+  try {
+      const query = {
+        query: `query {
+        transactions(
+          recipients:["${owner}"]
+          tags: [
+              { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+              { name: "Tip-Type", values: "data upload"}
+          ]
+          first: ${firstPage}
+          after: "${cursor}"
+        ) {
+          pageInfo {
+            hasNextPage
+          }
+          edges {
+            cursor
+            node {
+              tags {
+                name
+                value
+              }
+              fee {
+                  ar
+              }
+              quantity {
+                winston
+                ar
+              }
+              block {
+                timestamp
+                height
+              }
+            }
+          }
+        }
+      }`,
+      };
+      // Call the Arweave Graphql Endpoint
+      const response = await arweave.api
+        .request()
+        .post(gqlUrl, query);
+      const { data } = response.data;
+      const { transactions } = data;
+      return transactions;
+    } catch (err) {
+      console.log (err)
+      console.log ("Cannot query for My ArDrive Community Fees. Gateway error %s", gqlUrl)
+      if (gqlUrl = primaryGraphQLUrl) {
+        // Run backup graphql query
+        return await queryForMyArDriveCommunityFees(owner, firstPage, cursor, backupGraphQLUrl) ;
       } else {
         return false;
       }

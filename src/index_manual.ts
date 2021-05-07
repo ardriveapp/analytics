@@ -22,7 +22,7 @@ export async function getBlockDates() {
     });
 }
 
-async function main () {
+export async function main2 () {
     const createCsvWriter = require('csv-writer').createObjectCsvWriter;
     const csvWriter = createCsvWriter({
         path: 'allBlockDates.csv',
@@ -41,4 +41,40 @@ async function main () {
     });
 }
 
+export async function main () {
+    const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+
+    const csvWriter = createCsvWriter({
+        path: 'allArMyDriveFees.csv',
+        header: [
+            {id: 'appName', title: 'APPNAME'},
+            {id: 'appVersion', title: 'APPVERSION'},
+            {id: 'tip', title: 'TIP'},
+            {id: 'type', title: 'TYPE'},
+            {id: 'amount', title: 'AMOUNT'},
+            {id: 'blockHeight', title: 'BLOCKHEIGHT'},
+            {id: 'blockTime', title: 'BLOCKTIME'},
+            {id: 'friendlyDate', title: 'FRIENDLYDATE'},
+        ]
+    });
+    2ZaUGqVCPxst5s0XO933HbZmksnLixpXkt6Sh2re0hg
+    const allBlockDates: ArDriveCommunityFee[] = await getAllMyArDriveCommunityFees()
+    csvWriter.writeRecords(allBlockDates)
+    .then(() => {
+        console.log('...Done writing all block dates');
+    });
+}
+
+
+
 main();
+
+export interface ArDriveCommunityFee {
+    appName: string,
+    appVersion: string,
+    tip: string,
+    type: string,
+    amount: number,
+    blockTime: number,
+    friendlyDate: string
+  }
