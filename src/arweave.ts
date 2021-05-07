@@ -243,7 +243,6 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
     let hasNextPage = true;
 
     // To calculate the no. of days between two dates
-    const minBlock = 800;
     let gqlUrl = primaryGraphQLUrl;
     let tries = 0;
 
@@ -253,7 +252,6 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
           transactions(
             tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
             sort: HEIGHT_ASC
-            block: {min: ${minBlock}}
             first: ${firstPage}
             after: "${cursor}"
           ) {
