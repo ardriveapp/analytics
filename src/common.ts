@@ -307,7 +307,7 @@ export async function getAllMetrics (start: Date, end: Date, days?: number, hour
   averageUserFiles = +averageUserFiles / allOwnerStats.length;
 
   console.log ("Average User Upload Size %s", formatBytes(averageUserSize));
-  console.log ("Average User Files %s", formatBytes(averageUserFiles));
+  console.log ("Average User Files %s", averageUserFiles);
   console.log ('  ---------------------------');
   console.log ("Top 10 Uploaders This Period");
   console.log ("Starting: %s", end.toLocaleString());
