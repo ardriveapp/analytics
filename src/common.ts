@@ -1,6 +1,10 @@
 import {
+  ArDriveCommunityFee,
+  BlockDate,
     getAllArDrives, 
+    getAllBlockDates, 
     getLatestBlockInfo, 
+    getMyTotalArDriveCommunityFees, 
     getTokenHolderCount, 
     getTotalArDriveCommunityFees, 
     getTotalBundledDataTransactionsSize, 
@@ -53,6 +57,116 @@ export async function sendResultsToGraphite (results: Results) {
     }
 
     return "Success";
+}
+
+export async function exportArDriveCommunityFinances () {
+
+  let communityFees: ArDriveCommunityFee[] = [];
+  const today = new Date().toISOString().slice(0, 10)
+  const start = new Date(2020, 8, 26) // the beginning history of ardrive
+  const end = new Date()
+  const name = 'ArDrive_Community_Finance_Report_' + today + '.csv';
+
+  const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+  const csvWriter = createCsvWriter({
+    path: name,
+    header: [
+        {id: 'owner', title: 'OWNER'},
+        {id: 'appName', title: 'APPNAME'},
+        {id: 'appVersion', title: 'APPVERSION'},
+        {id: 'tip', title: 'TIP'},
+        {id: 'type', title: 'TYPE'},
+        {id: 'exchangeRate', title: 'AR/USD PRICE'},
+        {id: 'amountAR', title: 'AR'},
+        {id: 'amountUSD', title: 'USD'},
+        {id: 'currentPrice', title: 'CURRENT AR/USD PRICE'},
+        {id: 'costBasis', title: 'COST BASIS'},
+        {id: 'blockHeight', title: 'BLOCKHEIGHT'},
+        {id: 'blockTime', title: 'BLOCKTIME'},
+        {id: 'friendlyDate', title: 'FRIENDLYDATE'},
+    ]
+  });
+
+  const vestedLockedWarchest = 'Zznp65qgTIm2QBMjjoEaHKOmQrpTu0tfOcdbkm_qoL4';
+  communityFees = await getMyTotalArDriveCommunityFees(vestedLockedWarchest, start, end)
+
+  const lockedWarchest = '-OtTqVqAGqTBzhviZptnUTys7rWenNrnQcjGtvDBDdo';
+  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees(lockedWarchest, start, end));
+
+  const unlockedOperations = 'vn6Z31Dy8rV8Ion7MTcPjwhLcEJnAIObHIGDHP8oGDI';
+  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees(unlockedOperations, start, end));
+
+  const vestedCommunityUsageMining = 'i325n3L2UvgcavEM8UnFfY0OWBiyf2RrbNsLStPI73o';
+  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees(vestedCommunityUsageMining, start, end));
+
+  const unlockedCommunityUsageMining = '2ZaUGqVCPxst5s0XO933HbZmksnLixpXkt6Sh2re0hg';
+  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees(unlockedCommunityUsageMining, start, end));
+
+  const unlockedTeamAndProjects = 'FAxDUPlFfJrLDl6BvUlPw3EJOEEeg6WQbhiWidU7ueY'
+  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees(unlockedTeamAndProjects, start, end));
+
+  csvWriter.writeRecords(communityFees)
+  .then(() => {
+      console.log('...Done writing all ArDrive Community Fees earned');
+  });
+}
+
+export async function exportAllMyCommunityFees (name: string, owner: string) {
+  const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+
+  const csvWriter = createCsvWriter({
+      path: name,
+      header: [
+          {id: 'owner', title: 'OWNER'},
+          {id: 'appName', title: 'APPNAME'},
+          {id: 'appVersion', title: 'APPVERSION'},
+          {id: 'tip', title: 'TIP'},
+          {id: 'type', title: 'TYPE'},
+          {id: 'exchangeRate', title: 'AR/USD PRICE'},
+          {id: 'amountAR', title: 'AR'},
+          {id: 'amountUSD', title: 'USD'},
+          {id: 'currentPrice', title: 'CURRENT AR/USD PRICE'},
+          {id: 'costBasis', title: 'COST BASIS'},
+          {id: 'blockHeight', title: 'BLOCKHEIGHT'},
+          {id: 'blockTime', title: 'BLOCKTIME'},
+          {id: 'friendlyDate', title: 'FRIENDLYDATE'},
+      ]
+  });
+  
+  const start = new Date(2020, 8, 26) // the beginning history of ardrive
+  const end = new Date()
+  const allMyFees: ArDriveCommunityFee[] = await getMyTotalArDriveCommunityFees(owner, start, end)
+  csvWriter.writeRecords(allMyFees)
+  .then(() => {
+      console.log('...Done writing all my ArDrive Community Fees');
+  });
+
+  let totalARFees = 0;
+  allMyFees.forEach((fee: ArDriveCommunityFee) => {
+      totalARFees += +fee.amountAR
+  });
+  console.log ("%s ArDrive Community Fee transactions receieved", allMyFees.length);
+  console.log ("%s AR collected", totalARFees);
+}
+
+// Gets the date of every block on the arweave network
+export async function getBlockDates() {
+  const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+  const csvWriter = createCsvWriter({
+      path: 'allBlockDates.csv',
+      header: [
+          {id: 'blockHeight', title: 'HEIGHT'},
+          {id: 'blockTimeStamp', title: 'TIMESTAMP'},
+          {id: 'blockHash', title: 'HASH'},
+          {id: 'friendlyDate', title: 'DATE'},
+      ]
+  });
+
+  const allBlockDates: BlockDate[] = await getAllBlockDates()
+  csvWriter.writeRecords(allBlockDates)
+  .then(() => {
+      console.log('...Done writing all block dates');
+  });
 }
 
 // Gets a set of metrics for a period of days or hours

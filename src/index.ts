@@ -16,7 +16,7 @@ export async function dailyArDriveUsageAnalytics () {
     await sendResultsToGraphite(dailyResults);
 }
 
-async function hourlyArDriveUsageAnalytics (hours: number) {
+export async function hourlyArDriveUsageAnalytics (hours: number) {
     let today = new Date();
     let start = new Date();
 

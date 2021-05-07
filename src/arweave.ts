@@ -1,8 +1,9 @@
 
 import Arweave from 'arweave';
-import { dataCompare, formatBytes } from './common';
+import { asyncForEach, dataCompare, formatBytes } from './common';
 import { BlockInfo, ArDriveStat, ContentType, AstatineItem } from './types';
 import { readContract } from "smartweave";
+import limestone from 'limestone-api';
 
 const appName = "ArDrive-Desktop";
 const webAppName = "ArDrive-Web";
@@ -35,11 +36,16 @@ export interface BlockDate {
 }
 
 export interface ArDriveCommunityFee {
+  owner: string,
   appName: string,
   appVersion: string,
   tip: string,
   type: string,
-  amount: number,
+  amountAR: number,
+  exchangeRate: number,
+  amountUSD: number,
+  currentPrice: number,
+  costBasis: number,
   blockHeight: number,
   blockTime: number,
   friendlyDate: string
@@ -578,7 +584,7 @@ export const getTotalArDriveCommunityFees = async (start: Date, end: Date) => {
   let webAppFees = 0;
   let firstPage : number = 100; // Max size of query for GQL
   let cursor : string = "";
-  let hasNextPage = false;
+  let hasNextPage = true;
   let timeStamp = new Date(end);
   try {
       while (hasNextPage) {
@@ -635,22 +641,31 @@ export const getTotalArDriveCommunityFees = async (start: Date, end: Date) => {
 export const getMyTotalArDriveCommunityFees = async (owner: string, start: Date, end: Date): Promise<ArDriveCommunityFee[]> => {
   let firstPage : number = 100; // Max size of query for GQL
   let cursor : string = "";
-  let hasNextPage = false;
+  let hasNextPage = true;
   let timeStamp = new Date(end);
   let myFees: ArDriveCommunityFee[] = [];
+  let checkHistoricalPrice = true;
+  console.log ("Getting all fees for %s", owner)
+
+  const currentPrice = await getArUSDPrice();
   try {
       while (hasNextPage) {
         const transactions = await queryForMyArDriveCommunityFees(owner, firstPage, cursor, primaryGraphQLUrl);
         const { edges } = transactions;
         hasNextPage = transactions.pageInfo.hasNextPage
         // Create the query to search for all ardrive transactions.
-        edges.forEach((edge: any) => {
+        await asyncForEach (edges, async (edge: any) => {
             let myFee: ArDriveCommunityFee = {
+              owner,
               appName: '',
               appVersion: '',
               tip: '',
               type: '',
-              amount: 0,
+              amountAR: 0,
+              exchangeRate: 0, // The AR/USD exchange rate
+              amountUSD: 0,
+              currentPrice,
+              costBasis: 0,
               blockHeight: 0,
               blockTime: 0,
               friendlyDate: ''
@@ -664,7 +679,20 @@ export const getMyTotalArDriveCommunityFees = async (owner: string, start: Date,
                 timeStamp = new Date(block.timestamp * 1000);
                 if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
                   //console.log ("Matching community fee transaction: ", timeStamp)
-                  myFee.amount = quantity.ar;
+                  myFee.amountAR = quantity.ar;
+                  try {
+                    if (checkHistoricalPrice) {
+                      let latestPrice = await limestone.getHistoricalPrice("AR", {
+                        date: timeStamp, // Any convertable to date type
+                      });
+                      myFee.exchangeRate = latestPrice.value;
+                      myFee.amountUSD = latestPrice.value * myFee.amountAR;
+                      myFee.costBasis = latestPrice.value - myFee.currentPrice
+                    }
+                  } catch {
+                    checkHistoricalPrice = false;
+                    console.log ("Cannot get AR price on ", timeStamp);
+                  }
                   myFee.blockTime = block.timestamp;
                   myFee.blockHeight = block.height;
                   myFee.friendlyDate = timeStamp.toLocaleString();
@@ -1047,11 +1075,7 @@ async function queryForMyArDriveCommunityFees(owner: string, firstPage: number, 
                 name
                 value
               }
-              fee {
-                  ar
-              }
               quantity {
-                winston
                 ar
               }
               block {
