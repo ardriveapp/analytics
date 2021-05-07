@@ -27,7 +27,12 @@ const arweave = Arweave.init({
     timeout: 600000,
   });
 
-
+  export interface BlockDate {
+    blockHeight: number;
+    blockTimeStamp: number;
+    blockHash: string;
+    friendlyDate: string;
+  }
 
 // Gets the latest price of Arweave in USD
 export const getArUSDPrice = async () : Promise<number> => {
@@ -74,6 +79,20 @@ export const getLatestBlockInfo = async (height: number) => {
     latestBlock.blockSize = blockInfo['block_size']
     return latestBlock;
 };
+
+export const getBlockDate = async (height: number): Promise<BlockDate> => {
+  const response = await fetch(`https://arweave.net/block/height/${height}`);
+  const blockInfo = await response.json()
+  const blockTimeStampDate = new Date(+blockInfo['timestamp'] * 1000);
+  const friendlyDate = blockTimeStampDate.toLocaleString();
+  const blockDate: BlockDate = {
+    blockHeight: height,
+    blockTimeStamp: blockInfo['timestamp'],
+    blockHash: blockInfo['hash'],
+    friendlyDate,
+  };
+  return blockDate;
+}
 
 // Gets ArDrive information from a start and and date
 export const getAllArDrives = async (start: Date, end: Date) => {
@@ -221,16 +240,10 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
     let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let timeStamp = new Date(end);
-    let today = new Date();
     let hasNextPage = true;
 
     // To calculate the no. of days between two dates
-    const blocksPerDay = 1200;
-    let height = await getCurrentBlockHeight();
-    const startDays = today.getTime() - start.getTime()
-    const startDaysDiff = Math.floor(startDays / (1000 * 3600 * 24));
-    const minBlock = height - (blocksPerDay * startDaysDiff)
-    console.log ("Min block is: ", minBlock)
+    const minBlock = 800;
     let gqlUrl = primaryGraphQLUrl;
     let tries = 0;
 
@@ -824,7 +837,7 @@ async function queryForBundledDataUploads(firstPage: number, cursor: string, gql
             { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
             { name: "Bundle-Format", values: "json"}
         ]
-        sort: HEIGHT_DESC
+        sort: HEIGHT_ASC
         first: ${firstPage}
         after: "${cursor}"
       ) {
@@ -1013,3 +1026,17 @@ export async function get_24_hour_ardrive_transactions() : Promise<AstatineItem[
     
     return trimmedWeightedList;
 }
+
+export async function getAllBlockDates() : Promise<BlockDate[]> {
+  let blockDates: BlockDate[] = [];
+  let currentHeight = await getCurrentBlockHeight();
+  let i = 0;
+  while (i <= currentHeight) {
+    let blockDate = await getBlockDate(i);
+    console.log ("Block Date: ", blockDate);
+    blockDates.push(blockDate);
+    i += 1;
+  }
+  return blockDates;
+}
+

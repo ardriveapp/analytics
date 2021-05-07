@@ -1,21 +1,44 @@
 
 // import { get_24_hour_ardrive_transactions } from './arweave';
-import { getMetrics, sendResultsToGraphite } from './common';
-import { Results } from './types';
+import {  BlockDate, getAllBlockDates } from './arweave';
 // import { AstatineItem } from './types';
 
-async function main () {
-    let today = new Date();
-    let start = new Date();
-    let hours = 12;
-    // Take off one day
-    start.setHours(start.getHours() - hours);
+export async function getBlockDates() {
+    const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+    const csvWriter = createCsvWriter({
+        path: 'allBlockDates.csv',
+        header: [
+            {id: 'blockHeight', title: 'HEIGHT'},
+            {id: 'blockTimeStamp', title: 'TIMESTAMP'},
+            {id: 'blockHash', title: 'HASH'},
+            {id: 'friendlyDate', title: 'DATE'},
+        ]
+    });
 
-    const dailyResults : Results = await getMetrics(start, today, 0, hours);
-    await sendResultsToGraphite(dailyResults);
-    // Used to test Astatine
-    // const usersToReward : AstatineItem[] = await get_24_hour_ardrive_transactions();
-    // console.log (usersToReward)
+    const allBlockDates: BlockDate[] = await getAllBlockDates()
+    csvWriter.writeRecords(allBlockDates)
+    .then(() => {
+        console.log('...Done writing all block dates');
+    });
+}
+
+async function main () {
+    const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+    const csvWriter = createCsvWriter({
+        path: 'allBlockDates.csv',
+        header: [
+            {id: 'blockHeight', title: 'HEIGHT'},
+            {id: 'blockTimeStamp', title: 'TIMESTAMP'},
+            {id: 'blockHash', title: 'HASH'},
+            {id: 'friendlyDate', title: 'DATE'},
+        ]
+    });
+
+    const allBlockDates: BlockDate[] = await getAllBlockDates()
+    csvWriter.writeRecords(allBlockDates)
+    .then(() => {
+        console.log('...Done writing all block dates');
+    });
 }
 
 main();

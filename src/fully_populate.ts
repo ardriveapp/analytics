@@ -1,4 +1,4 @@
-import { getMetrics, sendResultsToGraphite } from "./common";
+import { getAllMetrics, sendResultsToGraphite } from "./common";
 
 async function main () {
     let today = new Date();
@@ -11,7 +11,7 @@ async function main () {
     while (start <= today) {
         const end = new Date(start)
         end.setDate(start.getDate() + 1); // How far back we should query for data
-        let newResult = await getMetrics(start, end, 1)
+        let newResult = await getAllMetrics(start, end, 1)
         // console.log (newResult)
         await sendResultsToGraphite(newResult);
         start.setDate(start.getDate() + 1); // move on to the next day
