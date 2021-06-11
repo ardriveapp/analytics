@@ -58,3 +58,27 @@ export interface ArDriveStat {
     data: number,
     blockTimeStamp: Date,
 }
+
+export interface BlockDate {
+  blockHeight: number;
+  blockTimeStamp: number;
+  blockHash: string;
+  friendlyDate: string;
+}
+
+export interface ArDriveCommunityFee {
+owner: string,
+friendlyName: string,
+appName: string,
+appVersion: string,
+tip: string,
+type: string,
+amountAR: number,
+exchangeRate: number,
+amountUSD: number,
+currentPrice: number,
+costBasis: number,
+blockHeight: number,
+blockTime: number,
+friendlyDate: string
+}

@@ -1,7 +1,7 @@
 
 import Arweave from 'arweave';
 import { asyncForEach, dataCompare, formatBytes } from './common';
-import { BlockInfo, ArDriveStat, ContentType, AstatineItem } from './types';
+import { BlockInfo, ArDriveStat, ContentType, AstatineItem, ArDriveCommunityFee, BlockDate } from './types';
 import { readContract } from "smartweave";
 import limestone from 'limestone-api';
 
@@ -27,29 +27,6 @@ const arweave = Arweave.init({
     protocol: 'https',
     timeout: 600000,
   });
-
-export interface BlockDate {
-    blockHeight: number;
-    blockTimeStamp: number;
-    blockHash: string;
-    friendlyDate: string;
-}
-
-export interface ArDriveCommunityFee {
-  owner: string,
-  appName: string,
-  appVersion: string,
-  tip: string,
-  type: string,
-  amountAR: number,
-  exchangeRate: number,
-  amountUSD: number,
-  currentPrice: number,
-  costBasis: number,
-  blockHeight: number,
-  blockTime: number,
-  friendlyDate: string
-}
 
 // Gets the latest price of Arweave in USD
 export const getArUSDPrice = async () : Promise<number> => {
@@ -426,17 +403,24 @@ export const getTotalDataTransactionsSize_WithBlocks = async (start: Date, end: 
   let cursor : string = "";
   let timeStamp = new Date(end);
   let today = new Date();
-  let found = 1;
+  let hasNextPage = true;
+
+  let startingData = 999221829546;
+  let dailyDataSize = 0;
 
   // To calculate the no. of days between two dates
   const blocksPerDay = 1000;
   let height = await getCurrentBlockHeight();
+  let minBlock = height - blocksPerDay // Search the last min block time by default
   const startDays = today.getTime() - start.getTime()
   const startDaysDiff = Math.floor(startDays / (1000 * 3600 * 24));
-  const minBlock = height - (blocksPerDay * startDaysDiff)
+  if (startDaysDiff !== 0) {
+    minBlock = height - (blocksPerDay * startDaysDiff)
+  } 
+  console.log (minBlock)
   let gqlUrl = primaryGraphQLUrl;
   let tries = 0;
-  while (found > 0) {
+  while (hasNextPage) {
       const query = {
         query: `query {
         transactions(
@@ -482,6 +466,7 @@ export const getTotalDataTransactionsSize_WithBlocks = async (start: Date, end: 
           .post(gqlUrl, query);
         const { data } = response.data;
         const { transactions } = data;
+        hasNextPage = transactions.pageInfo.hasNextPage
         const { edges } = transactions;
         // Create the query to search for all ardrive transactions.
         edges.forEach((edge: any) => {
@@ -547,12 +532,21 @@ export const getTotalDataTransactionsSize_WithBlocks = async (start: Date, end: 
                         } else if (appName === 'ArDrive-Desktop') {
                             desktopFiles += 1;
                         }
+                        dailyDataSize += +data.size;
+                        startingData += +data.size;
+                        console.log (startingData)
+                        if (startingData >= 1000000000000) {
+                          console.log ("CONGRATS!!!")
+                          console.log (node.owner.address);
+                          console.log (node.id)
+                          console.log ("At daily data size: ", dailyDataSize)
+                        }
                     }
                 } else if (timeStamp.getTime() > end.getTime()) {
                   // console.log ("Result too old")
-                  found = 0;
+                  hasNextPage = false;
                 } else {
-                  //console.log ("Result too early")
+                  // console.log ("Result too early")
                 }
             }
         })
@@ -566,7 +560,7 @@ export const getTotalDataTransactionsSize_WithBlocks = async (start: Date, end: 
           tries = 0;
           if (gqlUrl.includes('.dev')) {
             console.log('Backup gateway is having issues, stopping.');
-            found = 0;
+            hasNextPage = false;
           } else {
             console.log('Primary gateway is having issues, switching to backup.');
             gqlUrl = backupGraphQLUrl; // Change to the backup URL and try 5 times
@@ -637,15 +631,16 @@ export const getTotalArDriveCommunityFees = async (start: Date, end: Date) => {
   }
 }
 
-// Sums up all ArDrive Community Tips/Fees for a particular public address
-export const getMyTotalArDriveCommunityFees = async (owner: string, start: Date, end: Date): Promise<ArDriveCommunityFee[]> => {
+// Sums up all ArDrive Community Tips/Fees for a particular public address.  Uses a friendly name to label the wallet
+export const getMyTotalArDriveCommunityFees = async (friendlyName: string, owner: string, start: Date, end: Date): Promise<ArDriveCommunityFee[]> => {
   let firstPage : number = 100; // Max size of query for GQL
   let cursor : string = "";
   let hasNextPage = true;
   let timeStamp = new Date(end);
+  let limestoneDay: number;
   let myFees: ArDriveCommunityFee[] = [];
   let checkHistoricalPrice = true;
-  console.log ("Getting all fees for %s", owner)
+  console.log ("Getting all fees for %s: %s", friendlyName, owner)
 
   const currentPrice = await getArUSDPrice();
   try {
@@ -657,6 +652,7 @@ export const getMyTotalArDriveCommunityFees = async (owner: string, start: Date,
         await asyncForEach (edges, async (edge: any) => {
             let myFee: ArDriveCommunityFee = {
               owner,
+              friendlyName,
               appName: '',
               appVersion: '',
               tip: '',
@@ -678,16 +674,20 @@ export const getMyTotalArDriveCommunityFees = async (owner: string, start: Date,
             if (block !== null) {
                 timeStamp = new Date(block.timestamp * 1000);
                 if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
-                  //console.log ("Matching community fee transaction: ", timeStamp)
+                  // console.log ("Matching community fee transaction: ", timeStamp)
                   myFee.amountAR = quantity.ar;
                   try {
-                    if (checkHistoricalPrice) {
+                    // Will try to get the price of AR for the day of this transaction. 
+                    // This will skip if it already got the price of AR for that day
+                    // This will skip completely if limestone is down
+                    if (checkHistoricalPrice && (limestoneDay !== timeStamp.getDay())) {
+                      limestoneDay = timeStamp.getDay();
                       let latestPrice = await limestone.getHistoricalPrice("AR", {
                         date: timeStamp, // Any convertable to date type
                       });
                       myFee.exchangeRate = latestPrice.value;
                       myFee.amountUSD = latestPrice.value * myFee.amountAR;
-                      myFee.costBasis = latestPrice.value - myFee.currentPrice
+                      myFee.costBasis = latestPrice.value - myFee.currentPrice;
                     }
                   } catch {
                     checkHistoricalPrice = false;

@@ -1,6 +1,4 @@
 import {
-  ArDriveCommunityFee,
-  BlockDate,
     getAllArDrives, 
     getAllBlockDates, 
     getLatestBlockInfo, 
@@ -13,7 +11,15 @@ import {
     getTotalDriveSize, 
     /*get_24_hour_ardrive_transactions*/ 
 } from './arweave'
-import { Results, ContentType, BlockInfo } from './types';
+import { Results, ContentType, BlockInfo, ArDriveCommunityFee, BlockDate } from './types';
+
+// Pauses application
+export async function sleep(ms: number): Promise<number> {
+	return new Promise((resolve) => {
+		// eslint-disable-next-line @typescript-eslint/no-implied-eval
+		setTimeout(resolve, ms);
+	});
+}
 
 export async function sendResultsToGraphite (results: Results) {
 
@@ -59,59 +65,57 @@ export async function sendResultsToGraphite (results: Results) {
     return "Success";
 }
 
-export async function exportArDriveCommunityFinances () {
+// Takes the ardrive community fees and exports to graphite/grafana dashboard, using friendly name for the grouping
+export async function sendArDriveCommunityFinancesToGraphite (communityFee: ArDriveCommunityFee) {
+  try {
+    const date = new Date(communityFee.blockTime * 1000);
+    let arDriveFinancesMessage = 'ardrive.finances.' + communityFee.friendlyName + '.';
 
-  let communityFees: ArDriveCommunityFee[] = [];
-  const today = new Date().toISOString().slice(0, 10)
-  const start = new Date(2020, 8, 26) // the beginning history of ardrive
-  const end = new Date()
-  const name = 'ArDrive_Community_Finance_Report_' + today + '.csv';
+    let graphiteMessage = arDriveFinancesMessage + 'amount.ar';
+    await sendMessageToGraphite(graphiteMessage, communityFee.amountAR, date);
 
-  const createCsvWriter = require('csv-writer').createObjectCsvWriter;
-  const csvWriter = createCsvWriter({
-    path: name,
-    header: [
-        {id: 'owner', title: 'OWNER'},
-        {id: 'appName', title: 'APPNAME'},
-        {id: 'appVersion', title: 'APPVERSION'},
-        {id: 'tip', title: 'TIP'},
-        {id: 'type', title: 'TYPE'},
-        {id: 'exchangeRate', title: 'AR/USD PRICE'},
-        {id: 'amountAR', title: 'AR'},
-        {id: 'amountUSD', title: 'USD'},
-        {id: 'currentPrice', title: 'CURRENT AR/USD PRICE'},
-        {id: 'costBasis', title: 'COST BASIS'},
-        {id: 'blockHeight', title: 'BLOCKHEIGHT'},
-        {id: 'blockTime', title: 'BLOCKTIME'},
-        {id: 'friendlyDate', title: 'FRIENDLYDATE'},
-    ]
-  });
+    graphiteMessage = arDriveFinancesMessage + 'amount.usd';
+    await sendMessageToGraphite(graphiteMessage, communityFee.amountUSD, date);
 
-  const vestedLockedWarchest = 'Zznp65qgTIm2QBMjjoEaHKOmQrpTu0tfOcdbkm_qoL4';
-  communityFees = await getMyTotalArDriveCommunityFees(vestedLockedWarchest, start, end)
+    graphiteMessage = arDriveFinancesMessage + 'tipType.' + communityFee.tip + '.';
+    await sendMessageToGraphite(graphiteMessage, 1, date);
 
-  const lockedWarchest = '-OtTqVqAGqTBzhviZptnUTys7rWenNrnQcjGtvDBDdo';
-  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees(lockedWarchest, start, end));
-
-  const unlockedOperations = 'vn6Z31Dy8rV8Ion7MTcPjwhLcEJnAIObHIGDHP8oGDI';
-  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees(unlockedOperations, start, end));
-
-  const vestedCommunityUsageMining = 'i325n3L2UvgcavEM8UnFfY0OWBiyf2RrbNsLStPI73o';
-  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees(vestedCommunityUsageMining, start, end));
-
-  const unlockedCommunityUsageMining = '2ZaUGqVCPxst5s0XO933HbZmksnLixpXkt6Sh2re0hg';
-  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees(unlockedCommunityUsageMining, start, end));
-
-  const unlockedTeamAndProjects = 'FAxDUPlFfJrLDl6BvUlPw3EJOEEeg6WQbhiWidU7ueY'
-  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees(unlockedTeamAndProjects, start, end));
-
-  csvWriter.writeRecords(communityFees)
-  .then(() => {
-      console.log('...Done writing all ArDrive Community Fees earned');
-  });
+  } catch (err) {
+    console.log (err);
+    console.log ("Error sending community fees to graphite")
+  }
+  return "Success";
 }
 
-export async function exportAllMyCommunityFees (name: string, owner: string) {
+export async function getArDriveCommunityFinances (): Promise<ArDriveCommunityFee[]> {
+
+  let communityFees: ArDriveCommunityFee[] = [];
+  const start = new Date(2020, 8, 26) // the beginning history of ardrive
+  const end = new Date()
+
+  const vestedCommunityUsageMining = 'i325n3L2UvgcavEM8UnFfY0OWBiyf2RrbNsLStPI73o';
+  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees('VestedCommunityDistribution', vestedCommunityUsageMining, start, end));
+
+  const lockedWarchest = '-OtTqVqAGqTBzhviZptnUTys7rWenNrnQcjGtvDBDdo';
+  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees('LockedWarchest', lockedWarchest, start, end));
+
+  const unlockedOperations = 'vn6Z31Dy8rV8Ion7MTcPjwhLcEJnAIObHIGDHP8oGDI';
+  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees('UnlockedOperations', unlockedOperations, start, end));
+
+  const vestedLockedWarchest = 'Zznp65qgTIm2QBMjjoEaHKOmQrpTu0tfOcdbkm_qoL4';
+  communityFees = await getMyTotalArDriveCommunityFees('VestedLockedWarchest', vestedLockedWarchest, start, end)
+
+  const unlockedCommunityUsageMining = '2ZaUGqVCPxst5s0XO933HbZmksnLixpXkt6Sh2re0hg';
+  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees('UnlockedCommunityDistribution', unlockedCommunityUsageMining, start, end));
+
+  const unlockedTeamAndProjects = 'FAxDUPlFfJrLDl6BvUlPw3EJOEEeg6WQbhiWidU7ueY'
+  communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees('UnlockedTeamAndProjects', unlockedTeamAndProjects, start, end));
+
+  return communityFees;
+
+}
+
+export async function exportAllMyCommunityFees (name: string, friendlyName: string, owner: string) {
   const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
   const csvWriter = createCsvWriter({
@@ -135,7 +139,7 @@ export async function exportAllMyCommunityFees (name: string, owner: string) {
   
   const start = new Date(2020, 8, 26) // the beginning history of ardrive
   const end = new Date()
-  const allMyFees: ArDriveCommunityFee[] = await getMyTotalArDriveCommunityFees(owner, start, end)
+  const allMyFees: ArDriveCommunityFee[] = await getMyTotalArDriveCommunityFees(friendlyName, owner, start, end)
   csvWriter.writeRecords(allMyFees)
   .then(() => {
       console.log('...Done writing all my ArDrive Community Fees');
@@ -171,6 +175,12 @@ export async function getBlockDates() {
 
 // Gets a set of metrics for a period of days or hours
 export async function getMetrics (start: Date, end: Date, days?: number, hours?: number) : Promise<Results> {
+    const today = new Date()
+    // If our end date is in the future, we set it to the current time to ensure valid results.
+    if (end.getTime() > today.getTime()) {
+      end.setTime(today.getTime());
+    }
+
     console.log ("Pulling metrics from %s EST to %s EST", start.toLocaleString(), end.toLocaleString());
 
     let totalPrivateDrives = 0;
@@ -266,7 +276,7 @@ export async function getMetrics (start: Date, end: Date, days?: number, hours?:
     averageUserFiles = +averageUserFiles / allOwnerStats.length;
 
     console.log ("Average User Upload Size %s", formatBytes(averageUserSize));
-    console.log ("Average User Files %s", formatBytes(averageUserFiles));
+    console.log ("Average User Files %s", averageUserFiles);
     console.log ('  ---------------------------');
     console.log ("Top 10 Uploaders This Period");
     console.log ("Starting: %s", end.toLocaleString());
@@ -326,6 +336,11 @@ export async function getMetrics (start: Date, end: Date, days?: number, hours?:
 
 // Gets a set of metrics for a period of days or hours
 export async function getAllMetrics (start: Date, end: Date, days?: number, hours?: number) : Promise<Results> {
+  const today = new Date()
+  // If our end date is in the future, we set it to the current time to ensure valid results.
+  if (end > today) {
+    end.setTime(today.getTime());
+  }
   console.log ("Pulling metrics from %s EST to %s EST", start.toLocaleString(), end.toLocaleString());
 
   let totalPrivateDrives = 0;
@@ -420,8 +435,8 @@ export async function getAllMetrics (start: Date, end: Date, days?: number, hour
   averageUserSize = +averageUserSize / allOwnerStats.length ;
   averageUserFiles = +averageUserFiles / allOwnerStats.length;
 
-  console.log ("Average User Upload Size %s", formatBytes(averageUserSize));
-  console.log ("Average User Files %s", averageUserFiles);
+  console.log ("Average User Size %s", formatBytes(averageUserSize));
+  console.log ("Average User Files Amount %s", averageUserFiles);
   console.log ('  ---------------------------');
   console.log ("Top 10 Uploaders This Period");
   console.log ("Starting: %s", end.toLocaleString());
@@ -489,13 +504,24 @@ export const asyncForEach = async (array: any[], callback: any) => {
   
 // Sends a message to the ardrive graphite server
 export const sendMessageToGraphite = async (path: string, value: number, timeStamp: Date) => {
+  try {
     const message = path + " " + value.toString() + " " + (Math.floor(timeStamp.getTime()/1000)) + '\n';
     let net = require('net');
-    let client = new net.Socket();
-    client.connect(2003, 'stats.ardrive.io', function() {
-        client.write(message)
-        client.end('completed!')
+    let socket = new net.createConnection(2003, 'stats.ardrive.io', function() {
+        socket.write(message)
+        socket.end('completed!')
     });
+    socket.on('error', async function() {
+      console.log ('Connection error')
+      socket.end('completed!')
+      await sleep (5000);
+      await sendMessageToGraphite(path, value, timeStamp)
+    })
+  } catch (err) {
+    console.log (err)
+    console.log ("Error sending message to graphite")
+  }
+
 }
 
 // Format byte size to something nicer.  This is minified...

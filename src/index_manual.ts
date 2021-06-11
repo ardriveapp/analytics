@@ -1,12 +1,15 @@
 
 // import { get_24_hour_ardrive_transactions } from './arweave';
-import {  BlockDate, getAllBlockDates } from './arweave';
-import { exportArDriveCommunityFinances } from './common';
+
+import { getAllBlockDates } from "./arweave";
+import { BlockDate } from "./types";
+
+
 // import { AstatineItem } from './types';
 
 
 
-export async function main2 () {
+export async function main () {
     const createCsvWriter = require('csv-writer').createObjectCsvWriter;
     const csvWriter = createCsvWriter({
         path: 'allBlockDates.csv',
@@ -25,8 +28,5 @@ export async function main2 () {
     });
 }
 
-export async function main () {
-    await exportArDriveCommunityFinances()
-}
 
 main();
