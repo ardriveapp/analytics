@@ -88,6 +88,18 @@ export const getBlockDate = async (height: number): Promise<BlockDate> => {
   return blockDate;
 }
 
+// Get the balance of an Arweave wallet
+export async function getWalletBalance(walletPublicKey: string): Promise<number> {
+	try {
+		let balance = await arweave.wallets.getBalance(walletPublicKey);
+		balance = arweave.ar.winstonToAr(balance);
+		return +balance;
+	} catch (err) {
+		console.log(err);
+		return 0;
+	}
+}
+
 // Gets ArDrive information from a start and and date
 export const getAllArDrives = async (start: Date, end: Date) => {
     let firstPage : number = 100; // Max size of query for GQL
@@ -244,7 +256,7 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
         const query = {
           query: `query {
           transactions(
-            tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+            tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Mobile", "ArDrive-Web"] }
             sort: HEIGHT_ASC
             first: ${firstPage}
             after: "${cursor}"
@@ -424,7 +436,7 @@ export const getTotalDataTransactionsSize_WithBlocks = async (start: Date, end: 
       const query = {
         query: `query {
         transactions(
-          tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+          tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Mobile", "ArDrive-Web"] }
           sort: HEIGHT_ASC
           block: {min: ${minBlock}}
           first: ${firstPage}
@@ -718,10 +730,11 @@ export const getMyTotalArDriveCommunityFees = async (friendlyName: string, owner
                   })
                   myFees.push(myFee);
                 } else if (timeStamp.getTime() > end.getTime()) {
-                  // console.log ("Result too old")
-                  hasNextPage = false;
+                  //console.log ("Result too early")
                 } else {
-                  // result too early
+                  //console.log ("Result too old")
+                  hasNextPage = false;
+                  // result too old
                 }
             }
         })
@@ -780,7 +793,7 @@ const queryForAllDrives = async (firstPage: number, cursor: string, gqlUrl: stri
       query: `query {
           transactions(
               tags: [
-                  { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+                  { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Mobile", "ArDrive-Web"] }
                   { name: "Entity-Type", values: "drive" }
                 ]
               sort: HEIGHT_ASC
@@ -884,7 +897,7 @@ async function queryForDataUploads(minBlock: number, firstPage: number, cursor: 
     const query = {
       query: `query {
       transactions(
-        tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+        tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Mobile", "ArDrive-Web"] }
         sort: HEIGHT_DESC
         block: {min: ${minBlock}}
         first: ${firstPage}
@@ -946,7 +959,7 @@ async function queryForBundledDataUploads(firstPage: number, cursor: string, gql
       query: `query {
       transactions(
         tags: [
-            { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+            { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Mobile", "ArDrive-Web"] }
             { name: "Bundle-Format", values: "json"}
         ]
         sort: HEIGHT_ASC
@@ -1000,11 +1013,12 @@ async function queryForArDriveCommunityFees(firstPage: number, cursor: string, g
         query: `query {
         transactions(
           tags: [
-              { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+              { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Mobile", "ArDrive-Web"] }
               { name: "Tip-Type", values: "data upload"}
           ]
           first: ${firstPage}
           after: "${cursor}"
+          sort: HEIGHT_ASC
         ) {
           pageInfo {
             hasNextPage
@@ -1059,11 +1073,12 @@ async function queryForMyArDriveCommunityFees(owner: string, firstPage: number, 
         transactions(
           recipients:["${owner}"]
           tags: [
-              { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Web"] }
+              { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Mobile", "ArDrive-Web"] }
               { name: "Tip-Type", values: "data upload"}
           ]
           first: ${firstPage}
           after: "${cursor}"
+          sort: HEIGHT_DESC
         ) {
           pageInfo {
             hasNextPage
