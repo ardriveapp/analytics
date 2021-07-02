@@ -1,6 +1,6 @@
 {
   "name": "ardrive-analytics",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Pulls different statics for ArDrive usage from Arweave.",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",

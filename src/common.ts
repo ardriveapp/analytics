@@ -8,7 +8,8 @@ import {
     getTotalBundledDataTransactionsSize, 
     getTotalDataTransactionsSize, 
     getTotalDataTransactionsSize_WithBlocks, 
-    getTotalDriveSize, 
+    getTotalDriveSize,
+    getWalletBalance, 
     /*get_24_hour_ardrive_transactions*/ 
 } from './arweave'
 import { Results, ContentType, BlockInfo, ArDriveCommunityFee, BlockDate } from './types';
@@ -87,11 +88,59 @@ export async function sendArDriveCommunityFinancesToGraphite (communityFee: ArDr
   return "Success";
 }
 
-export async function getArDriveCommunityFinances (): Promise<ArDriveCommunityFee[]> {
+// Gets all of the ArDrive Community Wallets and sends their balance to grafana
+export async function getArDriveCommunityWalletBalances () {
+  let today = new Date();
+
+  console.log ("%s Starting to collect ArDrive Community Balances", today)
+  console.log ("")
+
+  const communityWallets : string[] = [
+    'i325n3L2UvgcavEM8UnFfY0OWBiyf2RrbNsLStPI73o', // vested community usage mining 
+    '-OtTqVqAGqTBzhviZptnUTys7rWenNrnQcjGtvDBDdo', // locked warchest
+    'vn6Z31Dy8rV8Ion7MTcPjwhLcEJnAIObHIGDHP8oGDI', // unlocked operations
+    'Zznp65qgTIm2QBMjjoEaHKOmQrpTu0tfOcdbkm_qoL4', // vested locked warchest
+    '2ZaUGqVCPxst5s0XO933HbZmksnLixpXkt6Sh2re0hg', // unlocked community usage mining
+    'FAxDUPlFfJrLDl6BvUlPw3EJOEEeg6WQbhiWidU7ueY', // unlocked team and projects
+    'pzH5LB20NhsrPMmvZzTrW-ahbAbIE-TeRzWBVYdArpA' // operational vault
+  ];
+
+  communityWallets.forEach(async (communityWallet: string) => {
+    let communityWalletMessage = 'ardrive.finances.communitywallets.' + communityWallet
+    let balance = await getWalletBalance(communityWallet);
+    console.log ("%s balance is %s", communityWallet, balance)
+    await sendMessageToGraphite(communityWalletMessage, balance, today);
+  });
+
+}
+
+// Gets all of the community fees for the main ArDrive wallets since the beginning of ArDrive usage
+// Writes to graphite/grafana
+export async function fullyPopulateArDriveCommunityFinances() {
+  let today = new Date();
+  const start = new Date(2020, 8, 26) // the beginning history of ardrive
+
+  start.setMinutes(0);
+  start.setHours(20);
+
+  console.log ("Fully populating all ArDrive Community Finances in Grafana")
+  while (start < today) {
+      const end = new Date(start)
+      end.setDate(start.getDate() + 1); // How far back we should query for data
+      console.log ("Getting data between %s and %s", start, end);
+      let fees = await getArDriveCommunityFinances(start, end);
+      fees.forEach(async (fee: ArDriveCommunityFee) => {
+        console.log (fee)
+        await sendArDriveCommunityFinancesToGraphite(fee);
+      })
+      start.setDate(start.getDate() + 1); // move on to the next day
+  }
+}
+
+// Gets all ArDrive Tip transactions for the primary ArDrive Community Wallets between a start and end date
+export async function getArDriveCommunityFinances (start: Date, end: Date): Promise<ArDriveCommunityFee[]> {
 
   let communityFees: ArDriveCommunityFee[] = [];
-  const start = new Date(2020, 8, 26) // the beginning history of ardrive
-  const end = new Date()
 
   const vestedCommunityUsageMining = 'i325n3L2UvgcavEM8UnFfY0OWBiyf2RrbNsLStPI73o';
   communityFees = communityFees.concat(await getMyTotalArDriveCommunityFees('VestedCommunityDistribution', vestedCommunityUsageMining, start, end));
@@ -115,6 +164,7 @@ export async function getArDriveCommunityFinances (): Promise<ArDriveCommunityFe
 
 }
 
+// Gets all of the ArDrive Community tip transactions for the main wallets and exports to a CSV
 export async function exportAllMyCommunityFees (name: string, friendlyName: string, owner: string) {
   const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 

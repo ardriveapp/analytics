@@ -1,5 +1,4 @@
-import { asyncForEach, getArDriveCommunityFinances, sendArDriveCommunityFinancesToGraphite } from "./common";
-import { ArDriveCommunityFee } from "./types";
+import { getArDriveCommunityFinances, getArDriveCommunityWalletBalances } from "./common";
 
 export async function main () {
     const today = new Date().toISOString().slice(0, 10)
@@ -26,21 +25,16 @@ export async function main () {
       ]
     });
 
-    const communityFees = await getArDriveCommunityFinances()
+    const start = new Date(2020, 8, 26) // the beginning history of ardrive
+    const end = new Date()
+    await getArDriveCommunityWalletBalances()
+    const communityFees = await getArDriveCommunityFinances(start, end)
     
     console.log ("Writing all ArDrive Community Finances to ", name)
     csvWriter.writeRecords(communityFees)
     .then(() => {
         console.log('...Done writing');
     });
-
-    console.log ("Sending ArDrive Community Finances to Graphite/Grafana");
-    await asyncForEach (communityFees, async (communityFee: ArDriveCommunityFee) => {
-        await sendArDriveCommunityFinancesToGraphite(communityFee);
-    });
-    console.log ("All fees sent")
-
-
 }
 
 main();
