@@ -108,7 +108,7 @@ export async function getArDriveCommunityWalletARBalances () {
   console.log ("")
 
   communityWallets.forEach(async (communityWallet: string) => {
-    let communityWalletMessage = 'ardrive.finances.communitywallets.ar.' + communityWallet
+    let communityWalletMessage = 'ardrive.finances.communitywallets.' + communityWallet + '.ar'
     let balance = await getWalletBalance(communityWallet);
     console.log ("%s balance is %s", communityWallet, balance)
     await sendMessageToGraphite(communityWalletMessage, balance, today);
