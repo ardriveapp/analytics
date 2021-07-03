@@ -1,4 +1,4 @@
-import { getArDriveCommunityFinances, getArDriveCommunityWalletBalances } from "./common";
+import { getArDriveCommunityFinances } from "./common";
 
 export async function main () {
     const today = new Date().toISOString().slice(0, 10)
@@ -27,7 +27,7 @@ export async function main () {
 
     const start = new Date(2020, 8, 26) // the beginning history of ardrive
     const end = new Date()
-    await getArDriveCommunityWalletBalances()
+
     const communityFees = await getArDriveCommunityFinances(start, end)
     
     console.log ("Writing all ArDrive Community Finances to ", name)
