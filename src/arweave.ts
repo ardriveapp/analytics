@@ -21,7 +21,7 @@ const primaryGraphQLUrl = 'https://arweave.net/graphql';
 const backupGraphQLUrl = 'https://arweave.net/graphql';
 
 const fetch = require('node-fetch')
-const arweave = Arweave.init({
+export const arweave = Arweave.init({
     host: 'arweave.net', // Arweave Gateway
     port: 443,
     protocol: 'https',

@@ -12,7 +12,18 @@ import {
     getWalletBalance, 
     /*get_24_hour_ardrive_transactions*/ 
 } from './arweave'
+import { getArDriveCommunityState, getTotalTokenCount, getWalletArDriveLockedBalance, getWalletArDriveUnlockedBalance } from './smartweave';
 import { Results, ContentType, BlockInfo, ArDriveCommunityFee, BlockDate } from './types';
+
+export const communityWallets : string[] = [
+  'i325n3L2UvgcavEM8UnFfY0OWBiyf2RrbNsLStPI73o', // vested community usage mining 
+  '-OtTqVqAGqTBzhviZptnUTys7rWenNrnQcjGtvDBDdo', // locked warchest
+  'vn6Z31Dy8rV8Ion7MTcPjwhLcEJnAIObHIGDHP8oGDI', // unlocked operations
+  'Zznp65qgTIm2QBMjjoEaHKOmQrpTu0tfOcdbkm_qoL4', // vested locked warchest
+  '2ZaUGqVCPxst5s0XO933HbZmksnLixpXkt6Sh2re0hg', // unlocked community usage mining
+  'FAxDUPlFfJrLDl6BvUlPw3EJOEEeg6WQbhiWidU7ueY', // unlocked team and projects
+  'pzH5LB20NhsrPMmvZzTrW-ahbAbIE-TeRzWBVYdArpA' // operational vault
+];
 
 // Pauses application
 export async function sleep(ms: number): Promise<number> {
@@ -88,30 +99,47 @@ export async function sendArDriveCommunityFinancesToGraphite (communityFee: ArDr
   return "Success";
 }
 
-// Gets all of the ArDrive Community Wallets and sends their balance to grafana
-export async function getArDriveCommunityWalletBalances () {
+
+// Gets all of the ArDrive Community AR token balances and sends their balance to grafana
+export async function getArDriveCommunityWalletARBalances () {
   let today = new Date();
 
   console.log ("%s Starting to collect ArDrive Community Balances", today)
   console.log ("")
 
-  const communityWallets : string[] = [
-    'i325n3L2UvgcavEM8UnFfY0OWBiyf2RrbNsLStPI73o', // vested community usage mining 
-    '-OtTqVqAGqTBzhviZptnUTys7rWenNrnQcjGtvDBDdo', // locked warchest
-    'vn6Z31Dy8rV8Ion7MTcPjwhLcEJnAIObHIGDHP8oGDI', // unlocked operations
-    'Zznp65qgTIm2QBMjjoEaHKOmQrpTu0tfOcdbkm_qoL4', // vested locked warchest
-    '2ZaUGqVCPxst5s0XO933HbZmksnLixpXkt6Sh2re0hg', // unlocked community usage mining
-    'FAxDUPlFfJrLDl6BvUlPw3EJOEEeg6WQbhiWidU7ueY', // unlocked team and projects
-    'pzH5LB20NhsrPMmvZzTrW-ahbAbIE-TeRzWBVYdArpA' // operational vault
-  ];
-
   communityWallets.forEach(async (communityWallet: string) => {
-    let communityWalletMessage = 'ardrive.finances.communitywallets.' + communityWallet
+    let communityWalletMessage = 'ardrive.finances.communitywallets.ar.' + communityWallet
     let balance = await getWalletBalance(communityWallet);
     console.log ("%s balance is %s", communityWallet, balance)
     await sendMessageToGraphite(communityWalletMessage, balance, today);
   });
+}
 
+// Gets all of the ArDrive Community Wallet balances for the ArDrive token specifically and sends to grafana
+export async function getArDriveCommunityWalletArDriveBalances () {
+  try {
+    const today = new Date();
+    const state = await getArDriveCommunityState();
+
+    await getTotalTokenCount(state);
+    communityWallets.forEach(async (communityWallet: string) => {
+        const lockedBalance = await getWalletArDriveLockedBalance(state, communityWallet)
+        const unlockedBalance = await getWalletArDriveUnlockedBalance(state, communityWallet)
+        const totalBalance = lockedBalance + unlockedBalance;
+        console.log ("Total Balance for %s: %s", communityWallet, totalBalance)
+
+        let communityWalletMessage = 'ardrive.finances.communitywallets.' + communityWallet + '.ardrive.locked'
+        await sendMessageToGraphite(communityWalletMessage, lockedBalance, today);
+
+        communityWalletMessage = 'ardrive.finances.communitywallets.' + communityWallet + '.ardrive.unlocked'
+        await sendMessageToGraphite(communityWalletMessage, unlockedBalance, today);
+
+        communityWalletMessage = 'ardrive.finances.communitywallets.' + communityWallet + '.ardrive.total'
+        await sendMessageToGraphite(communityWalletMessage, totalBalance, today);
+    });
+  } catch (err) {
+      console.log ("Error getting token balances")
+  }
 }
 
 // Gets all of the community fees for the main ArDrive wallets since the beginning of ArDrive usage
