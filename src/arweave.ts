@@ -309,11 +309,11 @@ export const getTotalDataTransactionsSize = async (start: Date, end: Date) => {
               const { tags } = node;
               if (block !== null) {
                   timeStamp = new Date(block.timestamp * 1000);
-                  console.log ("Block time: ", timeStamp.toLocaleString());
+                  // console.log ("Block time: ", timeStamp.toLocaleString());
                   lastBlock = block.height;
                   if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
                       // We only want data transactions
-                      console.log ("Matching data transaction: %s %s", node.id, timeStamp)
+                      // console.log ("Matching data transaction: %s %s", node.id, timeStamp)
                       if (data.size > 0) {
                           let cipherIV = "public";
                           let appName = '';
