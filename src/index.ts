@@ -82,8 +82,9 @@ console.log ("---------------------------------");
 });*/
 
 cron.schedule('0 */12 * * *', function(){
-    console.log('Running ArDrive Daiy Analytics Every 12 hours');
+    console.log('Running ArDrive Daiy Analytics and ArDrive Community Wallet Balances (ARDRIVE tokens) Every 12 hours');
     hourlyArDriveUsageAnalytics(12);
+    getArDriveCommunityWalletArDriveBalances()
 });
 
 cron.schedule('*/15 * * * *', function(){
@@ -92,7 +93,6 @@ cron.schedule('*/15 * * * *', function(){
 });
 
 cron.schedule('*/30 * * * *', function(){
-    console.log('Collecting ArDrive Community Wallet Balances');
+    console.log('Collecting ArDrive Community Wallet Balances (AR tokens) Every 30 minutes');
     getArDriveCommunityWalletARBalances();
-    getArDriveCommunityWalletArDriveBalances()
 });
