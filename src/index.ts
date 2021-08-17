@@ -1,5 +1,5 @@
 import { getArUSDPrice, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo } from './arweave'
-import { sendMessageToGraphite, getMetrics, sendResultsToGraphite, getArDriveCommunityWalletARBalances, getArDriveCommunityWalletArDriveBalances } from './common';
+import { sendMessageToGraphite, getAllMetrics, sendResultsToGraphite, getArDriveCommunityWalletARBalances, getArDriveCommunityWalletArDriveBalances } from './common';
 import { Results, BlockInfo } from './types';
 
 // Used for scheduling the jobs
@@ -12,7 +12,7 @@ export async function dailyArDriveUsageAnalytics () {
     // Take off one day
     start.setDate(start.getDate() - 1);
 
-    const dailyResults : Results = await getMetrics(start, today, 1);
+    const dailyResults : Results = await getAllMetrics(start, today, 1, undefined, false);
     await sendResultsToGraphite(dailyResults);
 }
 
@@ -23,7 +23,7 @@ export async function hourlyArDriveUsageAnalytics (hours: number) {
     // Take off one day
     start.setHours(start.getHours() - hours);
 
-    const dailyResults : Results = await getMetrics(start, today, 0, hours);
+    const dailyResults : Results = await getAllMetrics(start, today, 0, hours, false);
     await sendResultsToGraphite(dailyResults);
 }
 

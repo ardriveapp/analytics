@@ -77,6 +77,27 @@ export async function getTotalTokenCount(state: any): Promise<number> {
     return total;
 }
 
+// Gets the count of ArDrive token holders
+export async function getTokenHolderCount() : Promise<number>  {
+	try {
+	  // Read the ArDrive Smart Contract to get the latest state
+	  const state = await readContract(arweave, communityTxId);
+	  const balances = state.balances;
+  
+	  // Get the total number of token holders with balance > 0
+	  let total = 0;
+	  for (const addr of Object.keys(balances)) {
+		total += 1;
+		balances[addr];
+	  }
+	  return total;
+	} catch (err) {
+	  console.log (err)
+	  console.log ("Error getting token holder count")
+	  return 0;
+	}
+}
+
 export async function getWalletArDriveLockedBalance(state: any, wallet: string): Promise<number> {
 	// Read the ArDrive Smart Contract to get the latest state
 	const vaults = state.vault;
