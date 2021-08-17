@@ -45,12 +45,18 @@ export async function sendResultsToGraphite (results: Results) {
     await sendMessageToGraphite('ardrive.v2Data.private', results.privateData, today);
     await sendMessageToGraphite('ardrive.files.total', results.totalFiles, today);
     await sendMessageToGraphite('ardrive.files.web', results.webAppFiles, today);
-    await sendMessageToGraphite('ardrive.files.desktop', results.desktopFiles, today);
+    await sendMessageToGraphite('ardrive.files.desktop', results.desktopAppFiles, today);
+    await sendMessageToGraphite('ardrive.files.desktop', results.mobileAppFiles, today);
+    await sendMessageToGraphite('ardrive.files.desktop', results.coreAppFiles, today);
+    await sendMessageToGraphite('ardrive.files.desktop', results.cliAppFiles, today);
     await sendMessageToGraphite('ardrive.files.public', results.publicFiles, today);
     await sendMessageToGraphite('ardrive.files.private', results.privateFiles, today);
     await sendMessageToGraphite('ardrive.fees.community', results.totalCommunityFees, today);
     await sendMessageToGraphite('ardrive.fees.mining', results.totalMiningFees, today);
-    await sendMessageToGraphite('ardrive.fees.desktop', results.desktopFees, today);
+    await sendMessageToGraphite('ardrive.fees.desktop', results.desktopAppFees, today);
+    await sendMessageToGraphite('ardrive.fees.desktop', results.mobileAppFees, today);
+    await sendMessageToGraphite('ardrive.fees.desktop', results.coreAppFees, today);
+    await sendMessageToGraphite('ardrive.fees.desktop', results.cliAppFees, today);
     await sendMessageToGraphite('ardrive.fees.webapp', results.webAppFees, today);
     await sendMessageToGraphite('ardrive.fees.public', results.publicArFees, today);
     await sendMessageToGraphite('ardrive.fees.private', results.privateArFees, today);
@@ -328,13 +334,19 @@ export async function getAllMetrics (start: Date, end: Date, days?: number, hour
   console.log ('          Private:        ', formatBytes(totalData.privateDataSize));
   console.log ('      Total Files:        ', totalFiles);
   console.log ('          Web:            ', totalData.webAppFiles);
-  console.log ('          Desktop:        ', totalData.desktopFiles);
+  console.log ('          Desktop:        ', totalData.desktopAppFiles);
+  console.log ('          Mobile:         ', totalData.mobileAppFiles);
+  console.log ('          CLI:            ', totalData.cliAppFiles);
+  console.log ('          Core:           ', totalData.coreAppFiles);
   console.log ('          Public:         ', totalData.publicFiles);
   console.log ('          Private:        ', totalData.privateFiles);
   console.log ('      Total Mining Fees:  ', totalMiningFees.toFixed(5));
   console.log ('      Total ArDrive Fees: ', totalCommunityFees.totalFees.toFixed(5));
-  console.log ('          Desktop:        ', totalCommunityFees.desktopFees.toFixed(5));
-  console.log ('          WebApp:         ', totalCommunityFees.webAppFees.toFixed(5));
+  console.log ('          Desktop:        ', totalCommunityFees.desktopAppFees.toFixed(5));
+  console.log ('          Web:            ', totalCommunityFees.webAppFees.toFixed(5));
+  console.log ('          Mobile:         ', totalCommunityFees.mobileAppFees.toFixed(5));
+  console.log ('          CLI:            ', totalCommunityFees.cliAppFees.toFixed(5));
+  console.log ('          Core:           ', totalCommunityFees.coreAppFees.toFixed(5));
   console.log ('  ---------------------------')
 
   console.log ("Content Types Found %s", totalData.contentTypes?.length);
@@ -387,13 +399,19 @@ export async function getAllMetrics (start: Date, end: Date, days?: number, hour
       publicData: totalData.publicDataSize,
       totalFiles,
       webAppFiles: totalData.webAppFiles,
-      desktopFiles: totalData.desktopFiles,
+      desktopAppFiles: totalData.desktopAppFiles,
+      mobileAppFiles: totalData.mobileAppFiles,
+      coreAppFiles: totalData.coreAppFiles,
+      cliAppFiles: totalData.cliAppFiles,
       privateFiles: totalData.privateFiles,
       publicFiles: totalData.publicFiles,
       totalCommunityFees: +totalCommunityFees.totalFees.toFixed(8),
       totalMiningFees: +totalMiningFees.toFixed(8),
-      desktopFees: +totalCommunityFees.desktopFees.toFixed(8),
+      desktopAppFees: +totalCommunityFees.desktopAppFees.toFixed(8),
       webAppFees: +totalCommunityFees.webAppFees.toFixed(8),
+      mobileAppFees: +totalCommunityFees.mobileAppFees.toFixed(8),
+      coreAppFees: +totalCommunityFees.coreAppFees.toFixed(8),
+      cliAppFees: +totalCommunityFees.cliAppFees.toFixed(8),
       publicArFees: +totalData.publicArFee.toFixed(8),
       privateArFees: +totalData.privateArFee.toFixed(8),
       contentTypes: totalData.contentTypes,

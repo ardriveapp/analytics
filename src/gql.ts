@@ -3,10 +3,11 @@ import { asyncForEach, formatBytes, sleep } from './common';
 import { ArDriveCommunityFee, ArDriveStat, ContentType } from './types';
 import limestone from 'limestone-api';
 
-const appName = "ArDrive-Desktop";
+const desktopAppName = "ArDrive-Desktop";
 const webAppName = "ArDrive-Web";
 const mobileAppName = "ArDrive-Mobile";
 const coreAppName = "ArDrive-Core";
+const cliAppName = "ArDrive-CLI";
 
 export const gateways = [
 	"https://arweave.net"
@@ -62,7 +63,7 @@ export const getUserSize = async (owner: string, start: Date, end: Date) => {
                 transactions(
                     owners: ["${owner}"]
                     tags: [
-                    { name: "App-Name", values: ["${appName}", "${webAppName}", "${mobileAppName}", "${coreAppName}"]}
+                    { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
                     ]
                     first: ${firstPage}
                     after: "${cursor}"
@@ -131,7 +132,7 @@ export const getAllDrives = async (start: Date, end: Date) => {
             query: `query {
                 transactions(
                     tags: [
-                        { name: "App-Name", values: ["${appName}", "${webAppName}", "${mobileAppName}", "${coreAppName}"]}
+                        { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
                         { name: "Entity-Type", values: "drive" }
                       ]
                     sort: HEIGHT_ASC
@@ -238,7 +239,7 @@ export const getANS102Transactions = async (start: Date, end: Date) => {
                 query: `query {
                 transactions(
                   tags: [
-                    { name: "App-Name", values: ["${appName}", "${webAppName}", "${mobileAppName}", "${coreAppName}"]}
+                    { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
                     { name: "Bundle-Format", values: "json"}
                   ]
                   sort: HEIGHT_ASC
@@ -326,8 +327,11 @@ export const getANS102Transactions = async (start: Date, end: Date) => {
 // Sums up all ArDrive Community Tips/Fees
 export const getAllCommunityFees = async (start: Date, end: Date) => {
     let totalFees = 0;
-    let desktopFees = 0;
+    let desktopAppFees = 0;
     let webAppFees = 0;
+    let coreAppFees = 0;
+    let cliAppFees = 0;
+    let mobileAppFees = 0;
     let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let hasNextPage = true;
@@ -338,7 +342,7 @@ export const getAllCommunityFees = async (start: Date, end: Date) => {
                 query: `query {
                 transactions(
                   tags: [
-                    { name: "App-Name", values: ["${appName}", "${webAppName}", "${mobileAppName}", "${coreAppName}"]}
+                    { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
                     { name: "Tip-Type", values: "data upload"}
                   ]
                   first: ${firstPage}
@@ -403,10 +407,22 @@ export const getAllCommunityFees = async (start: Date, end: Date) => {
                             };
                         })
                         totalFees += +quantity.ar;
-                        if (appName === 'ArDrive-Web') {
-                        webAppFees += +quantity.ar;
-                        } else if (appName === 'ArDrive-Desktop') {
-                        desktopFees += +quantity.ar;
+                        switch (appName) {
+                            case webAppName:
+                                webAppFees += +quantity.ar;
+                                break;
+                            case desktopAppName:
+                                desktopAppFees += +quantity.ar;
+                                break;
+                            case mobileAppName:
+                                mobileAppFees += +quantity.ar;
+                                break; 
+                            case coreAppName:
+                                coreAppFees += +quantity.ar;
+                                break;
+                            case cliAppName:
+                                cliAppFees += +quantity.ar;
+                                break; 
                         }
                     } else if (timeStamp.getTime() > end.getTime()) {
                         // console.log ("Result too old")
@@ -417,11 +433,11 @@ export const getAllCommunityFees = async (start: Date, end: Date) => {
                 }
             })
         }
-        return {totalFees, webAppFees, desktopFees};
+        return {totalFees, webAppFees, desktopAppFees, mobileAppFees, coreAppFees, cliAppFees};
     } catch (err) {
         console.log (err)
         console.log ("Error collecting total amount of fees")
-        return {totalFees, webAppFees, desktopFees};
+        return {totalFees, webAppFees, desktopAppFees, mobileAppFees, coreAppFees, cliAppFees};
     }
 };
 
@@ -444,7 +460,7 @@ export const getMyCommunityFees = async (friendlyName: string, owner: string, st
                 transactions(
                   recipients:["${owner}"]
                   tags: [
-                      { name: "App-Name", values: ["${appName}", "${webAppName}", "${mobileAppName}", "${coreAppName}"]}
+                      { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
                       { name: "Tip-Type", values: "data upload"}
                   ]
                   first: ${firstPage}
@@ -576,7 +592,10 @@ export const getAllTransactions_WithBlocks = async (start: Date, end: Date) => {
     let publicFiles = 0;
     let privateFiles = 0;
     let webAppFiles = 0;
-    let desktopFiles = 0;
+    let desktopAppFiles = 0;
+    let mobileAppFiles = 0;
+    let coreAppFiles = 0;
+    let cliAppFiles = 0;
     let publicArFee = 0;
     let privateArFee = 0;
     let contentType : string = '';
@@ -603,7 +622,7 @@ export const getAllTransactions_WithBlocks = async (start: Date, end: Date) => {
           query: `query {
           transactions(
             tags: [
-                { name: "App-Name", values: ["${appName}", "${webAppName}", "${mobileAppName}", "${coreAppName}"]}
+                { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
             ]
             sort: HEIGHT_ASC
             block: {min: ${minBlock}}
@@ -706,10 +725,23 @@ export const getAllTransactions_WithBlocks = async (start: Date, end: Date) => {
                                 privateArFee += +fee.ar;
                                 privateFiles += 1;
                             }
-                            if (appName === 'ArDrive-Web') {
-                                webAppFiles += 1;
-                            } else if (appName === 'ArDrive-Desktop') {
-                                desktopFiles += 1;
+
+                            switch (appName) {
+                                case webAppName:
+                                    webAppFiles += 1;
+                                    break;
+                                case desktopAppName:
+                                    desktopAppFiles += 1;
+                                    break;
+                                case mobileAppName:
+                                    mobileAppFiles += 1;
+                                    break; 
+                                case coreAppName:
+                                    coreAppFiles += 1;
+                                    break;
+                                case cliAppName:
+                                    cliAppFiles += 1;
+                                    break; 
                             }
                         }
                     } else if (timeStamp.getTime() > end.getTime()) {
@@ -730,7 +762,7 @@ export const getAllTransactions_WithBlocks = async (start: Date, end: Date) => {
             hasNextPage = false;
         }
     }
-    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopFiles, contentTypes, lastBlock}
+    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopAppFiles, mobileAppFiles, coreAppFiles, cliAppFiles, contentTypes, lastBlock}
 }
 
 // Sums up every data transaction for a start and end period.
@@ -742,7 +774,10 @@ export const getAllTransactions = async (start: Date, end: Date) => {
     let publicFiles = 0;
     let privateFiles = 0;
     let webAppFiles = 0;
-    let desktopFiles = 0;
+    let desktopAppFiles = 0;
+    let mobileAppFiles = 0;
+    let coreAppFiles = 0;
+    let cliAppFiles = 0;
     let publicArFee = 0;
     let privateArFee = 0;
     let contentType : string = '';
@@ -757,7 +792,7 @@ export const getAllTransactions = async (start: Date, end: Date) => {
           query: `query {
           transactions(
             tags: [
-                { name: "App-Name", values: ["${appName}", "${webAppName}", "${mobileAppName}", "${coreAppName}"]}
+                { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
             ]
             sort: HEIGHT_ASC
             first: ${firstPage}
@@ -859,10 +894,22 @@ export const getAllTransactions = async (start: Date, end: Date) => {
                                 privateArFee += +fee.ar;
                                 privateFiles += 1;
                             }
-                            if (appName === 'ArDrive-Web') {
-                                webAppFiles += 1;
-                            } else if (appName === 'ArDrive-Desktop') {
-                                desktopFiles += 1;
+                            switch (appName) {
+                                case webAppName:
+                                    webAppFiles += 1;
+                                    break;
+                                case desktopAppName:
+                                    desktopAppFiles += 1;
+                                    break;
+                                case mobileAppName:
+                                    mobileAppFiles += 1;
+                                    break; 
+                                case coreAppName:
+                                    coreAppFiles += 1;
+                                    break;
+                                case cliAppName:
+                                    cliAppFiles += 1;
+                                    break; 
                             }
                         }
                     } else if (timeStamp.getTime() > end.getTime()) {
@@ -883,5 +930,6 @@ export const getAllTransactions = async (start: Date, end: Date) => {
             hasNextPage = false;
         }
     }
-    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopFiles, contentTypes, lastBlock}
+    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopAppFiles, mobileAppFiles, coreAppFiles, cliAppFiles, contentTypes, lastBlock}
+
 }
