@@ -1,10 +1,6 @@
 
 import Arweave from 'arweave';
-import { dataCompare } from './common';
-import { BlockInfo, AstatineItem, BlockDate } from './types';
-
-const primaryGraphQLUrl = 'https://arweave.net/graphql';
-const backupGraphQLUrl = 'https://arweave.net/graphql';
+import { BlockInfo, BlockDate } from './types';
 
 const fetch = require('node-fetch')
 export const arweave = Arweave.init({
@@ -40,9 +36,22 @@ export const getDataPrice = async (bytes: number) => {
 
 // Gets the latest block height
 export const getCurrentBlockHeight = async () => {
+  let height = 0;
+  try {
     const response = await fetch(`https://arweave.net/height/`);
-    const height = await response.json()
-    return height;
+    height = await response.json()
+    return height
+  } catch (err) {
+    console.log (err)
+  }
+  // Try a backup just in case
+  try {
+    const response = await fetch(`http://node.ardrive.io:1984/height/`);
+    height = await response.json()
+  } catch (err) {
+    console.log (err)
+  }
+  return height
 };
 
 // Gets the total weave size from the latest block
@@ -101,134 +110,4 @@ export async function getWalletBalance(walletPublicKey: string): Promise<number>
 		console.log(err);
 		return 0;
 	}
-}
-
-// This is used specifically for testing Astatine, and is not invoked with the Analytics script
-export async function get_24_hour_ardrive_transactions() : Promise<AstatineItem[]> {
-
-    let completed : Boolean = false;
-    let weightedList : AstatineItem[] = [];
-    let trimmedWeightedList : AstatineItem[] = [];
-    let firstPage : number = 100; // Max size of query for GQL
-    let cursor : string = "";
-    let timeStamp = new Date();
-    let yesterday = new Date(timeStamp);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    while (!completed) {
-      // Create the query to search for all ardrive transactions.
-      let transactions = await queryForDataUploads(0, firstPage, cursor, primaryGraphQLUrl);
-      const { edges } = transactions;
-      edges.forEach((edge: any) => {
-        cursor = edge.cursor;
-        const { node } = edge;
-        const { data } = node;
-        const { owner } = node;
-        const { block } = node;
-        if (block !== null) {
-            let timeStamp = new Date(block.timestamp * 1000);
-            // We only want results from last 24 hours, defined by milliseconds since epoch
-            if (yesterday.getTime() <= timeStamp.getTime()) {
-              // We only want data transactions
-              if (+data.size > 0) {
-                // Does this wallet address exist in our array?
-                let objIndex = weightedList.findIndex((obj => obj.address === owner.address));
-                if (objIndex >= 0) {
-                // If it exists, then we increment the existing data amount
-                  // console.log ("Existing wallet found %s with %s data", weightedList[objIndex].address, weightedList[objIndex].weight);
-                  weightedList[objIndex].weight += +data.size;
-                } 
-                else {
-                  // Else we add a new user into our Astatine List
-                  // console.log("Adding new wallet ", owner.address);
-                  let arDriveUser: AstatineItem = {
-                    address: owner.address,
-                    weight: +data.size,
-                  };
-                  weightedList.push(arDriveUser);
-                }
-              }
-            }
-            else {
-              // The blocks are too old, and we dont care about them
-              completed = true;
-            }
-        }
-      })
-    }
-  
-    // lets sort the list based on data amount
-    weightedList.sort(dataCompare);
-
-    // Trim the list of any users who have not uploaded the minimum
-    let minUploadAmount = 1048576 * 50 // 50 MB
-    weightedList.forEach((item: AstatineItem) => {
-      if (item.weight >= minUploadAmount) {
-        trimmedWeightedList.push(item);
-      }
-    })
-    
-    return trimmedWeightedList;
-}
-
-// This is used specifically for testing Astatine, and is not invoked with the Analytics script
-// Creates a GraphQL Query to search for all ArDrive Data transactions and requests it from the primary Arweave gateway
-async function queryForDataUploads(minBlock: number, firstPage: number, cursor: string, gqlUrl: string): Promise<any> {
-  try {
-  const query = {
-    query: `query {
-    transactions(
-      tags: { name: "App-Name", values: ["ArDrive-Desktop", "ArDrive-Mobile", "ArDrive-Web"] }
-      sort: HEIGHT_DESC
-      block: {min: ${minBlock}}
-      first: ${firstPage}
-      after: "${cursor}"
-    ) {
-      pageInfo {
-        hasNextPage
-      }
-      edges {
-        cursor
-        node {
-          id
-          owner {
-              address
-          }
-          fee {
-              ar
-          }
-          tags {
-              name
-              value
-          }
-          data {
-            size
-          }
-          block {
-            height
-            timestamp
-          }
-        }
-      }
-    }
-  }`,
-  };
-
-  // Call the Arweave Graphql Endpoint
-  const response = await arweave.api
-    .request()
-    .post(gqlUrl, query);
-  const { data } = response.data;
-  const { transactions } = data;
-  return transactions;
-} catch (err) {
-  console.log (err)
-  console.log ("Cannot query for data transactions.  Gateway error %s", gqlUrl)
-  if (gqlUrl = primaryGraphQLUrl) {
-    // Run backup graphql query
-    return await queryForDataUploads(minBlock, firstPage, cursor, backupGraphQLUrl) ;
-  } else {
-    return false;
-  }
-}
 }
