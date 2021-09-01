@@ -34,6 +34,7 @@ export interface Results {
   mobileAppFiles: number,
   coreAppFiles: number,
   cliAppFiles: number,
+  arConnectFiles: number;
   privateFiles: number,
   publicFiles: number,
   totalCommunityFees: number,
@@ -42,6 +43,7 @@ export interface Results {
   webAppFees: number,
   mobileAppFees: number,
   coreAppFees: number,
+  arConnectFees: number,
   cliAppFees: number,
   publicArFees: number,
   privateArFees: number,

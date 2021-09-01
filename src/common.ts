@@ -46,17 +46,19 @@ export async function sendResultsToGraphite (results: Results) {
     await sendMessageToGraphite('ardrive.files.total', results.totalFiles, today);
     await sendMessageToGraphite('ardrive.files.web', results.webAppFiles, today);
     await sendMessageToGraphite('ardrive.files.desktop', results.desktopAppFiles, today);
-    await sendMessageToGraphite('ardrive.files.desktop', results.mobileAppFiles, today);
-    await sendMessageToGraphite('ardrive.files.desktop', results.coreAppFiles, today);
-    await sendMessageToGraphite('ardrive.files.desktop', results.cliAppFiles, today);
+    await sendMessageToGraphite('ardrive.files.mobile', results.mobileAppFiles, today);
+    await sendMessageToGraphite('ardrive.files.core', results.coreAppFiles, today);
+    await sendMessageToGraphite('ardrive.files.core.arconnect', results.arConnectFiles, today);
+    await sendMessageToGraphite('ardrive.files.cli', results.cliAppFiles, today);
     await sendMessageToGraphite('ardrive.files.public', results.publicFiles, today);
     await sendMessageToGraphite('ardrive.files.private', results.privateFiles, today);
     await sendMessageToGraphite('ardrive.fees.community', results.totalCommunityFees, today);
     await sendMessageToGraphite('ardrive.fees.mining', results.totalMiningFees, today);
     await sendMessageToGraphite('ardrive.fees.desktop', results.desktopAppFees, today);
-    await sendMessageToGraphite('ardrive.fees.desktop', results.mobileAppFees, today);
-    await sendMessageToGraphite('ardrive.fees.desktop', results.coreAppFees, today);
-    await sendMessageToGraphite('ardrive.fees.desktop', results.cliAppFees, today);
+    await sendMessageToGraphite('ardrive.fees.mobile', results.mobileAppFees, today);
+    await sendMessageToGraphite('ardrive.fees.core', results.coreAppFees, today);
+    await sendMessageToGraphite('ardrive.fees.core.arconnect', results.arConnectFees, today)
+    await sendMessageToGraphite('ardrive.fees.cli', results.cliAppFees, today);
     await sendMessageToGraphite('ardrive.fees.webapp', results.webAppFees, today);
     await sendMessageToGraphite('ardrive.fees.public', results.publicArFees, today);
     await sendMessageToGraphite('ardrive.fees.private', results.privateArFees, today);
@@ -402,6 +404,7 @@ export async function getAllMetrics (start: Date, end: Date, days?: number, hour
       desktopAppFiles: totalData.desktopAppFiles,
       mobileAppFiles: totalData.mobileAppFiles,
       coreAppFiles: totalData.coreAppFiles,
+      arConnectFiles: totalData.arConnectFiles,
       cliAppFiles: totalData.cliAppFiles,
       privateFiles: totalData.privateFiles,
       publicFiles: totalData.publicFiles,
@@ -411,6 +414,7 @@ export async function getAllMetrics (start: Date, end: Date, days?: number, hour
       webAppFees: +totalCommunityFees.webAppFees.toFixed(8),
       mobileAppFees: +totalCommunityFees.mobileAppFees.toFixed(8),
       coreAppFees: +totalCommunityFees.coreAppFees.toFixed(8),
+      arConnectFees: +totalCommunityFees.arConnectFees.toFixed(8),
       cliAppFees: +totalCommunityFees.cliAppFees.toFixed(8),
       publicArFees: +totalData.publicArFee.toFixed(8),
       privateArFees: +totalData.privateArFee.toFixed(8),

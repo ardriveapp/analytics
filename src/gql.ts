@@ -330,8 +330,10 @@ export const getAllCommunityFees = async (start: Date, end: Date) => {
     let desktopAppFees = 0;
     let webAppFees = 0;
     let coreAppFees = 0;
+    let arConnectFees = 0;
     let cliAppFees = 0;
     let mobileAppFees = 0;
+    let arDriveClient = '';
     let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let hasNextPage = true;
@@ -402,6 +404,9 @@ export const getAllCommunityFees = async (start: Date, end: Date) => {
                             case 'App-Name':
                                 appName = value;
                                 break;
+                            case 'ArDrive-Client':
+                                arDriveClient = value;
+                                break;
                             default:
                                 break;
                             };
@@ -409,7 +414,12 @@ export const getAllCommunityFees = async (start: Date, end: Date) => {
                         totalFees += +quantity.ar;
                         switch (appName) {
                             case webAppName:
-                                webAppFees += +quantity.ar;
+                                if (!arDriveClient.includes('ArConnect')) {
+                                    webAppFees += +quantity.ar;
+                                } else {
+                                    coreAppFees += +quantity.ar;
+                                    arConnectFees += +quantity.ar;
+                                }
                                 break;
                             case desktopAppName:
                                 desktopAppFees += +quantity.ar;
@@ -433,11 +443,11 @@ export const getAllCommunityFees = async (start: Date, end: Date) => {
                 }
             })
         }
-        return {totalFees, webAppFees, desktopAppFees, mobileAppFees, coreAppFees, cliAppFees};
+        return {totalFees, webAppFees, desktopAppFees, mobileAppFees, coreAppFees, cliAppFees, arConnectFees};
     } catch (err) {
         console.log (err)
         console.log ("Error collecting total amount of fees")
-        return {totalFees, webAppFees, desktopAppFees, mobileAppFees, coreAppFees, cliAppFees};
+        return {totalFees, webAppFees, desktopAppFees, mobileAppFees, coreAppFees, cliAppFees, arConnectFees};
     }
 };
 
@@ -596,8 +606,10 @@ export const getAllTransactions_WithBlocks = async (start: Date, end: Date) => {
     let mobileAppFiles = 0;
     let coreAppFiles = 0;
     let cliAppFiles = 0;
+    let arConnectFiles = 0;
     let publicArFee = 0;
     let privateArFee = 0;
+    let arDriveClient : string = '';
     let contentType : string = '';
     let contentTypes : ContentType[] = [];
     let firstPage : number = 100; // Max size of query for GQL
@@ -696,6 +708,9 @@ export const getAllTransactions_WithBlocks = async (start: Date, end: Date) => {
                                 case 'App-Name':
                                     appName = value;
                                     break;
+                                case 'ArDrive-Client':
+                                    arDriveClient = value;
+                                    break;
                                 default:
                                     break;
                                 };
@@ -728,7 +743,14 @@ export const getAllTransactions_WithBlocks = async (start: Date, end: Date) => {
 
                             switch (appName) {
                                 case webAppName:
-                                    webAppFiles += 1;
+                                    // Currently, ArConnect is tagging its uploads with app name ArDrive-Web
+                                    // If a file is uploaded by ArConnect (with ardrive core), we want to count it as such
+                                    if (!arDriveClient.includes('ArConnect')) {
+                                        webAppFiles += 1;
+                                    } else {
+                                        coreAppFiles += 1;
+                                        arConnectFiles += 1;
+                                    }
                                     break;
                                 case desktopAppName:
                                     desktopAppFiles += 1;
@@ -762,7 +784,7 @@ export const getAllTransactions_WithBlocks = async (start: Date, end: Date) => {
             hasNextPage = false;
         }
     }
-    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopAppFiles, mobileAppFiles, coreAppFiles, cliAppFiles, contentTypes, lastBlock}
+    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopAppFiles, mobileAppFiles, coreAppFiles, cliAppFiles, arConnectFiles, contentTypes, lastBlock}
 }
 
 // Sums up every data transaction for a start and end period.
@@ -778,8 +800,10 @@ export const getAllTransactions = async (start: Date, end: Date) => {
     let mobileAppFiles = 0;
     let coreAppFiles = 0;
     let cliAppFiles = 0;
+    let arConnectFiles = 0;
     let publicArFee = 0;
     let privateArFee = 0;
+    let arDriveClient : string = '';
     let contentType : string = '';
     let contentTypes : ContentType[] = [];
     let firstPage : number = 100; // Max size of query for GQL
@@ -865,6 +889,9 @@ export const getAllTransactions = async (start: Date, end: Date) => {
                                 case 'App-Name':
                                     appName = value;
                                     break;
+                                case 'ArDrive-Client':
+                                    arDriveClient = value;
+                                    break;
                                 default:
                                     break;
                                 };
@@ -896,7 +923,14 @@ export const getAllTransactions = async (start: Date, end: Date) => {
                             }
                             switch (appName) {
                                 case webAppName:
-                                    webAppFiles += 1;
+                                    // Currently, ArConnect is tagging its uploads with app name ArDrive-Web
+                                    // If a file is uploaded by ArConnect (with ardrive core), we want to count it as such
+                                    if (!arDriveClient.includes('ArConnect')) {
+                                        webAppFiles += 1;
+                                    } else {
+                                        coreAppFiles += 1;
+                                        arConnectFiles += 1;
+                                    }
                                     break;
                                 case desktopAppName:
                                     desktopAppFiles += 1;
@@ -930,6 +964,6 @@ export const getAllTransactions = async (start: Date, end: Date) => {
             hasNextPage = false;
         }
     }
-    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopAppFiles, mobileAppFiles, coreAppFiles, cliAppFiles, contentTypes, lastBlock}
+    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopAppFiles, mobileAppFiles, coreAppFiles, cliAppFiles,arConnectFiles, contentTypes, lastBlock}
 
 }
