@@ -8,6 +8,7 @@ export const arweave = Arweave.init({
     port: 443,
     protocol: 'https',
     timeout: 600000,
+    logging: false
   });
 
 // Gets the latest price of Arweave in USD

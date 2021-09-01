@@ -76,6 +76,7 @@ export interface BlockDate {
 
 export interface ArDriveCommunityFee {
 owner: string,
+recipient: string,
 friendlyName: string,
 appName: string,
 appVersion: string,
@@ -89,4 +90,13 @@ costBasis: number,
 blockHeight: number,
 blockTime: number,
 friendlyDate: string
+}
+
+export interface ArDriveTokenHolder {
+  address: string,
+  unlockedArDriveTokens: number,
+  lockedArDriveTokens: number,
+  totalArDriveTokens: number,
+  voteWeight: number,
+  arweaveTokens: number
 }

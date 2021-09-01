@@ -3,7 +3,7 @@ import { getAllMetrics } from "./common";
 async function main () {
     let today = new Date();
     // const start = new Date(2020, 8, 26) // the beginning history of ardrive
-    const start = new Date(2021, 7, 14)
+    const start = new Date(2021, 7, 26)
     start.setMinutes(0);
     start.setHours(20);
     // const start = new Date(today)

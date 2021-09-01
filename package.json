@@ -7,13 +7,14 @@
   "dependencies": {
     "@types/node": "^14.14.34",
     "ansi-colors": "^4.1.1",
-    "arweave": "^1.10.15",
+    "arweave": "^1.10.16",
     "csv-writer": "^1.6.0",
     "limestone-api": "^3.0.4",
     "node-cron": "^3.0.0",
     "node-fetch": "^2.6.1",
     "package.json": "^2.0.1",
-    "smartweave": "^0.4.38",
+    "redstone-smartweave": "^0.3.5-alpha.1",
+    "smartweave": "^0.4.43",
     "typescript": "^4.2.3"
   },
   "devDependencies": {
@@ -33,7 +34,9 @@
     "start": "yarn run build && node ./lib/index.js",
     "test": "yarn run build && node ./lib/index_manual.js",
     "full-run": "yarn run build && node ./lib/fully_populate.js",
-    "get-finances": "yarn run build && node ./lib/communityFinanceReport.js"
+    "get-finances": "yarn run build && node ./lib/communityFinanceReport.js",
+    "export-tips": "yarn run build && node ./lib/exportCommunityTips.js",
+    "export-ardrive-token-holders": "yarn run build && node ./lib/exportArDriveTokenHolders.js"
   },
   "license": "GPL-3.0-or-later",
   "author": {

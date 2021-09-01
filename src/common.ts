@@ -4,9 +4,9 @@ import {
     getWalletBalance, 
     /*get_24_hour_ardrive_transactions*/ 
 } from './arweave'
-import { getANS102Transactions, getAllCommunityFees, getAllDrives, getAllTransactions_WithBlocks, getMyCommunityFees, getUserSize, getAllTransactions } from './gql';
+import { getANS102Transactions, getAllCommunityFees, getAllDrives, getAllTransactions_WithBlocks, getMyCommunityFees, getUserSize, getAllTransactions, getSumOfAllCommunityFees } from './gql';
 import { getArDriveCommunityState, getTotalTokenCount, getWalletArDriveLockedBalance, getWalletArDriveUnlockedBalance, getTokenHolderCount } from './smartweave';
-import { Results, ContentType, BlockInfo, ArDriveCommunityFee, BlockDate } from './types';
+import { Results, BlockInfo, ArDriveCommunityFee, BlockDate, ContentType } from './types';
 
 export const communityWallets : string[] = [
   'i325n3L2UvgcavEM8UnFfY0OWBiyf2RrbNsLStPI73o', // vested community usage mining 
@@ -199,6 +199,7 @@ export async function exportAllMyCommunityFees (name: string, friendlyName: stri
       path: name,
       header: [
           {id: 'owner', title: 'OWNER'},
+          {id: 'recipient', title: 'RECIPIENT'},
           {id: 'appName', title: 'APPNAME'},
           {id: 'appVersion', title: 'APPVERSION'},
           {id: 'tip', title: 'TIP'},
@@ -217,6 +218,46 @@ export async function exportAllMyCommunityFees (name: string, friendlyName: stri
   const start = new Date(2020, 8, 26) // the beginning history of ardrive
   const end = new Date()
   const allMyFees: ArDriveCommunityFee[] = await getMyCommunityFees(friendlyName, owner, start, end)
+  csvWriter.writeRecords(allMyFees)
+  .then(() => {
+      console.log('...Done writing all my ArDrive Community Fees');
+  });
+
+  let totalARFees = 0;
+  allMyFees.forEach((fee: ArDriveCommunityFee) => {
+      totalARFees += +fee.amountAR
+  });
+  console.log ("%s ArDrive Community Fee transactions receieved", allMyFees.length);
+  console.log ("%s AR collected", totalARFees);
+}
+
+// Gets all of the ArDrive Community tip transactions and exports to a CSV
+export async function exportAllCommunityFees (name: string) {
+  const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+
+  const csvWriter = createCsvWriter({
+      path: name,
+      header: [
+          {id: 'owner', title: 'OWNER'},
+          {id: 'recipient', title: 'RECIPIENT'},
+          {id: 'appName', title: 'APPNAME'},
+          {id: 'appVersion', title: 'APPVERSION'},
+          {id: 'tip', title: 'TIP'},
+          {id: 'type', title: 'TYPE'},
+          {id: 'exchangeRate', title: 'AR/USD PRICE'},
+          {id: 'amountAR', title: 'AR'},
+          {id: 'amountUSD', title: 'USD'},
+          {id: 'currentPrice', title: 'CURRENT AR/USD PRICE'},
+          {id: 'costBasis', title: 'COST BASIS'},
+          {id: 'blockHeight', title: 'BLOCKHEIGHT'},
+          {id: 'blockTime', title: 'BLOCKTIME'},
+          {id: 'friendlyDate', title: 'FRIENDLYDATE'},
+      ]
+  });
+  
+  const start = new Date(2020, 8, 26) // the beginning history of ardrive
+  const end = new Date()
+  const allMyFees: ArDriveCommunityFee[] = await getAllCommunityFees(start, end)
   csvWriter.writeRecords(allMyFees)
   .then(() => {
       console.log('...Done writing all my ArDrive Community Fees');
@@ -276,7 +317,7 @@ export async function getAllMetrics (start: Date, end: Date, days?: number, hour
   console.log ("- Getting all bundled data transactions");
   const totalBundledData = await getANS102Transactions(start, end)
   console.log ("- Getting ArDrive Community fees");
-  const totalCommunityFees = await getAllCommunityFees(start, end)
+  const totalCommunityFees = await getSumOfAllCommunityFees(start, end)
   const totalMiningFees = totalData.publicArFee + totalData.privateArFee;
 
   console.log ("- Getting all drives");
