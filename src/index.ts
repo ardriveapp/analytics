@@ -36,7 +36,7 @@ async function networkAnalytics() {
     console.log ("")
 
     let pendingTxs = await getMempoolSize()
-    await sendMessageToGraphite('arweave.mempool.pendingTxs.', pendingTxs.length, today)
+    await sendMessageToGraphite('arweave.mempool.pendingTxs', pendingTxs.length, today)
     let height = await getCurrentBlockHeight();
     await sendMessageToGraphite('arweave.blockHeight', +height, today)
     let latestBlock : BlockInfo = await getLatestBlockInfo(height)
