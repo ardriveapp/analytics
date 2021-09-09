@@ -37,14 +37,19 @@ async function networkAnalytics() {
 
     let pendingTxs = await getMempoolSize()
     await sendMessageToGraphite('arweave.mempool.pendingTxs', pendingTxs.length, today)
+    console.log ("Mempool size: %s", pendingTxs.length)
 
     let height = await getCurrentBlockHeight();
 
     await sendMessageToGraphite('arweave.blockHeight', +height, today)
+
     let latestBlock : BlockInfo = await getLatestBlockInfo(height)
     await sendMessageToGraphite('arweave.weaveSize', latestBlock.weaveSize, today)
+    console.log ("Weave Size: %s", latestBlock.weaveSize)
     await sendMessageToGraphite('arweave.difficulty', latestBlock.difficulty, today)
+    console.log ("Arweave Difficulty: %s", latestBlock.difficulty)
     await sendMessageToGraphite('arweave.lastBlockSize', latestBlock.blockSize, today)
+    console.log ("Arweave Last Block Size: %s", latestBlock.blockSize)
 
     // Get price of AR in USD
     let arUSDPrice = await getArUSDPrice()
@@ -93,7 +98,7 @@ cron.schedule('0 */12 * * *', function(){
 });
 
 cron.schedule('*/5 * * * *', function(){
-    console.log('Running ArDrive Block Info and Price Collection Analytics Every 15 minutes');
+    console.log('Running ArDrive Block Info and Price Collection Analytics Every 5 minutes');
     networkAnalytics();
 });
 
