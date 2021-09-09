@@ -100,3 +100,17 @@ export interface ArDriveTokenHolder {
   voteWeight: number,
   arweaveTokens: number
 }
+
+export interface AstatineReward {
+  owner: string,
+  target: string,
+  appName: string,
+  appVersion: string,
+  cannon: string,
+  quantity: number,
+  completion: number,
+  blockHeight: number,
+  blockTime: number,
+  friendlyDate: string,
+  validSmartweaveTx: boolean
+}

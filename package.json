@@ -36,6 +36,7 @@
     "full-run": "yarn run build && node ./lib/fully_populate.js",
     "get-finances": "yarn run build && node ./lib/communityFinanceReport.js",
     "export-tips": "yarn run build && node ./lib/exportCommunityTips.js",
+    "export-astatine-txs": "yarn run build && node ./lib/exportAstatineTransactions.js",
     "export-ardrive-token-holders": "yarn run build && node ./lib/exportArDriveTokenHolders.js"
   },
   "license": "GPL-3.0-or-later",

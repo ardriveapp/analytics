@@ -1,6 +1,6 @@
 import { arweave, getArUSDPrice, getCurrentBlockHeight } from './arweave';
 import { asyncForEach, formatBytes, sleep } from './common';
-import { ArDriveCommunityFee, ArDriveStat, ContentType } from './types';
+import { ArDriveCommunityFee, ArDriveStat, AstatineReward, ContentType } from './types';
 import limestone from 'limestone-api';
 
 const desktopAppName = "ArDrive-Desktop";
@@ -47,7 +47,7 @@ export async function queryGateway(query: (url: string) => Promise<any>): Promis
 	}
 };
 
-// Sums up all transactions for a drive
+// Sums up all transactions for a wallet
 export const getUserSize = async (owner: string, start: Date, end: Date) => {
     let totalDriveSize = 0;
     let totalDriveTransactions = 0
@@ -325,7 +325,7 @@ export const getANS102Transactions = async (start: Date, end: Date) => {
 };
 
 // Sums up all ArDrive Community Tips/Fees
-export const getAllCommunityFees = async (start: Date, end: Date) => {
+export const getSumOfAllCommunityFees = async (start: Date, end: Date) => {
     let totalFees = 0;
     let desktopAppFees = 0;
     let webAppFees = 0;
@@ -357,6 +357,7 @@ export const getAllCommunityFees = async (start: Date, end: Date) => {
                   edges {
                     cursor
                     node {
+                      recipient
                       tags {
                         name
                         value
@@ -451,7 +452,282 @@ export const getAllCommunityFees = async (start: Date, end: Date) => {
     }
 };
 
-// Sums up all ArDrive Community Tips/Fees for a particular public address.  Uses a friendly name to label the wallet
+// Gets all ArDrive Community Tips/Fees sent
+export const getAllCommunityFees = async (start: Date, end: Date): Promise<ArDriveCommunityFee[]> => {
+    let firstPage : number = 100; // Max size of query for GQL
+    let cursor : string = "";
+    let hasNextPage = true;
+    let timeStamp = new Date(end);
+    let limestoneDay: number;
+    let myFees: ArDriveCommunityFee[] = [];
+    let checkHistoricalPrice = true;
+    console.log ("Getting all ArDrive Community fees");
+  
+    const currentPrice = await getArUSDPrice();
+    try {
+        while (hasNextPage) {
+            const query = {
+                query: `query {
+                transactions(
+                  tags: [
+                      { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
+                      { name: "Tip-Type", values: "data upload"}
+                  ]
+                  first: ${firstPage}
+                  after: "${cursor}"
+                  sort: HEIGHT_DESC
+                ) {
+                  pageInfo {
+                    hasNextPage
+                  }
+                  edges {
+                    cursor
+                    node {
+                      recipient
+                      tags {
+                        name
+                        value
+                      }
+                      owner {
+                          address
+                      }
+                      quantity {
+                        ar
+                      }
+                      block {
+                        timestamp
+                        height
+                      }
+                    }
+                  }
+                }
+              }`,
+            };
+            const transactions = await queryGateway(async (url: string) => {
+                const response = await arweave.api.request().post(url + "/graphql", query)
+                const { data } = response.data;
+                const { transactions } = data;
+                return transactions;
+            });
+            const { edges } = transactions;
+            hasNextPage = transactions.pageInfo.hasNextPage
+            await asyncForEach (edges, async (edge: any) => {
+                cursor = edge.cursor;
+                const { node } = edge;
+                const { quantity } = node;
+                const { block } = node;
+                const { owner } = node;
+                const { tags } = node;
+                if (block !== null) {
+                    timeStamp = new Date(block.timestamp * 1000);
+                    if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                        let myFee: ArDriveCommunityFee = {
+                            owner: owner.address,
+                            recipient: node.recipient,
+                            friendlyName: "community",
+                            appName: '',
+                            appVersion: '',
+                            tip: '',
+                            type: '',
+                            amountAR: 0,
+                            exchangeRate: 0, // The AR/USD exchange rate
+                            amountUSD: 0,
+                            currentPrice,
+                            costBasis: 0,
+                            blockHeight: 0,
+                            blockTime: 0,
+                            friendlyDate: ''
+                        }
+                        myFee.amountAR = quantity.ar;
+                        try {
+                        // Will try to get the price of AR for the day of this transaction. 
+                        // This will skip if it already got the price of AR for that day
+                        // This will skip completely if limestone is down
+                        if (checkHistoricalPrice && (limestoneDay !== timeStamp.getDay())) {
+                            limestoneDay = timeStamp.getDay();
+                            let latestPrice = await limestone.getHistoricalPrice("AR", {
+                            date: timeStamp, // Any convertable to date type
+                            });
+                            myFee.exchangeRate = latestPrice.value;
+                            myFee.amountUSD = latestPrice.value * myFee.amountAR;
+                            myFee.costBasis = latestPrice.value - myFee.currentPrice;
+                        }
+                        } catch {
+                        checkHistoricalPrice = false;
+                        console.log ("Cannot get AR price on ", timeStamp);
+                        }
+                        myFee.blockTime = block.timestamp;
+                        myFee.blockHeight = block.height;
+                        myFee.friendlyDate = timeStamp.toLocaleString();
+                        tags.forEach((tag: any) => {
+                            const key = tag.name;
+                            const { value } = tag;
+                            switch (key) {
+                            case 'App-Name':
+                                myFee.appName = value;
+                                break;
+                            case 'App-Version':
+                                myFee.appVersion = value;
+                                break;
+                            case 'Type':
+                                myFee.type = value;
+                                break;
+                            case 'Tip-Type':
+                                myFee.tip = value;
+                                break;
+                            default:
+                                break;
+                            };
+                        })
+                        console.log (myFee);
+                        myFees.push(myFee);
+                    } else if (timeStamp.getTime() > end.getTime()) {
+                        // console.log ("Result too early")
+                    } else {
+                        // console.log ("Result too old")
+                        hasNextPage = false;
+                        // result too old
+                    }
+                }
+            })
+        }
+        return myFees;
+    } catch (err) {
+        console.log (err)
+        console.log ("Error collecting total amount of fees")
+        return myFees;
+    }
+};
+
+// Gets all ArDrive Community Tips/Fees sent
+export const getAllAstatineRewards = async (start: Date, end: Date): Promise<AstatineReward[]> => {
+    let firstPage : number = 100; // Max size of query for GQL
+    let cursor : string = "";
+    let hasNextPage = true;
+    let timeStamp = new Date(end);
+    let input: string;
+    let rewards: AstatineReward[] = [];
+    console.log ("Getting all Astatine Transactions");
+    try {
+        while (hasNextPage) {
+            const query = {
+                query: `query {
+                transactions(
+                  tags: [
+                      { name: "Cannon", values: ["ArDrive Usage Rewards", "PST"]}
+                      { name: "Contract", values: "-8A6RexFkpfWwuyVO98wzSFZh0d6VJuI-buTJvlwOJQ"}
+                  ]
+                  first: ${firstPage}
+                  after: "${cursor}"
+                  sort: HEIGHT_DESC
+                ) {
+                  pageInfo {
+                    hasNextPage
+                  }
+                  edges {
+                    cursor
+                    node {
+                      recipient
+                      tags {
+                        name
+                        value
+                      }
+                      owner {
+                          address
+                      }
+                      quantity {
+                        ar
+                      }
+                      block {
+                        timestamp
+                        height
+                      }
+                    }
+                  }
+                }
+              }`,
+            };
+            const transactions = await queryGateway(async (url: string) => {
+                const response = await arweave.api.request().post(url + "/graphql", query)
+                const { data } = response.data;
+                const { transactions } = data;
+                return transactions;
+            });
+            const { edges } = transactions;
+            hasNextPage = transactions.pageInfo.hasNextPage
+            await asyncForEach (edges, async (edge: any) => {
+                cursor = edge.cursor;
+                const { node } = edge;
+                const { block } = node;
+                const { owner } = node;
+                const { tags } = node;
+                if (block !== null) {
+                    timeStamp = new Date(block.timestamp * 1000);
+                    if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                        let reward: AstatineReward = {
+                            owner: owner.address,
+                            target: '',
+                            appName: '',
+                            appVersion: '',
+                            cannon: '',
+                            quantity: 0,
+                            completion: 0,
+                            blockHeight: 0,
+                            blockTime: 0,
+                            friendlyDate: '',
+                            validSmartweaveTx: false
+                        }
+
+                        reward.blockTime = block.timestamp;
+                        reward.blockHeight = block.height;
+                        reward.friendlyDate = timeStamp.toLocaleString();
+                        tags.forEach((tag: any) => {
+                            const key = tag.name;
+                            const { value } = tag;
+                            switch (key) {
+                            case 'App-Name':
+                                reward.appName = value;
+                                break;
+                            case 'App-Version':
+                                reward.appVersion = value;
+                                break;
+                            case 'Cannon':
+                                reward.cannon = value;
+                                break;
+                            case 'Completion':
+                                reward.completion = value;
+                                break;
+                            case 'Input':
+                                input = value;
+                                break;
+                            default:
+                                break;
+                            };
+                        })
+                        let inputObject = JSON.parse(input);
+                        reward.target = inputObject.target;
+                        reward.quantity = inputObject.qty;
+                        console.log (reward);
+                        rewards.push(reward);
+                    } else if (timeStamp.getTime() > end.getTime()) {
+                        // console.log ("Result too early")
+                    } else {
+                        // console.log ("Result too old")
+                        hasNextPage = false;
+                        // result too old
+                    }
+                }
+            })
+        }
+        return rewards;
+    } catch (err) {
+        console.log (err)
+        console.log ("Error collecting total amount of astatine transactions")
+        return rewards;
+    }
+};
+
+// Gets all ArDrive Community Tips/Fees for a particular public address.  Uses a friendly name to label the wallet
 export const getMyCommunityFees = async (friendlyName: string, owner: string, start: Date, end: Date): Promise<ArDriveCommunityFee[]> => {
     let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
@@ -483,6 +759,7 @@ export const getMyCommunityFees = async (friendlyName: string, owner: string, st
                   edges {
                     cursor
                     node {
+                      recipient
                       tags {
                         name
                         value
@@ -508,22 +785,7 @@ export const getMyCommunityFees = async (friendlyName: string, owner: string, st
             const { edges } = transactions;
             hasNextPage = transactions.pageInfo.hasNextPage
             await asyncForEach (edges, async (edge: any) => {
-                let myFee: ArDriveCommunityFee = {
-                    owner,
-                    friendlyName,
-                    appName: '',
-                    appVersion: '',
-                    tip: '',
-                    type: '',
-                    amountAR: 0,
-                    exchangeRate: 0, // The AR/USD exchange rate
-                    amountUSD: 0,
-                    currentPrice,
-                    costBasis: 0,
-                    blockHeight: 0,
-                    blockTime: 0,
-                    friendlyDate: ''
-                }
+
                 cursor = edge.cursor;
                 const { node } = edge;
                 const { quantity } = node;
@@ -532,6 +794,24 @@ export const getMyCommunityFees = async (friendlyName: string, owner: string, st
                 if (block !== null) {
                     timeStamp = new Date(block.timestamp * 1000);
                     if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                        let myFee: ArDriveCommunityFee = {
+                            owner,
+                            recipient: node.recipient,
+                            friendlyName,
+                            appName: '',
+                            appVersion: '',
+                            tip: '',
+                            type: '',
+                            amountAR: 0,
+                            exchangeRate: 0, // The AR/USD exchange rate
+                            amountUSD: 0,
+                            currentPrice,
+                            costBasis: 0,
+                            blockHeight: 0,
+                            blockTime: 0,
+                            friendlyDate: ''
+                        }
+
                         // console.log ("Matching community fee transaction: ", timeStamp)
                         myFee.amountAR = quantity.ar;
                         try {
