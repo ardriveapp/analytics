@@ -29,7 +29,6 @@ export async function sleep(ms: number): Promise<number> {
 export async function sendResultsToGraphite (results: Results) {
 
     const today = results.endDate;
-
     await sendMessageToGraphite('ardrive.users.total', results.totalArDriveUsers, today);
     await sendMessageToGraphite('ardrive.users.new', results.newArDriveUsers, today);
     await sendMessageToGraphite('ardrive.users.averageUserSize', results.averageUserSize, today);

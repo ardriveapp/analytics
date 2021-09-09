@@ -1,4 +1,4 @@
-import { getArUSDPrice, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo } from './arweave'
+import { getArUSDPrice, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getMempoolSize } from './arweave'
 import { sendMessageToGraphite, getAllMetrics, sendResultsToGraphite, getArDriveCommunityWalletARBalances, getArDriveCommunityWalletArDriveBalances } from './common';
 import { Results, BlockInfo } from './types';
 
@@ -35,6 +35,8 @@ async function networkAnalytics() {
     console.log ("%s Starting to collect latest block and price info", today)
     console.log ("")
 
+    let pendingTxs = await getMempoolSize()
+    await sendMessageToGraphite('arweave.mempool.pendingTxs.', pendingTxs.length, today)
     let height = await getCurrentBlockHeight();
     await sendMessageToGraphite('arweave.blockHeight', +height, today)
     let latestBlock : BlockInfo = await getLatestBlockInfo(height)
@@ -73,6 +75,7 @@ async function networkAnalytics() {
         await sendMessageToGraphite('ardrive.price.usd.1gb', (+priceOf1GB.toFixed(5) * arUSDPrice), today)
     }
 }
+
 console.log ("Start ArDrive Analytics Cron Jobs");
 console.log ("---------------------------------");
 

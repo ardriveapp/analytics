@@ -55,6 +55,26 @@ export const getCurrentBlockHeight = async () => {
   return height
 };
 
+// Gets the latest block height
+export const getMempoolSize = async () => {
+  let pendingTxs: any;
+  try {
+    const response = await fetch(`https://arweave.net/tx/pending`);
+    pendingTxs = await response.json()
+    return pendingTxs
+  } catch (err) {
+    console.log (err)
+  }
+  // Try a backup just in case
+  try {
+    const response = await fetch(`http://us.arweave.ardrive.io:1984/tx/pending`);
+    pendingTxs = await response.json()
+  } catch (err) {
+    console.log (err)
+  }
+  return pendingTxs
+};
+
 // Gets the total weave size from the latest block
 export const getLatestBlockInfo = async (height: number) => {
     let latestBlock : BlockInfo = {
