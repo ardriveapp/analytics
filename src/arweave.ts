@@ -1,5 +1,6 @@
 
 import Arweave from 'arweave';
+import { asyncForEach } from './common';
 import { BlockInfo, BlockDate } from './types';
 
 const fetch = require('node-fetch')
@@ -12,7 +13,7 @@ export const arweave = Arweave.init({
   });
 
 // Gets the latest price of Arweave in USD
-export const getArUSDPrice = async () : Promise<number> => {
+export async function getArUSDPrice() : Promise<number> {
   let usdPrice = 0;
   try {
     const res = await fetch(
@@ -28,7 +29,7 @@ export const getArUSDPrice = async () : Promise<number> => {
 };
 
 // Gets the price of AR based on amount of data
-export const getDataPrice = async (bytes: number) => {
+export async function getDataPrice(bytes: number) {
     const response = await fetch(`https://arweave.net/price/${bytes}`);
     const winstonAmount = await response.json();
     const arweaveAmount = +winstonAmount * 0.000000000001;
@@ -36,7 +37,7 @@ export const getDataPrice = async (bytes: number) => {
 };
 
 // Gets the latest block height
-export const getCurrentBlockHeight = async () => {
+export async function getCurrentBlockHeight() {
   let height = 0;
   try {
     const response = await fetch(`https://arweave.net/height/`);
@@ -47,7 +48,7 @@ export const getCurrentBlockHeight = async () => {
   }
   // Try a backup just in case
   try {
-    const response = await fetch(`http://node.ardrive.io:1984/height/`);
+    const response = await fetch(`http://us.arweave.ardrive.io:1984/height/`);
     height = await response.json()
   } catch (err) {
     console.log (err)
@@ -56,7 +57,7 @@ export const getCurrentBlockHeight = async () => {
 };
 
 // Gets the latest block height
-export const getMempoolSize = async () => {
+export async function getMempoolSize() {
   let pendingTxs: any;
   try {
     const response = await fetch(`https://arweave.net/tx/pending`);
@@ -75,24 +76,55 @@ export const getMempoolSize = async () => {
   return pendingTxs
 };
 
+// Gets all transactions from the latest block
+export async function getLatestBlockTransactions() {
+  const lastBlockHeight = await getCurrentBlockHeight();
+  const response = await fetch(`https://arweave.net/block/height/${lastBlockHeight}`);
+  const block = await response.json();
+  return block;
+}
+// Takes all transactions in the mempool and gets the average fee per byte in winston
+export async function getAvgPerByteFee (memPool: string[]) {
+  let avgRewardPerByte = 0;
+  
+  await asyncForEach (memPool, async (tx: string) => {
+    const response = await fetch(`https://arweave.net/tx/${tx}`);
+    const txDetails = await response.json();
+    const txReward = +txDetails.reward;
+    const dataSize = +txDetails.data_size;
+    const rewardPerByte = dataSize / txReward;
+    console.log ("Reward per byte for %s is %s", tx, rewardPerByte)
+    console.log ("   Data Size %s", dataSize)
+    console.log ("   Reward is %s", txReward)
+  });
+  console.log (avgRewardPerByte)
+};
+
 // Gets the total weave size from the latest block
-export const getLatestBlockInfo = async (height: number) => {
+export async function getLatestBlockInfo (height: number) {
     let latestBlock : BlockInfo = {
         weaveSize: 0,
         difficulty: 0,
         blockSize: 0,
     }
-    const response = await fetch(`https://arweave.net/block/height/${height}`);
-    const blockInfo = await response.json()
-    latestBlock.weaveSize = blockInfo['weave_size']
-    latestBlock.difficulty = blockInfo['diff']
-    latestBlock.blockSize = blockInfo['block_size']
-    return latestBlock;
+    try {
+      const response = await fetch(`https://arweave.net/block/height/${height}`);
+      const blockInfo = await response.json()
+      latestBlock.weaveSize = blockInfo['weave_size']
+      latestBlock.difficulty = blockInfo['diff']
+      latestBlock.blockSize = blockInfo['block_size']
+      return latestBlock;
+    } catch (err) {
+      console.log ("Error getting latest block info");
+      console.log (err)
+      return latestBlock;
+    }
+
 };
 
 // Basic function to get the date for a block height
 // Not used anywhere
-export const getBlockDate = async (height: number): Promise<BlockDate> => {
+export async function getBlockDate (height: number): Promise<BlockDate> {
   const response = await fetch(`https://arweave.net/block/height/${height}`);
   const blockInfo = await response.json()
   const blockTimeStampDate = new Date(+blockInfo['timestamp'] * 1000);

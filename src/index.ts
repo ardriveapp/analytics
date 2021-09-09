@@ -37,7 +37,9 @@ async function networkAnalytics() {
 
     let pendingTxs = await getMempoolSize()
     await sendMessageToGraphite('arweave.mempool.pendingTxs', pendingTxs.length, today)
+
     let height = await getCurrentBlockHeight();
+
     await sendMessageToGraphite('arweave.blockHeight', +height, today)
     let latestBlock : BlockInfo = await getLatestBlockInfo(height)
     await sendMessageToGraphite('arweave.weaveSize', latestBlock.weaveSize, today)
@@ -90,12 +92,12 @@ cron.schedule('0 */12 * * *', function(){
     getArDriveCommunityWalletArDriveBalances()
 });
 
-cron.schedule('*/15 * * * *', function(){
+cron.schedule('*/5 * * * *', function(){
     console.log('Running ArDrive Block Info and Price Collection Analytics Every 15 minutes');
     networkAnalytics();
 });
 
-cron.schedule('*/30 * * * *', function(){
+cron.schedule('*/60 * * * *', function(){
     console.log('Collecting ArDrive Community Wallet Balances (AR tokens) Every 30 minutes');
     getArDriveCommunityWalletARBalances();
 });
