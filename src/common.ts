@@ -552,3 +552,16 @@ export function contentTypeCountCompare(a: any, b: any) {
   }
   return comparison * -1;
 }
+
+// This method returns count of Unique elements in an array
+export function countDistinct(arr: any[],n: number) {
+let hs = new Set();
+    for(let i = 0; i < n; i++)
+    {
+        // add all the elements to the HashSet
+        hs.add(arr[i]);
+    }
+    // return the size of hashset as
+    // it consists of all Unique elements
+    return hs.size;   
+}

@@ -37,7 +37,12 @@
     "get-finances": "yarn run build && node ./lib/communityFinanceReport.js",
     "export-tips": "yarn run build && node ./lib/exportCommunityTips.js",
     "export-astatine-txs": "yarn run build && node ./lib/exportAstatineTransactions.js",
-    "export-ardrive-token-holders": "yarn run build && node ./lib/exportArDriveTokenHolders.js"
+    "export-ardrive-token-holders": "yarn run build && node ./lib/exportArDriveTokenHolders.js",
+    "export-dust-transaction-report": "yarn run build && node ./lib/dustTransactionReport.js",
+    "get-all-folders": "yarn run build && node ./lib/getAllFolders.js",
+    "get-all-drives": "yarn run build && node ./lib/getAllDrives.js",
+    "get-all-files": "yarn run build && node ./lib/getAllFiles.js",
+    "get-all-app-data": "yarn run build && node ./lib/getAllAppData.js"
   },
   "license": "GPL-3.0-or-later",
   "author": {

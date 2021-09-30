@@ -164,3 +164,13 @@ export async function getWalletBalance(walletPublicKey: string): Promise<number>
 		return 0;
 	}
 }
+// Get the latest status of a transaction
+export async function getTransactionStatus(txid: string): Promise<number> {
+	try {
+		const response = await arweave.transactions.getStatus(txid);
+		return response.status;
+	} catch (err) {
+		// console.log(err);
+		return 0;
+	}
+}

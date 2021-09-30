@@ -1,6 +1,6 @@
 import { arweave, getArUSDPrice, getCurrentBlockHeight } from './arweave';
 import { asyncForEach, formatBytes, sleep } from './common';
-import { ArDriveCommunityFee, ArDriveStat, AstatineReward, ContentType } from './types';
+import { ArDriveCommunityFee, ArDriveStat, AstatineReward, ContentType, FileInfo } from './types';
 import limestone from 'limestone-api';
 
 const desktopAppName = "ArDrive-Desktop";
@@ -120,8 +120,8 @@ export const getUserSize = async (owner: string, start: Date, end: Date) => {
     }
 };
 
-// Gets ArDrive information from a start and and date
-export const getAllDrives = async (start: Date, end: Date) => {
+// Gets ArDrive Drive information from a start and and date
+export const getAllDrives = async (start: Date, end: Date): Promise<ArDriveStat[]> => {
     let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let arDriveStats : ArDriveStat[] = [];
@@ -221,6 +221,295 @@ export const getAllDrives = async (start: Date, end: Date) => {
         console.log (err)
         console.log ("Error collecting total number of ArDrives")
         return arDriveStats;
+    }
+};
+
+// Gets ArDrive Folder information from a start and and date
+export const getAllFolders = async (start: Date, end: Date):Promise <string[]> => {
+    let firstPage : number = 100; // Max size of query for GQL
+    let cursor : string = "";
+    let folderIds : string[] = [];
+    let hasNextPage = true;
+    try {
+      while (hasNextPage) {
+        const query = {
+            query: `query {
+                transactions(
+                    tags: [
+                        { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
+                        { name: "Entity-Type", values: "folder" }
+                      ]
+                    sort: HEIGHT_ASC
+                    first: ${firstPage}
+                    after: "${cursor}"
+                ) {
+                    pageInfo {
+                        hasNextPage
+                    }
+                    edges {
+                        cursor
+                        node {
+                            id
+                            owner {
+                                address
+                            }
+                            tags {
+                                name
+                                value
+                            }
+                            block {
+                                timestamp
+                            }
+                        }
+                    }
+                }
+            }`,
+        };
+        const transactions = await queryGateway(async (url: string) => {
+            const response = await arweave.api.request().post(url + "/graphql", query)
+            const { data } = response.data;
+            const { transactions } = data;
+            return transactions;
+        });
+        const { edges } = transactions;
+        hasNextPage = transactions.pageInfo.hasNextPage
+        edges.forEach((edge: any) => {
+            cursor = edge.cursor;
+            const { node } = edge;
+            const { block } = node;
+            if (block !== null) {
+                let timeStamp = new Date(block.timestamp * 1000);
+                // We only want results between our start and end dates, defined by milliseconds since epoch
+                if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                    //console.log ("Matching ardrive transaction: ", timeStamp)
+                    const { tags } = node;
+                    tags.forEach((tag: any) => {
+                        const key = tag.name;
+                        const { value } = tag;
+                        switch (key) {
+                        case 'Folder-Id':
+                            folderIds.push(value);
+                            break;
+                        default:
+                            break;
+                        };
+                    })
+                } else if (timeStamp.getTime() > end.getTime()) {
+                  // console.log ("Result too old")
+                  hasNextPage = false;
+                } else {
+                  // result too early
+                }
+            }
+        })
+      }
+      return folderIds;
+    } catch (err) {
+        console.log (err)
+        console.log ("Error collecting total number of ArDrives")
+        return folderIds;
+    }
+};
+
+// Gets ArDrive File information from a start and and date
+export const getAllFiles = async (start: Date, end: Date):Promise <FileInfo[]> => {
+    let firstPage : number = 100; // Max size of query for GQL
+    let cursor : string = "";
+    let files : FileInfo[] = [];
+    let hasNextPage = true;
+    try {
+      while (hasNextPage) {
+        const query = {
+            query: `query {
+                transactions(
+                    tags: [
+                        { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
+                        { name: "Entity-Type", values: "file" }
+                      ]
+                    sort: HEIGHT_ASC
+                    first: ${firstPage}
+                    after: "${cursor}"
+                ) {
+                    pageInfo {
+                        hasNextPage
+                    }
+                    edges {
+                        cursor
+                        node {
+                            id
+                            owner {
+                                address
+                            }
+                            tags {
+                                name
+                                value
+                            }
+                            block {
+                                timestamp
+                            }
+                        }
+                    }
+                }
+            }`,
+        };
+        const transactions = await queryGateway(async (url: string) => {
+            const response = await arweave.api.request().post(url + "/graphql", query)
+            const { data } = response.data;
+            const { transactions } = data;
+            return transactions;
+        });
+        const { edges } = transactions;
+        hasNextPage = transactions.pageInfo.hasNextPage
+        edges.forEach((edge: any) => {
+            cursor = edge.cursor;
+            const { node } = edge;
+            const { block } = node;
+            const { owner } = node;
+            if (block !== null) {
+                let timeStamp = new Date(block.timestamp * 1000);
+                // We only want results between our start and end dates, defined by milliseconds since epoch
+                if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                    //console.log ("Matching ardrive transaction: ", timeStamp)
+                    let file: FileInfo = {
+                        address: owner.address,
+                        fileId: '',
+                        parentFolderId: '',
+                        driveId: '',
+                        privacy: 'public',
+                        tx: node.id,
+                        blockTimeStamp: timeStamp,
+                    }
+                    const { tags } = node;
+                    tags.forEach((tag: any) => {
+                        const key = tag.name;
+                        const { value } = tag;
+                         switch (key) {
+                        case 'File-Id':
+                            file.fileId = value;
+                            break;
+                        case 'Drive-Id':
+                            file.driveId = value;
+                            break;
+                        case 'Parent-Folder-Id':
+                            file.parentFolderId = value;
+                            break;
+                        case 'Cipher-IV':
+                            file.privacy = 'private';
+                            break;
+                        default:
+                            break;
+                        };
+                    })
+                    files.push(file);
+                } else if (timeStamp.getTime() > end.getTime()) {
+                  // console.log ("Result too old")
+                  hasNextPage = false;
+                } else {
+                  // result too early
+                }
+            }
+        })
+      }
+      return files;
+    } catch (err) {
+        console.log (err)
+        console.log ("Error collecting all ArDrive Files")
+        return files;
+    }
+};
+
+// Gets ArDrive information from a start and and date
+export const getAllAppData = async (appTarget: string, start: Date, end: Date):Promise <{foundTransactions: number, dataSize: number, foundUsers: string[]}> => {
+    let firstPage : number = 100; // Max size of query for GQL
+    let cursor : string = "";
+    let foundTransactions = 0;
+    let dataSize = 0;
+    let foundUsers: string[] = [];
+    let hasNextPage = true;
+    try {
+      while (hasNextPage) {
+        const query = {
+            query: `query {
+                transactions(
+                    tags: [
+                        { name: "App-Name", values: ["${appTarget}"]}
+                      ]
+                    sort: HEIGHT_ASC
+                    first: ${firstPage}
+                    after: "${cursor}"
+                ) {
+                    pageInfo {
+                        hasNextPage
+                    }
+                    edges {
+                        cursor
+                        node {
+                            id
+                            owner {
+                                address
+                            }
+                            tags {
+                                name
+                                value
+                            }
+                            block {
+                                timestamp
+                            }
+                            data {
+                                size
+                            }
+                        }
+                    }
+                }
+            }`,
+        };
+        const transactions = await queryGateway(async (url: string) => {
+            const response = await arweave.api.request().post(url + "/graphql", query)
+            const { data } = response.data;
+            const { transactions } = data;
+            return transactions;
+        });
+        const { edges } = transactions;
+        hasNextPage = transactions.pageInfo.hasNextPage
+        edges.forEach((edge: any) => {
+            cursor = edge.cursor;
+            const { node } = edge;
+            const { block } = node;
+            const { data } = node;
+            if (block !== null) {
+                let timeStamp = new Date(block.timestamp * 1000);
+                // We only want results between our start and end dates, defined by milliseconds since epoch
+                if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                    //console.log ("Matching ardrive transaction: ", timeStamp)
+                    foundTransactions += 1;
+                    dataSize += +data.size;
+                    const { tags } = node;
+                    tags.forEach((tag: any) => {
+                        const key = tag.name;
+                        const { value } = tag;
+                        // include whatever specific tags needed to track users of this app.
+                        switch (key) {
+                        case 'publicSigningKey':
+                            foundUsers.push(value);
+                            break;
+                        default:
+                            break;
+                        };
+                    })
+                } else if (timeStamp.getTime() > end.getTime()) {
+                  // console.log ("Result too old")
+                  hasNextPage = false;
+                } else {
+                  // result too early
+                }
+            }
+        })
+      }
+      return {foundTransactions, dataSize, foundUsers};
+    } catch (err) {
+        console.log (err)
+        console.log ("Error collecting total number of ArDrives")
+        return {foundTransactions, dataSize, foundUsers};
     }
 };
 

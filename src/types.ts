@@ -64,7 +64,17 @@ export interface ArDriveStat {
     driveId: string,
     tx: string,
     data: number,
-    blockTimeStamp: Date,
+    blockTimeStamp: Date
+}
+
+export interface FileInfo {
+  address: string,
+  fileId: string,
+  parentFolderId: string,
+  driveId: string,
+  privacy: string,
+  tx: string,
+  blockTimeStamp: Date
 }
 
 export interface BlockDate {
