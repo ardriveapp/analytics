@@ -41,8 +41,10 @@
     "export-dust-transaction-report": "yarn run build && node ./lib/dustTransactionReport.js",
     "get-all-folders": "yarn run build && node ./lib/getAllFolders.js",
     "get-all-drives": "yarn run build && node ./lib/getAllDrives.js",
+    "get-drive-sizes": "yarn run build && node ./lib/getDriveSizes.js",
     "get-all-files": "yarn run build && node ./lib/getAllFiles.js",
-    "get-all-app-data": "yarn run build && node ./lib/getAllAppData.js"
+    "get-all-app-data": "yarn run build && node ./lib/getAllAppData.js",
+    "get-unique-ardrive-users": "yarn run build && node ./lib/getUniqueArDriveUsers.js"
   },
   "license": "GPL-3.0-or-later",
   "author": {

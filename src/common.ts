@@ -18,6 +18,10 @@ export const communityWallets : string[] = [
   'pzH5LB20NhsrPMmvZzTrW-ahbAbIE-TeRzWBVYdArpA' // operational vault
 ];
 
+export const otherAppWallets : string[] = [
+  'OXcT1sVRSA5eGwt2k6Yuz8-3e3g9WJi5uSE99CWqsBs', // bundler node wallet
+];
+
 // Pauses application
 export async function sleep(ms: number): Promise<number> {
 	return new Promise((resolve) => {
@@ -111,6 +115,21 @@ export async function getArDriveCommunityWalletARBalances () {
     let balance = await getWalletBalance(communityWallet);
     console.log ("%s balance is %s", communityWallet, balance)
     await sendMessageToGraphite(communityWalletMessage, balance, today);
+  });
+}
+
+// Gets other Wallet's AR token balances and sends their balance to grafana
+export async function getOtherWalletARBalances () {
+  let today = new Date();
+
+  console.log ("%s Starting to collect Other Wallet Balances", today)
+  console.log ("")
+
+  otherAppWallets.forEach(async (otherAppWallet: string) => {
+    let otherWalletMessage = 'ardrive.finances.otherwallets.' + otherAppWallet + '.ar'
+    let balance = await getWalletBalance(otherAppWallet);
+    console.log ("%s balance is %s", otherAppWallet, balance)
+    await sendMessageToGraphite(otherWalletMessage, balance, today);
   });
 }
 

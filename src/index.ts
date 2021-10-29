@@ -1,5 +1,5 @@
 import { getArUSDPrice, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getMempoolSize } from './arweave'
-import { sendMessageToGraphite, getAllMetrics, sendResultsToGraphite, getArDriveCommunityWalletARBalances, getArDriveCommunityWalletArDriveBalances } from './common';
+import { sendMessageToGraphite, getAllMetrics, sendResultsToGraphite, getArDriveCommunityWalletARBalances, getArDriveCommunityWalletArDriveBalances, getOtherWalletARBalances } from './common';
 import { Results, BlockInfo } from './types';
 
 // Used for scheduling the jobs
@@ -100,6 +100,7 @@ cron.schedule('0 */12 * * *', function(){
 cron.schedule('*/5 * * * *', function(){
     console.log('Running ArDrive Block Info and Price Collection Analytics Every 5 minutes');
     networkAnalytics();
+    getOtherWalletARBalances();
 });
 
 cron.schedule('*/60 * * * *', function(){

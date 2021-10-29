@@ -1,12 +1,10 @@
 import { countDistinct } from "./common";
-import { getAllAppData } from "./gql";
-
+import { getUniqueArDriveUsers } from "./gql";
 
 export async function main () {
     const today = new Date().toISOString().slice(0, 10)
-    const start = new Date(2021, 8, 1) // the beginning history of ardrive
-    const end = new Date(2021, 9, 1)
-
+    const start = new Date(2021, 6, 1) 
+    const end = new Date(2021, 7, 1)
 
     const appTarget = 'ArDrive'; // Change this to whatever app target you like
 
@@ -23,12 +21,12 @@ export async function main () {
     });
 
     console.log('Getting all data from from app %s from %s to %s',  appTarget, start.toLocaleString(), end.toLocaleString());
-    const allData = await getAllAppData(appTarget, start, end)
+    const allData = await getUniqueArDriveUsers(start, end)
 
     const uniqueUsers = countDistinct(allData.foundUsers, allData.foundUsers.length)
     console.log ("Total Transactions found: %s", allData.foundTransactions);
     console.log ("Total Data found: %s", allData.dataSize);
-    console.log ("Total users found: %s", uniqueUsers);
+    console.log ("Total Active Users found: %s", uniqueUsers);
 
     const recordToWrite = {
         foundTransactions: allData.foundTransactions,

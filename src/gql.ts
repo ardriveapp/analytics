@@ -513,6 +513,106 @@ export const getAllAppData = async (appTarget: string, start: Date, end: Date):P
     }
 };
 
+// Gets ArDrive information from a start and and date
+export const getUniqueArDriveUsers = async (start: Date, end: Date):Promise <{foundTransactions: number, dataSize: number, foundUsers: string[]}> => {
+    let firstPage : number = 100; // Max size of query for GQL
+    let cursor : string = "";
+    let foundTransactions = 0;
+    let dataSize = 0;
+    let foundUsers: string[] = [];
+    let hasNextPage = true;
+    let today = new Date();
+
+
+    // To calculate the no. of days between two dates
+    const blocksPerDay = 720;
+    let height = await getCurrentBlockHeight();
+    let minBlock = height - blocksPerDay // Search the last min block time by default
+    const startDays = today.getTime() - start.getTime()
+    const startDaysDiff = Math.floor(startDays / (1000 * 3600 * 24));
+    if (startDaysDiff !== 0) {
+        minBlock = height - (blocksPerDay * startDaysDiff)
+    } 
+
+    try {
+      while (hasNextPage) {
+        const query = {
+            query: `query {
+                transactions(
+                    tags: [
+                        { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
+                        { name: "Entity-Type", values: ["file", "folder", "drive"]}
+                      ]
+                    sort: HEIGHT_ASC
+                    block: {min: ${minBlock}}
+                    first: ${firstPage}
+                    after: "${cursor}"
+                ) {
+                    pageInfo {
+                        hasNextPage
+                    }
+                    edges {
+                        cursor
+                        node {
+                            id
+                            owner {
+                                address
+                            }
+                            tags {
+                                name
+                                value
+                            }
+                            block {
+                                timestamp
+                            }
+                            data {
+                                size
+                            }
+                        }
+                    }
+                }
+            }`,
+        };
+        const transactions = await queryGateway(async (url: string) => {
+            const response = await arweave.api.request().post(url + "/graphql", query)
+            const { data } = response.data;
+            const { transactions } = data;
+            return transactions;
+        });
+        const { edges } = transactions;
+        hasNextPage = transactions.pageInfo.hasNextPage
+        edges.forEach((edge: any) => {
+            cursor = edge.cursor;
+            const { node } = edge;
+            const { block } = node;
+            const { data } = node;
+            const { owner } = node;
+            if (block !== null) {
+                let timeStamp = new Date(block.timestamp * 1000);
+                // We only want results between our start and end dates, defined by milliseconds since epoch
+                console.log (timeStamp.toLocaleString())
+                if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                    console.log ("Matching ardrive transaction: ", timeStamp)
+                    foundTransactions += 1;
+                    dataSize += +data.size;
+                    foundUsers.push(owner.address)
+                } else if (timeStamp.getTime() > end.getTime()) {
+                  console.log ("Result too early")
+                  hasNextPage = false;
+                } else {
+                  console.log ("Result too old")
+                }
+            }
+        })
+      }
+      return {foundTransactions, dataSize, foundUsers};
+    } catch (err) {
+        console.log (err)
+        console.log ("Error collecting total number of ArDrives")
+        return {foundTransactions, dataSize, foundUsers};
+    }
+};
+
 // Sums up every bundled data transaction for a start and end period.
 export const getANS102Transactions = async (start: Date, end: Date) => {
     let bundledDataSize = 0;
