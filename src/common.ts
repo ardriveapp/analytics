@@ -1,12 +1,14 @@
 import { 
     getAllBlockDates, 
+    getCurrentBlockHeight, 
     getLatestBlockInfo,  
     getWalletBalance, 
     /*get_24_hour_ardrive_transactions*/ 
 } from './arweave'
-import { getANS102Transactions, getAllCommunityFees, getAllDrives, getAllTransactions_WithBlocks, getMyCommunityFees, getUserSize, getAllTransactions, getSumOfAllCommunityFees } from './gql';
+import { getAllCommunityFees, getAllDrives, getAllTransactions_WithBlocks, getMyCommunityFees, getUserSize, getAllTransactions, getSumOfAllCommunityFees } from './gql';
+import { sendArDriveCommunityFinancesToGraphite, sendMessageToGraphite } from './graphite';
 import { getArDriveCommunityState, getTotalTokenCount, getWalletArDriveLockedBalance, getWalletArDriveUnlockedBalance, getTokenHolderCount } from './smartweave';
-import { Results, BlockInfo, ArDriveCommunityFee, BlockDate, ContentType } from './types';
+import { Results, BlockInfo, ArDriveCommunityFee, BlockDate } from './types';
 
 export const communityWallets : string[] = [
   'i325n3L2UvgcavEM8UnFfY0OWBiyf2RrbNsLStPI73o', // vested community usage mining 
@@ -28,79 +30,6 @@ export async function sleep(ms: number): Promise<number> {
 		// eslint-disable-next-line @typescript-eslint/no-implied-eval
 		setTimeout(resolve, ms);
 	});
-}
-
-export async function sendResultsToGraphite (results: Results) {
-
-    const today = results.endDate;
-    await sendMessageToGraphite('ardrive.users.total', results.totalArDriveUsers, today);
-    await sendMessageToGraphite('ardrive.users.new', results.newArDriveUsers, today);
-    await sendMessageToGraphite('ardrive.users.averageUserSize', results.averageUserSize, today);
-    await sendMessageToGraphite('ardrive.users.averageUserFiles', results.averageUserFiles, today);
-    await sendMessageToGraphite('ardrive.drives.total', results.drivesFound, today);
-    await sendMessageToGraphite('ardrive.drives.public', results.publicDrives, today);
-    await sendMessageToGraphite('ardrive.drives.private', results.privateDrives, today);
-    await sendMessageToGraphite('ardrive.bundledData.total', results.totalBundledData, today);
-    await sendMessageToGraphite('ardrive.bundledData.desktop', results.totalDesktopBundledData, today);
-    await sendMessageToGraphite('ardrive.bundledData.webapp', results.totalWebAppBundledData, today);
-    await sendMessageToGraphite('ardrive.v2Data.total', results.totalDataSize, today);
-    await sendMessageToGraphite('ardrive.v2Data.public', results.publicData, today);
-    await sendMessageToGraphite('ardrive.v2Data.private', results.privateData, today);
-    await sendMessageToGraphite('ardrive.files.total', results.totalFiles, today);
-    await sendMessageToGraphite('ardrive.files.web', results.webAppFiles, today);
-    await sendMessageToGraphite('ardrive.files.desktop', results.desktopAppFiles, today);
-    await sendMessageToGraphite('ardrive.files.mobile', results.mobileAppFiles, today);
-    await sendMessageToGraphite('ardrive.files.core', results.coreAppFiles, today);
-    await sendMessageToGraphite('ardrive.files.core.arconnect', results.arConnectFiles, today);
-    await sendMessageToGraphite('ardrive.files.cli', results.cliAppFiles, today);
-    await sendMessageToGraphite('ardrive.files.public', results.publicFiles, today);
-    await sendMessageToGraphite('ardrive.files.private', results.privateFiles, today);
-    await sendMessageToGraphite('ardrive.fees.community', results.totalCommunityFees, today);
-    await sendMessageToGraphite('ardrive.fees.mining', results.totalMiningFees, today);
-    await sendMessageToGraphite('ardrive.fees.desktop', results.desktopAppFees, today);
-    await sendMessageToGraphite('ardrive.fees.mobile', results.mobileAppFees, today);
-    await sendMessageToGraphite('ardrive.fees.core', results.coreAppFees, today);
-    await sendMessageToGraphite('ardrive.fees.core.arconnect', results.arConnectFees, today)
-    await sendMessageToGraphite('ardrive.fees.cli', results.cliAppFees, today);
-    await sendMessageToGraphite('ardrive.fees.webapp', results.webAppFees, today);
-    await sendMessageToGraphite('ardrive.fees.public', results.publicArFees, today);
-    await sendMessageToGraphite('ardrive.fees.private', results.privateArFees, today);
-    await sendMessageToGraphite('ardrive.community.tokenHolders', results.tokenHolders, today);
-    await sendMessageToGraphite('arweave.blockHeight', results.blockHeight, today);
-    await sendMessageToGraphite('arweave.weaveSize', results.weaveSize, today);
-    await sendMessageToGraphite('arweave.difficuty', results.weaveSize, today);
-    
-    if (results.contentTypes !== undefined) {
-        await asyncForEach (results.contentTypes, async (contentType: ContentType) => {
-            let contentTypeGraphiteMessage = 'ardrive.contenttypes.';
-            contentTypeGraphiteMessage = contentTypeGraphiteMessage.concat(contentType.contentType)
-            await sendMessageToGraphite(contentTypeGraphiteMessage, contentType.count, today);
-        })
-    }
-
-    return "Success";
-}
-
-// Takes the ardrive community fees and exports to graphite/grafana dashboard, using friendly name for the grouping
-export async function sendArDriveCommunityFinancesToGraphite (communityFee: ArDriveCommunityFee) {
-  try {
-    const date = new Date(communityFee.blockTime * 1000);
-    let arDriveFinancesMessage = 'ardrive.finances.' + communityFee.friendlyName + '.';
-
-    let graphiteMessage = arDriveFinancesMessage + 'amount.ar';
-    await sendMessageToGraphite(graphiteMessage, communityFee.amountAR, date);
-
-    graphiteMessage = arDriveFinancesMessage + 'amount.usd';
-    await sendMessageToGraphite(graphiteMessage, communityFee.amountUSD, date);
-
-    graphiteMessage = arDriveFinancesMessage + 'tipType.' + communityFee.tip + '.';
-    await sendMessageToGraphite(graphiteMessage, 1, date);
-
-  } catch (err) {
-    console.log (err);
-    console.log ("Error sending community fees to graphite")
-  }
-  return "Success";
 }
 
 // Gets all of the ArDrive Community AR token balances and sends their balance to grafana
@@ -332,8 +261,7 @@ export async function getAllMetrics (start: Date, end: Date, days?: number, hour
   const totalDataSize = totalData.publicDataSize + totalData.privateDataSize;
   const totalFiles = totalData.publicFiles + totalData.privateFiles;
   totalData.contentTypes?.sort(contentTypeCountCompare)
-  console.log ("- Getting all bundled data transactions");
-  const totalBundledData = await getANS102Transactions(start, end)
+
   console.log ("- Getting ArDrive Community fees");
   const totalCommunityFees = await getSumOfAllCommunityFees(start, end)
   const totalMiningFees = totalData.publicArFee + totalData.privateArFee;
@@ -389,7 +317,6 @@ export async function getAllMetrics (start: Date, end: Date, days?: number, hour
   console.log ('      Total Drives:       ', Object.keys(allNewArDrives).length);
   console.log ('          Public:         ', totalPublicDrives);
   console.log ('          Private:        ', totalPrivateDrives);
-  console.log ('      Total BundledData:  ', formatBytes(totalBundledData.bundledDataSize));
   console.log ('      Total Data:         ', formatBytes(totalDataSize));
   console.log ('          Public:         ', formatBytes(totalData.publicDataSize));
   console.log ('          Private:        ', formatBytes(totalData.privateDataSize));
@@ -398,6 +325,7 @@ export async function getAllMetrics (start: Date, end: Date, days?: number, hour
   console.log ('          Desktop:        ', totalData.desktopAppFiles);
   console.log ('          Mobile:         ', totalData.mobileAppFiles);
   console.log ('          CLI:            ', totalData.cliAppFiles);
+  console.log ('          Sync:            ', totalData.syncAppFiles);
   console.log ('          Core:           ', totalData.coreAppFiles);
   console.log ('          Public:         ', totalData.publicFiles);
   console.log ('          Private:        ', totalData.privateFiles);
@@ -453,9 +381,6 @@ export async function getAllMetrics (start: Date, end: Date, days?: number, hour
       publicDrives: totalPublicDrives,
       privateDrives: totalPrivateDrives,
       totalDataSize,
-      totalBundledData: totalBundledData.bundledDataSize,
-      totalWebAppBundledData: totalBundledData.webAppDataSize,
-      totalDesktopBundledData: totalBundledData.desktopDataSize,
       privateData: totalData.privateDataSize,
       publicData: totalData.publicDataSize,
       totalFiles,
@@ -465,6 +390,7 @@ export async function getAllMetrics (start: Date, end: Date, days?: number, hour
       coreAppFiles: totalData.coreAppFiles,
       arConnectFiles: totalData.arConnectFiles,
       cliAppFiles: totalData.cliAppFiles,
+      syncAppFiles: totalData.syncAppFiles,
       privateFiles: totalData.privateFiles,
       publicFiles: totalData.publicFiles,
       totalCommunityFees: +totalCommunityFees.totalFees.toFixed(8),
@@ -497,28 +423,6 @@ export const asyncForEach = async (array: any[], callback: any) => {
       await callback(array[index], index, array);
     }
 };
-  
-// Sends a message to the ardrive graphite server
-export const sendMessageToGraphite = async (path: string, value: number, timeStamp: Date) => {
-  try {
-    const message = path + " " + value.toString() + " " + (Math.floor(timeStamp.getTime()/1000)) + '\n';
-    let net = require('net');
-    let socket = new net.createConnection(2003, 'stats.ardrive.io', function() {
-        socket.write(message)
-        socket.end('completed!')
-    });
-    socket.on('error', async function() {
-      console.log ('Connection error')
-      socket.end('completed!')
-      await sleep (5000);
-      await sendMessageToGraphite(path, value, timeStamp)
-    })
-  } catch (err) {
-    console.log (err)
-    console.log ("Error sending message to graphite")
-  }
-
-}
 
 // Format byte size to something nicer.  This is minified...
 export const formatBytes = (bytes: number) => {
@@ -583,4 +487,28 @@ let hs = new Set();
     // return the size of hashset as
     // it consists of all Unique elements
     return hs.size;   
+}
+
+// Return the number of blocks to start searching from based on a date
+export async function getMinBlock(start: Date): Promise<number> {
+  // calculate the no. of days between two dates
+  const blocksPerDay = 775;
+  let today = new Date();
+  let height = await getCurrentBlockHeight();
+  let minBlock = height - blocksPerDay // Search the last min block time by default
+  const startDays = today.getTime() - start.getTime();
+  const startDaysDiff = Math.floor(startDays / (1000 * 3600 * 24));
+  if (startDaysDiff !== 0) {
+    minBlock = height - (blocksPerDay * startDaysDiff);
+  }
+  //console.log ("Starting at %s on %s", minBlock, start )
+  return minBlock;
+}
+
+// Adds an amount of hours to a date
+export function addHoursToDate(currentDate: Date, hours: number) {
+  const numberOfMlSeconds = currentDate.getTime();
+  const addMlSeconds = (hours * 60) * 60 * 1000;
+  const newDate = new Date(numberOfMlSeconds + addMlSeconds);
+  return newDate;
 }

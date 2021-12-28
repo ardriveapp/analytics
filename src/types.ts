@@ -8,6 +8,13 @@ export interface ContentType {
   count: number
 }
 
+export interface BundleTx {
+  appName: string,
+  appVersion: string,
+  dataSize: number,
+  quantity: number
+}
+
 export interface BlockInfo {
     weaveSize: number,
     difficulty: number,
@@ -23,9 +30,6 @@ export interface Results {
   publicDrives: number,
   privateDrives: number,
   totalDataSize: number,
-  totalBundledData: number,
-  totalWebAppBundledData: number,
-  totalDesktopBundledData: number,
   privateData: number,
   publicData: number,
   totalFiles: number,
@@ -34,6 +38,7 @@ export interface Results {
   mobileAppFiles: number,
   coreAppFiles: number,
   cliAppFiles: number,
+  syncAppFiles: number,
   arConnectFiles: number;
   privateFiles: number,
   publicFiles: number,

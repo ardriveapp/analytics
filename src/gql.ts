@@ -1,6 +1,6 @@
 import { arweave, getArUSDPrice, getCurrentBlockHeight } from './arweave';
-import { asyncForEach, formatBytes, sleep } from './common';
-import { ArDriveCommunityFee, ArDriveStat, AstatineReward, ContentType, FileInfo } from './types';
+import { asyncForEach, formatBytes, getMinBlock, sleep } from './common';
+import { ArDriveCommunityFee, ArDriveStat, AstatineReward, BundleTx, ContentType, FileInfo } from './types';
 import limestone from 'limestone-api';
 
 const desktopAppName = "ArDrive-Desktop";
@@ -8,6 +8,7 @@ const webAppName = "ArDrive-Web";
 const mobileAppName = "ArDrive-Mobile";
 const coreAppName = "ArDrive-Core";
 const cliAppName = "ArDrive-CLI";
+const syncAppName = "ArDrive-Sync";
 
 export const gateways = [
 	"https://arweave.net"
@@ -484,6 +485,7 @@ export const getAllAppData = async (appTarget: string, start: Date, end: Date):P
                     foundTransactions += 1;
                     dataSize += +data.size;
                     const { tags } = node;
+                    foundUsers.push(node.owner.address)
                     tags.forEach((tag: any) => {
                         const key = tag.name;
                         const { value } = tag;
@@ -709,6 +711,115 @@ export const getANS102Transactions = async (start: Date, end: Date) => {
         console.log (err)
         console.log ("Error collecting total amount of uploaded data")
         return {bundledDataSize, webAppDataSize, desktopDataSize}
+    }
+
+};
+
+// Gets all ANS 104 Bundle Transactions
+export const getBundleTransactions = async (start: Date, end: Date): Promise<BundleTx[]> => {
+    let bundles : BundleTx[] = []
+    let firstPage : number = 100; // Max size of query for GQL
+    let cursor : string = "";
+    let hasNextPage = true;
+    let timeStamp = new Date(end);
+    let minBlock = await getMinBlock(start);
+    try {
+        while (hasNextPage) {
+            const query = {
+                query: `query {
+                transactions(
+                  tags: [
+                    { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}"]}
+                    { name: "Bundle-Format", values: "binary"}
+                  ]
+                  sort: HEIGHT_ASC
+                  block: {min: ${minBlock}}
+                  first: ${firstPage}
+                  after: "${cursor}"
+                ) {
+                  pageInfo {
+                    hasNextPage
+                  }
+                  edges {
+                    cursor
+                    node {
+                      tags {
+                          name
+                          value
+                      }
+                      quantity {
+                        winston
+                        ar
+                      }
+                      data {
+                        size
+                      }
+                      block {
+                        timestamp
+                      }
+                    }
+                  }
+                }
+              }`,
+            };
+            const transactions = await queryGateway(async (url: string) => {
+                const response = await arweave.api.request().post(url + "/graphql", query)
+                const { data } = response.data;
+                const { transactions } = data;
+                return transactions;
+            });
+            const { edges } = transactions;
+            hasNextPage = transactions.pageInfo.hasNextPage
+            edges.forEach((edge: any) => {
+                cursor = edge.cursor;
+                const { node } = edge;
+                const { data } = node;
+                const { block } = node;
+                const { tags } = node;
+                if (block !== null) {
+                    timeStamp = new Date(block.timestamp * 1000);
+                    if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                        let bundle: BundleTx = {
+                            appName: '',
+                            appVersion: '',
+                            dataSize: 0,
+                            quantity: 0
+                        }
+                        // We only want data transactions
+                        if (data.size > 0) {
+                            //console.log ("Matching bundled data transaction: ", timeStamp)
+                            tags.forEach((tag: any) => {
+                                const key = tag.name;
+                                const { value } = tag;
+                                switch (key) {
+                                case 'App-Name':
+                                    bundle.appName = value;
+                                    break;
+                                case 'App-Version':
+                                    bundle.appVersion = value;
+                                    break;
+                                default:
+                                    break;
+                                };
+                            })
+                            bundle.dataSize = +data.size;
+                            bundle.quantity = +node.quantity.ar;
+                            bundles.push(bundle);
+                        }
+                    } else if (timeStamp.getTime() > end.getTime()) {
+                        //console.log ("Result too early %s", timeStamp)
+                        hasNextPage = false;
+                    } else {
+                        //console.log ("Result too old %s", timeStamp)
+                    }
+                }
+            })
+        }
+    return bundles;
+    } catch (err) {
+        console.log (err);
+        console.log ("Error collecting total amount of uploaded data");
+        return bundles;
     }
 
 };
@@ -1274,7 +1385,8 @@ export const getAllTransactions_WithBlocks = async (start: Date, end: Date) => {
     let desktopAppFiles = 0;
     let mobileAppFiles = 0;
     let coreAppFiles = 0;
-    let cliAppFiles = 0;
+    let cliAppFiles = 0; 
+    let syncAppFiles = 0;
     let arConnectFiles = 0;
     let publicArFee = 0;
     let privateArFee = 0;
@@ -1284,26 +1396,16 @@ export const getAllTransactions_WithBlocks = async (start: Date, end: Date) => {
     let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let timeStamp = new Date(end);
-    let today = new Date();
     let hasNextPage = true;
   
-    // To calculate the no. of days between two dates
-    const blocksPerDay = 800;
-    let height = await getCurrentBlockHeight();
-    let minBlock = height - blocksPerDay // Search the last min block time by default
-    const startDays = today.getTime() - start.getTime()
-    const startDaysDiff = Math.floor(startDays / (1000 * 3600 * 24));
-    if (startDaysDiff !== 0) {
-      minBlock = height - (blocksPerDay * startDaysDiff)
-    } 
+    let minBlock = getMinBlock(start);
 
-    console.log (minBlock)
     while (hasNextPage) {
         const query = {
           query: `query {
           transactions(
             tags: [
-                { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
+                { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}"]}
             ]
             sort: HEIGHT_ASC
             block: {min: ${minBlock}}
@@ -1433,15 +1535,18 @@ export const getAllTransactions_WithBlocks = async (start: Date, end: Date) => {
                                 case cliAppName:
                                     cliAppFiles += 1;
                                     break; 
+                                case syncAppName:
+                                    syncAppFiles += 1;
+                                    break; 
                             }
                         }
                     } else if (timeStamp.getTime() > end.getTime()) {
                         //console.log (timeStamp)
-                        //console.log ("Result too early")
+                        console.log ("Result too early %s", timeStamp)
                         hasNextPage = false;
                     } else {
                         //console.log (timeStamp)
-                        //console.log ("Result too old")
+                        console.log ("Result too old %s", timeStamp)
                     }
                 }
             })
@@ -1453,7 +1558,7 @@ export const getAllTransactions_WithBlocks = async (start: Date, end: Date) => {
             hasNextPage = false;
         }
     }
-    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopAppFiles, mobileAppFiles, coreAppFiles, cliAppFiles, arConnectFiles, contentTypes, lastBlock}
+    return {publicDataSize, privateDataSize, publicFiles, privateFiles, publicArFee, privateArFee, webAppFiles, desktopAppFiles, mobileAppFiles, coreAppFiles, cliAppFiles, syncAppFiles, arConnectFiles, contentTypes, lastBlock}
 }
 
 // Sums up every data transaction for a start and end period.

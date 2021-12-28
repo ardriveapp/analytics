@@ -1,12 +1,13 @@
-import { getAllMetrics } from "./common";
+import { addHoursToDate } from "./common";
+import { getBundleTransactions } from "./gql";
+import { sendBundlesToGraphite } from "./graphite";
+import { BundleTx } from "./types";
 
-async function main () {
+/*async function main () {
     let today = new Date();
     // const start = new Date(2020, 8, 26) // the beginning history of ardrive
-    const start = new Date(2021, 7, 26)
-    start.setMinutes(0);
-    start.setHours(20);
-    // const start = new Date(today)
+    const start = new Date(2021, 11, 1)
+
     console.log ("Today ", today)
     console.log ("Start ", start)
     while (start < today) {
@@ -17,6 +18,40 @@ async function main () {
         // await sendResultsToGraphite(newResult);
         start.setDate(start.getDate() + 1); // move on to the next day
     }
+}*/
+
+async function main () {
+    let today = new Date();
+    let allBundles: BundleTx[] = [];
+
+    // The amount of hours to search for i.e. 12, 24 or other range
+    let hoursToQuery: number = 12;
+
+    // const start = new Date(2020, 8, 26) // the beginning history of ardrive
+    let start = new Date(2021, 9, 1);
+    console.log ("Running analyytics from %s to %s", start.toLocaleString(), today.toLocaleString());
+    console.log ("--------------------------------------------------------------------------------");
+
+    while (start < today) {
+        const end = new Date(addHoursToDate(start, hoursToQuery));
+        console.log ("Bundle stats from %s to %s", start.toLocaleString(), end.toLocaleString());
+        let bundles: BundleTx[] = await getBundleTransactions(start, end);
+        await sendBundlesToGraphite(bundles, end);
+        
+        let totalData = bundles.map(item => item.dataSize).reduce((prev, curr) => prev + curr, 0);
+        let totalTips = bundles.map(item => item.quantity).reduce((prev, curr) => prev + curr, 0);
+        console.log ("Daily ArDrive stats")
+        console.log ("  - Bundles: %s, Data: %s, Tips: %s", bundles.length, totalData, totalTips);
+
+        start = addHoursToDate(start, hoursToQuery);
+        allBundles = allBundles.concat(bundles);
+    }
+
+    const totalData = allBundles.map(item => item.dataSize).reduce((prev, curr) => prev + curr, 0);
+    const totalTips = allBundles.map(item => item.quantity).reduce((prev, curr) => prev + curr, 0);
+    console.log ("Total ArDrive stats for this run")
+    console.log ("  - Bundles: %s, Data: %s, Tips: %s", allBundles.length, totalData, totalTips);
+
 }
 
 main();

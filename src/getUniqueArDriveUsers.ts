@@ -3,10 +3,10 @@ import { getUniqueArDriveUsers } from "./gql";
 
 export async function main () {
     const today = new Date().toISOString().slice(0, 10)
-    const start = new Date(2021, 6, 1) 
-    const end = new Date(2021, 7, 1)
+    const start = new Date(2021, 10, 1) 
+    const end = new Date(2021, 11, 1)
 
-    const appTarget = 'ArDrive'; // Change this to whatever app target you like
+    const appTarget = 'Arkb'; // Change this to whatever app target you like
 
     const name = appTarget + '_All_App_Data_Report_' + today + '.csv';
     const createCsvWriter = require('csv-writer').createObjectCsvWriter;
@@ -25,7 +25,7 @@ export async function main () {
 
     const uniqueUsers = countDistinct(allData.foundUsers, allData.foundUsers.length)
     console.log ("Total Transactions found: %s", allData.foundTransactions);
-    console.log ("Total Data found: %s", allData.dataSize);
+    console.log ("Total ArFS Data found: %s", allData.dataSize);
     console.log ("Total Active Users found: %s", uniqueUsers);
 
     const recordToWrite = {

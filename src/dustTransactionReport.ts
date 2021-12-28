@@ -19,7 +19,7 @@ interface AstatineTxOutput {
 export async function main () {
     const today = new Date().toISOString().slice(0, 10)
     const name = 'ArDrive_Dust_Transaction_Report_' + today + '.csv';
-    let status: status = JSON.parse(fs.readFileSync('status.json').toString());
+    let status: status = JSON.parse(fs.readFileSync('Dust 11-17-2021 Final status.json').toString());
     let totalFailed: number = 0;
     let failedTransactions: AstatineTxOutput[] = [];
     const createCsvWriter = require('csv-writer').createObjectCsvWriter;
@@ -54,7 +54,7 @@ export async function main () {
     })
 
     console.log ("Failed transaction count: %s", failedTransactions.length)
-    console.log ("Total not sent: %s", totalFailed)
+    console.log ("Total ARDRIVE not sent: %s", totalFailed)
     csvWriter.writeRecords(failedTransactions)
     .then(() => {
         console.log('...Done writing all ArDrive Community Fees transactions');

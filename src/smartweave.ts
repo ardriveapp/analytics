@@ -123,6 +123,8 @@ export async function getAllArDriveTokenHolders() : Promise<ArDriveTokenHolder[]
 	const balances = state.balances;
 	const vault = state.vault;
 	let arDriveTokenHolders : ArDriveTokenHolder[] = []
+	console.log (balances)
+	console.log (vault)
 	for (const addr of Object.keys(balances)) {
 
 		let vaultBalance = 0;

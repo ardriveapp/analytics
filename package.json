@@ -14,7 +14,7 @@
     "node-fetch": "^2.6.1",
     "package.json": "^2.0.1",
     "redstone-smartweave": "^0.3.10-alpha.6",
-    "smartweave": "^0.4.45",
+    "smartweave": "^0.4.46",
     "typescript": "^4.2.3"
   },
   "devDependencies": {
@@ -43,6 +43,7 @@
     "get-all-drives": "yarn run build && node ./lib/getAllDrives.js",
     "get-drive-sizes": "yarn run build && node ./lib/getDriveSizes.js",
     "get-all-files": "yarn run build && node ./lib/getAllFiles.js",
+    "get-all-txs": "yarn run build && node ./lib/getAllTxs.js",
     "get-all-app-data": "yarn run build && node ./lib/getAllAppData.js",
     "get-unique-ardrive-users": "yarn run build && node ./lib/getUniqueArDriveUsers.js"
   },
