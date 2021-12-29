@@ -129,3 +129,16 @@ export interface AstatineReward {
   friendlyDate: string,
   validSmartweaveTx: boolean
 }
+
+export interface SmartweaveTx {
+  id: string,
+  owner: string,
+  target: string,
+  appName: string,
+  appVersion: string,
+  quantity: number,
+  blockHeight: number,
+  blockTime: number,
+  friendlyDate: string,
+  validSmartweaveTx: boolean
+}

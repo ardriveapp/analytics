@@ -13,7 +13,7 @@
     "node-cron": "^3.0.0",
     "node-fetch": "^2.6.1",
     "package.json": "^2.0.1",
-    "redstone-smartweave": "^0.3.10-alpha.6",
+    "redstone-smartweave": "^0.4.10",
     "smartweave": "^0.4.46",
     "typescript": "^4.2.3"
   },
@@ -38,6 +38,8 @@
     "export-tips": "yarn run build && node ./lib/exportCommunityTips.js",
     "export-astatine-txs": "yarn run build && node ./lib/exportAstatineTransactions.js",
     "export-ardrive-token-holders": "yarn run build && node ./lib/exportArDriveTokenHolders.js",
+    "export-ardrive-token-transfers": "yarn run build && node ./lib/exportArDriveTokenTransfers.js",
+    "export-ardrive-snapshot": "yarn run build && node ./lib/exportArDriveTokenSnapshot.js",
     "export-dust-transaction-report": "yarn run build && node ./lib/dustTransactionReport.js",
     "get-all-folders": "yarn run build && node ./lib/getAllFolders.js",
     "get-all-drives": "yarn run build && node ./lib/getAllDrives.js",

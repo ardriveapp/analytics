@@ -5,10 +5,10 @@ import {
     getWalletBalance, 
     /*get_24_hour_ardrive_transactions*/ 
 } from './arweave'
-import { getAllCommunityFees, getAllDrives, getAllTransactions_WithBlocks, getMyCommunityFees, getUserSize, getAllTransactions, getSumOfAllCommunityFees } from './gql';
+import { getAllCommunityFees, getAllDrives, getAllTransactions_WithBlocks, getMyCommunityFees, getUserSize, getAllTransactions, getSumOfAllCommunityFees, getAllArDriveCommunityTokenTransactions } from './gql';
 import { sendArDriveCommunityFinancesToGraphite, sendMessageToGraphite } from './graphite';
-import { getArDriveCommunityState, getTotalTokenCount, getWalletArDriveLockedBalance, getWalletArDriveUnlockedBalance, getTokenHolderCount } from './smartweave';
-import { Results, BlockInfo, ArDriveCommunityFee, BlockDate } from './types';
+import { getArDriveCommunityState, getTotalTokenCount, getWalletArDriveLockedBalance, getWalletArDriveUnlockedBalance, getTokenHolderCount, validateSmartweaveTxs } from './smartweave';
+import { Results, BlockInfo, ArDriveCommunityFee, BlockDate, SmartweaveTx } from './types';
 
 export const communityWallets : string[] = [
   'i325n3L2UvgcavEM8UnFfY0OWBiyf2RrbNsLStPI73o', // vested community usage mining 
@@ -45,6 +45,18 @@ export async function getArDriveCommunityWalletARBalances () {
     console.log ("%s balance is %s", communityWallet, balance)
     await sendMessageToGraphite(communityWalletMessage, balance, today);
   });
+}
+
+// Gets all of the ArDrive Community Wallets and lists all token transfers
+export async function getArDriveTokenTransfers (start: Date, end: Date): Promise<SmartweaveTx[]> {
+  console.log ("Starting to collect ArDrive Community Token Transfers from %s to %s", start, end);
+  console.log ("");
+  let results: SmartweaveTx[] = [];
+  await asyncForEach (communityWallets, async (communityWallet: string) => {
+    results = results.concat(await getAllArDriveCommunityTokenTransactions(communityWallet, start, end));
+  });
+  results = await validateSmartweaveTxs(results);
+  return results;
 }
 
 // Gets other Wallet's AR token balances and sends their balance to grafana

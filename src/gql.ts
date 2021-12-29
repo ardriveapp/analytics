@@ -1,6 +1,6 @@
 import { arweave, getArUSDPrice, getCurrentBlockHeight } from './arweave';
 import { asyncForEach, formatBytes, getMinBlock, sleep } from './common';
-import { ArDriveCommunityFee, ArDriveStat, AstatineReward, BundleTx, ContentType, FileInfo } from './types';
+import { ArDriveCommunityFee, ArDriveStat, AstatineReward, BundleTx, ContentType, FileInfo, SmartweaveTx } from './types';
 import limestone from 'limestone-api';
 
 const desktopAppName = "ArDrive-Desktop";
@@ -1224,6 +1224,128 @@ export const getAllAstatineRewards = async (start: Date, end: Date): Promise<Ast
         console.log (err)
         console.log ("Error collecting total amount of astatine transactions")
         return rewards;
+    }
+};
+
+// Gets all ArDrive Community Tips/Fees sent
+export const getAllArDriveCommunityTokenTransactions = async (owner: string, start: Date, end: Date): Promise<SmartweaveTx[]> => {
+    let firstPage : number = 100; // Max size of query for GQL
+    let cursor : string = "";
+    let hasNextPage = true;
+    let timeStamp = new Date(end);
+    let input: string;
+    let tokenTransfers: SmartweaveTx[] = [];
+
+    try {
+        while (hasNextPage) {
+            const query = {
+                query: `query {
+                transactions(
+                  owners:["${owner}"]
+                  tags: [
+                      { name: "Contract", values: "-8A6RexFkpfWwuyVO98wzSFZh0d6VJuI-buTJvlwOJQ"}
+                  ]
+                  first: ${firstPage}
+                  after: "${cursor}"
+                  sort: HEIGHT_DESC
+                ) {
+                  pageInfo {
+                    hasNextPage
+                  }
+                  edges {
+                    cursor
+                    node {
+                      id
+                      recipient
+                      tags {
+                        name
+                        value
+                      }
+                      owner {
+                          address
+                      }
+                      quantity {
+                        ar
+                      }
+                      block {
+                        timestamp
+                        height
+                      }
+                    }
+                  }
+                }
+              }`,
+            };
+            const transactions = await queryGateway(async (url: string) => {
+                const response = await arweave.api.request().post(url + "/graphql", query)
+                const { data } = response.data;
+                const { transactions } = data;
+                return transactions;
+            });
+            const { edges } = transactions;
+            hasNextPage = transactions.pageInfo.hasNextPage
+            await asyncForEach (edges, async (edge: any) => {
+                cursor = edge.cursor;
+                const { node } = edge;
+                const { block } = node;
+                const { owner } = node;
+                const { tags } = node;
+                if (block !== null) {
+                    timeStamp = new Date(block.timestamp * 1000);
+                    if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                        let smartweaveTx: SmartweaveTx = {
+                            id: '',
+                            owner: owner.address,
+                            target: '',
+                            appName: '',
+                            appVersion: '',
+                            quantity: 0,
+                            blockHeight: 0,
+                            blockTime: 0,
+                            friendlyDate: '',
+                            validSmartweaveTx: false
+                        }
+
+                        smartweaveTx.blockTime = block.timestamp;
+                        smartweaveTx.blockHeight = block.height;
+                        smartweaveTx.friendlyDate = timeStamp.toLocaleString();
+                        tags.forEach((tag: any) => {
+                            const key = tag.name;
+                            const { value } = tag;
+                            switch (key) {
+                            case 'App-Name':
+                                smartweaveTx.appName = value;
+                                break;
+                            case 'App-Version':
+                                smartweaveTx.appVersion = value;
+                                break;
+                            case 'Input':
+                                input = value;
+                                break;
+                            default:
+                                break;
+                            };
+                        })
+                        let inputObject = JSON.parse(input);
+                        smartweaveTx.id = node.id;
+                        smartweaveTx.target = inputObject.target;
+                        smartweaveTx.quantity = inputObject.qty;
+                        tokenTransfers.push(smartweaveTx);
+                    } else if (timeStamp.getTime() > end.getTime()) {
+                        // console.log ("Result too early")
+                    } else {
+                        // console.log ("Result too old")
+                        hasNextPage = false;
+                        // result too old
+                    }
+                }
+            })
+        }
+        return tokenTransfers;
+    } catch (err) {
+        console.log (err)
+        console.log ("Error collecting total amount of astatine transactions")
+        return tokenTransfers;
     }
 };
 
