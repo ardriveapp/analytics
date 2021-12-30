@@ -8,7 +8,7 @@ import {
 import { getAllCommunityFees, getAllDrives, getAllTransactions_WithBlocks, getMyCommunityFees, getUserSize, getAllTransactions, getSumOfAllCommunityFees, getAllArDriveCommunityTokenTransactions } from './gql';
 import { sendArDriveCommunityFinancesToGraphite, sendMessageToGraphite } from './graphite';
 import { getArDriveCommunityState, getTotalTokenCount, getWalletArDriveLockedBalance, getWalletArDriveUnlockedBalance, getTokenHolderCount, validateSmartweaveTxs } from './smartweave';
-import { Results, BlockInfo, ArDriveCommunityFee, BlockDate, SmartweaveTx } from './types';
+import { Results, BlockInfo, ArDriveCommunityFee, BlockDate, SmartweaveTx, BundleTx, ArFSFileTx, ArFSDriveTx, ArFSFolderTx, ArFSFileDataTx, ArFSTipTx } from './types';
 
 export const communityWallets : string[] = [
   'i325n3L2UvgcavEM8UnFfY0OWBiyf2RrbNsLStPI73o', // vested community usage mining 
@@ -504,7 +504,7 @@ let hs = new Set();
 // Return the number of blocks to start searching from based on a date
 export async function getMinBlock(start: Date): Promise<number> {
   // calculate the no. of days between two dates
-  const blocksPerDay = 775;
+  const blocksPerDay = 725;
   let today = new Date();
   let height = await getCurrentBlockHeight();
   let minBlock = height - blocksPerDay // Search the last min block time by default
@@ -524,3 +524,107 @@ export function addHoursToDate(currentDate: Date, hours: number) {
   const newDate = new Date(numberOfMlSeconds + addMlSeconds);
   return newDate;
 }
+
+export function newBundleTx(): BundleTx {
+  let bundle: BundleTx = {
+    appName: '',
+    appVersion: '',
+    dataSize: 0,
+    fee: 0,
+    quantity: 0
+  }
+  return bundle;
+}
+
+export function newArFSFileTx(): ArFSFileTx {
+  let arFSFileTx: ArFSFileTx = {
+    appName: '',
+    appVersion: '',
+    arfsVersion: '',
+    owner: '',
+    dataSize: 0,
+    dataItemSize: 0,
+    private: false,
+    fee: 0,
+    contentType: '',
+    bundledIn: '',
+    id: '',
+    blockHeight: 0,
+    blockTime: 0,
+    friendlyDate: ''
+  }
+  return arFSFileTx;
+};
+
+export function newArFSFileDataTx(): ArFSFileDataTx {
+  let arFSFileDataTx: ArFSFileDataTx = {
+    appName: '',
+    appVersion: '',
+    owner: '',
+    dataSize: 0,
+    dataItemSize: 0,
+    private: false,
+    fee: 0,
+    contentType: '',
+    bundledIn: '',
+    id: '',
+    blockHeight: 0,
+    blockTime: 0,
+    friendlyDate: ''
+  }
+  return arFSFileDataTx;
+};
+
+export function newArFSFolderTx(): ArFSFolderTx {
+  let arFSFolderTx: ArFSFolderTx = {
+    appName: '',
+    appVersion: '',
+    arfsVersion: '',
+    owner: '',
+    dataSize: 0,
+    dataItemSize: 0,
+    private: false,
+    fee: 0,
+    contentType: '',
+    bundledIn: '',
+    id: '',
+    blockHeight: 0,
+    blockTime: 0,
+    friendlyDate: ''
+  }
+  return arFSFolderTx;
+};
+
+export function newArFSDriveTx(): ArFSDriveTx {
+  let arFSDriveTx: ArFSDriveTx = {
+    appName: '',
+    appVersion: '',
+    arfsVersion: '',
+    owner: '',
+    dataSize: 0,
+    dataItemSize: 0,
+    private: false,
+    fee: 0,
+    contentType: '',
+    bundledIn: '',
+    id: '',
+    blockHeight: 0,
+    blockTime: 0,
+    friendlyDate: ''
+  }
+  return arFSDriveTx;
+};
+
+export function newArFSTipTx(): ArFSTipTx {
+  let arFSTipTx: ArFSTipTx = {
+    appName: '',
+    appVersion: '',
+    owner: '',
+    quantity: 0,
+    id: '',
+    blockHeight: 0,
+    blockTime: 0,
+    friendlyDate: ''
+  }
+  return arFSTipTx;
+};

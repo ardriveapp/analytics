@@ -1,25 +1,18 @@
 export interface AstatineItem {
     address: string,
     weight: number,
-}
+};
 
 export interface ContentType {
   contentType: string,
   count: number
-}
-
-export interface BundleTx {
-  appName: string,
-  appVersion: string,
-  dataSize: number,
-  quantity: number
-}
+};
 
 export interface BlockInfo {
     weaveSize: number,
     difficulty: number,
     blockSize: number,
-}
+};
 
 export interface Results {
   startDate: Date,
@@ -60,7 +53,7 @@ export interface Results {
   blockSize: number,
   difficulty: number,
   tokenHolders: number,
-}
+};
 
 export interface ArDriveStat {
     address: string,
@@ -70,7 +63,7 @@ export interface ArDriveStat {
     tx: string,
     data: number,
     blockTimeStamp: Date
-}
+};
 
 export interface FileInfo {
   address: string,
@@ -80,14 +73,14 @@ export interface FileInfo {
   privacy: string,
   tx: string,
   blockTimeStamp: Date
-}
+};
 
 export interface BlockDate {
   blockHeight: number;
   blockTimeStamp: number;
   blockHash: string;
   friendlyDate: string;
-}
+};
 
 export interface ArDriveCommunityFee {
 owner: string,
@@ -105,7 +98,7 @@ costBasis: number,
 blockHeight: number,
 blockTime: number,
 friendlyDate: string
-}
+};
 
 export interface ArDriveTokenHolder {
   address: string,
@@ -114,7 +107,7 @@ export interface ArDriveTokenHolder {
   totalArDriveTokens: number,
   voteWeight: number,
   arweaveTokens: number
-}
+};
 
 export interface AstatineReward {
   owner: string,
@@ -128,7 +121,7 @@ export interface AstatineReward {
   blockTime: number,
   friendlyDate: string,
   validSmartweaveTx: boolean
-}
+};
 
 export interface SmartweaveTx {
   id: string,
@@ -141,4 +134,99 @@ export interface SmartweaveTx {
   blockTime: number,
   friendlyDate: string,
   validSmartweaveTx: boolean
-}
+};
+
+export interface ArFSFileTx {
+  appName: string,
+  appVersion: string,
+  arfsVersion: string,
+  owner: string,
+  dataSize: number,
+  dataItemSize: number,
+  private: boolean,
+  fee: number,
+  contentType: string
+  bundledIn: string,
+  id: string,
+  blockHeight: number,
+  blockTime: number,
+  friendlyDate: string
+};
+
+export interface ArFSFolderTx {
+  appName: string,
+  appVersion: string,
+  arfsVersion: string,
+  owner: string,
+  dataSize: number,
+  dataItemSize: number,
+  private: boolean,
+  fee: number,
+  contentType: string
+  bundledIn: string,
+  id: string,
+  blockHeight: number,
+  blockTime: number,
+  friendlyDate: string
+};
+
+export interface ArFSDriveTx {
+  appName: string,
+  appVersion: string,
+  arfsVersion: string,
+  owner: string,
+  dataSize: number,
+  dataItemSize: number,
+  private: boolean,
+  fee: number,
+  contentType: string
+  bundledIn: string,
+  id: string,
+  blockHeight: number,
+  blockTime: number,
+  friendlyDate: string
+};
+
+export interface ArFSFileDataTx {
+  appName: string,
+  appVersion: string,
+  owner: string,
+  dataSize: number,
+  dataItemSize: number,
+  private: boolean,
+  fee: number,
+  contentType: string
+  bundledIn: string,
+  id: string,
+  blockHeight: number,
+  blockTime: number,
+  friendlyDate: string
+};
+
+export interface ArFSTipTx {
+  appName: string,
+  appVersion: string,
+  owner: string,
+  quantity: number,
+  id: string,
+  blockHeight: number,
+  blockTime: number,
+  friendlyDate: string
+};
+
+export interface BundleTx {
+  appName: string,
+  appVersion: string,
+  dataSize: number,
+  fee: number,
+  quantity: number
+};
+
+export interface ResultSet {
+  bundles: BundleTx[],
+  fileDatas: ArFSFileDataTx[],
+  files: ArFSFileTx[],
+  folders: ArFSFolderTx[],
+  drives: ArFSDriveTx[],
+  v2CommunityTips: ArFSTipTx[]
+};

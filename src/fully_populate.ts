@@ -1,57 +1,58 @@
-import { addHoursToDate } from "./common";
-import { getBundleTransactions } from "./gql";
-import { sendBundlesToGraphite } from "./graphite";
-import { BundleTx } from "./types";
-
-/*async function main () {
-    let today = new Date();
-    // const start = new Date(2020, 8, 26) // the beginning history of ardrive
-    const start = new Date(2021, 11, 1)
-
-    console.log ("Today ", today)
-    console.log ("Start ", start)
-    while (start < today) {
-        const end = new Date(start)
-        end.setDate(start.getDate() + 1); // How far back we should query for data
-        let newResult = await getAllMetrics(start, end, 1, undefined, true)
-        console.log (newResult)
-        // await sendResultsToGraphite(newResult);
-        start.setDate(start.getDate() + 1); // move on to the next day
-    }
-}*/
+import { addHoursToDate, getMinBlock } from "./common";
+import { getAllAppTransactions } from "./gql";
+import { sendBundlesToGraphite, sendDriveMetadataToGraphite, sendFileDataToGraphite, sendFileMetadataToGraphite, sendFolderMetadataToGraphite, sendv2CommunityTipsToGraphite } from "./graphite";
+import { ResultSet } from "./types";
 
 async function main () {
+    let allResults: ResultSet = {
+        bundles: [],
+        fileDatas: [],
+        files: [],
+        folders: [],
+        drives: [],
+        v2CommunityTips: []
+    };
+    
     let today = new Date();
-    let allBundles: BundleTx[] = [];
+
 
     // The amount of hours to search for i.e. 12, 24 or other range
     let hoursToQuery: number = 12;
 
     // const start = new Date(2020, 8, 26) // the beginning history of ardrive
-    let start = new Date(2021, 9, 1);
-    console.log ("Running analyytics from %s to %s", start.toLocaleString(), today.toLocaleString());
+    let start = new Date(2021, 11, 15);
+    let lastBlock = await getMinBlock(start);
+
+    console.log ("Running analytics from %s to %s", start.toLocaleString(), today.toLocaleString());
     console.log ("--------------------------------------------------------------------------------");
 
     while (start < today) {
         const end = new Date(addHoursToDate(start, hoursToQuery));
-        console.log ("Bundle stats from %s to %s", start.toLocaleString(), end.toLocaleString());
-        let bundles: BundleTx[] = await getBundleTransactions(start, end);
-        await sendBundlesToGraphite(bundles, end);
-        
-        let totalData = bundles.map(item => item.dataSize).reduce((prev, curr) => prev + curr, 0);
-        let totalTips = bundles.map(item => item.quantity).reduce((prev, curr) => prev + curr, 0);
-        console.log ("Daily ArDrive stats")
-        console.log ("  - Bundles: %s, Data: %s, Tips: %s", bundles.length, totalData, totalTips);
+        console.log ("Stats from %s to %s", start.toLocaleString(), end.toLocaleString());
+        let results = await getAllAppTransactions(start, end, lastBlock);
 
+        console.log ("BundledTxs: %s", results.bundleTxs.length);
+        console.log ("FileDataTxs: %s", results.fileDataTxs.length);
+        console.log ("FileTxs: %s", results.fileTxs.length);
+        console.log ("FolderTxs: %s", results.folderTxs.length);
+        console.log ("DriveTxs: %s", results.driveTxs.length);
+        console.log ("V2 Tips: %s", results.tipTxs.length);
+        allResults.bundles = allResults.bundles.concat(results.bundleTxs);
+        allResults.fileDatas = allResults.fileDatas.concat(results.fileDataTxs);
+        allResults.files = allResults.files.concat(results.fileTxs);
+        allResults.folders = allResults.folders.concat(results.folderTxs);
+        allResults.drives = allResults.drives.concat(results.driveTxs);
+        allResults.v2CommunityTips = allResults.v2CommunityTips.concat(results.tipTxs);
         start = addHoursToDate(start, hoursToQuery);
-        allBundles = allBundles.concat(bundles);
-    }
-
-    const totalData = allBundles.map(item => item.dataSize).reduce((prev, curr) => prev + curr, 0);
-    const totalTips = allBundles.map(item => item.quantity).reduce((prev, curr) => prev + curr, 0);
-    console.log ("Total ArDrive stats for this run")
-    console.log ("  - Bundles: %s, Data: %s, Tips: %s", allBundles.length, totalData, totalTips);
-
+        await sendBundlesToGraphite(results.bundleTxs, end);
+        await sendFileMetadataToGraphite(results.fileTxs, end);
+        await sendFileDataToGraphite(results.fileDataTxs, end);
+        await sendFolderMetadataToGraphite(results.folderTxs, end);
+        await sendDriveMetadataToGraphite(results.driveTxs, end);
+        await sendv2CommunityTipsToGraphite(results.tipTxs, end);
+        lastBlock = results.lastBlock - 1; // Start the search from 1 block previous to the last block
+    };
+    console.log ("--------------------------------------------------------------------------------");
 }
 
 main();
