@@ -1,8 +1,8 @@
 import { getArUSDPrice, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getMempoolSize } from './arweave'
 import { getAllMetrics, getArDriveCommunityWalletARBalances, getArDriveCommunityWalletArDriveBalances, getOtherWalletARBalances } from './common';
-import { getBundleTransactions } from './gql';
-import { sendBundlesToGraphite, sendMessageToGraphite, sendResultsToGraphite } from './graphite';
-import { Results, BlockInfo, BundleTx } from './types';
+import { getAllAppTransactions_DESC} from './gql';
+import { sendBundlesToGraphite, sendDriveMetadataToGraphite, sendFileDataToGraphite, sendFileMetadataToGraphite, sendFolderMetadataToGraphite, sendMessageToGraphite, sendResultsToGraphite, sendv2CommunityTipsToGraphite } from './graphite';
+import { Results, BlockInfo } from './types';
 
 // Used for scheduling the jobs
 const cron = require('node-cron');
@@ -19,17 +19,19 @@ export async function dailyArDriveUsageAnalytics () {
 }
 
 export async function hourlyArDriveUsageAnalytics (hours: number) {
-    let today = new Date();
+    let bufferHours = 4; // The amount of hours to buffer to ensure items have been indexed.
     let start = new Date();
+    start.setHours(start.getHours() - hours - bufferHours);
+    let end = new Date();
+    end.setHours(start.getHours() - bufferHours);
 
-    // Take off one day
-    start.setHours(start.getHours() - hours);
-
-    const dailyResults : Results = await getAllMetrics(start, today, 0, hours, false);
-    await sendResultsToGraphite(dailyResults);
-
-    let bundles: BundleTx[] = await getBundleTransactions(start, today);
-    await sendBundlesToGraphite(bundles, today);
+    let results = await getAllAppTransactions_DESC(start, end);
+    await sendBundlesToGraphite(results.bundleTxs, end);
+    await sendFileMetadataToGraphite(results.fileTxs, end);
+    await sendFileDataToGraphite(results.fileDataTxs, end);
+    await sendFolderMetadataToGraphite(results.folderTxs, end);
+    await sendDriveMetadataToGraphite(results.driveTxs, end);
+    await sendv2CommunityTipsToGraphite(results.tipTxs, end);
 }
 
 // Gets non-GQL related data

@@ -1,5 +1,5 @@
 import { addHoursToDate, getMinBlock } from "./common";
-import { getAllAppTransactions } from "./gql";
+import { getAllAppTransactions_ASC } from "./gql";
 import { sendBundlesToGraphite, sendDriveMetadataToGraphite, sendFileDataToGraphite, sendFileMetadataToGraphite, sendFolderMetadataToGraphite, sendv2CommunityTipsToGraphite } from "./graphite";
 import { ResultSet } from "./types";
 
@@ -20,7 +20,7 @@ async function main () {
     let hoursToQuery: number = 12;
 
     // const start = new Date(2020, 8, 26) // the beginning history of ardrive
-    let start = new Date(2021, 11, 15);
+    let start = new Date(2020, 11, 16);
     let lastBlock = await getMinBlock(start);
 
     console.log ("Running analytics from %s to %s", start.toLocaleString(), today.toLocaleString());
@@ -29,7 +29,7 @@ async function main () {
     while (start < today) {
         const end = new Date(addHoursToDate(start, hoursToQuery));
         console.log ("Stats from %s to %s", start.toLocaleString(), end.toLocaleString());
-        let results = await getAllAppTransactions(start, end, lastBlock);
+        let results = await getAllAppTransactions_ASC(start, end, lastBlock);
 
         console.log ("BundledTxs: %s", results.bundleTxs.length);
         console.log ("FileDataTxs: %s", results.fileDataTxs.length);
@@ -53,6 +53,13 @@ async function main () {
         lastBlock = results.lastBlock - 1; // Start the search from 1 block previous to the last block
     };
     console.log ("--------------------------------------------------------------------------------");
+    console.log ("All Results");
+    console.log ("BundledTxs: %s", allResults.bundles.length);
+    console.log ("FileDataTxs: %s", allResults.fileDatas.length);
+    console.log ("FileTxs: %s", allResults.files.length);
+    console.log ("FolderTxs: %s", allResults.folders.length);
+    console.log ("DriveTxs: %s", allResults.drives.length);
+    console.log ("V2 Tips: %s", allResults.v2CommunityTips.length);
 }
 
 main();

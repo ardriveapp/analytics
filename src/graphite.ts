@@ -11,6 +11,7 @@ export async function sendBundlesToGraphite (bundles: BundleTx[], end: Date) {
         const appTips = bundles.filter(item => item.appName === appName).map(item => item.quantity).reduce((prev, curr) => prev + curr, 0);
         const appFees = bundles.filter(item => item.appName === appName).map(item => item.fee).reduce((prev, curr) => prev + curr, 0);
         const averageBundleSize = appData / appBundles;
+        const averageBundleTipSize = appTips / appBundles;
         console.log ("  - %s", appName);
         console.log ("      - Bundles: %s Data: %s Tips: %s Fees: %s", appBundles, appData, appTips, appFees);
 
@@ -22,6 +23,9 @@ export async function sendBundlesToGraphite (bundles: BundleTx[], end: Date) {
 
         graphiteMessage = message + appName + '.bundles.averageBundleSize';
         await sendMessageToGraphite(graphiteMessage, averageBundleSize, end);
+
+        graphiteMessage = message + appName + '.bundles.averageBundleTipSize';
+        await sendMessageToGraphite(graphiteMessage, averageBundleTipSize, end);
 
         graphiteMessage = message + appName + '.bundles.tips';
         await sendMessageToGraphite(graphiteMessage, appTips, end);

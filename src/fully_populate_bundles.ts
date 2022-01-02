@@ -1,5 +1,5 @@
 import { addHoursToDate } from "./common";
-import { getBundleTransactions } from "./gql";
+import { getBundleTransactions_ASC } from "./gql";
 import { sendBundlesToGraphite } from "./graphite";
 import { BundleTx } from "./types";
 
@@ -35,7 +35,7 @@ async function main () {
     while (start < today) {
         const end = new Date(addHoursToDate(start, hoursToQuery));
         console.log ("Bundle stats from %s to %s", start.toLocaleString(), end.toLocaleString());
-        let bundles: BundleTx[] = await getBundleTransactions(start, end);
+        let bundles: BundleTx[] = await getBundleTransactions_ASC(start, end);
         await sendBundlesToGraphite(bundles, end);
         
         let totalData = bundles.map(item => item.dataSize).reduce((prev, curr) => prev + curr, 0);

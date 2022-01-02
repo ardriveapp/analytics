@@ -715,114 +715,6 @@ export async function getANS102Transactions(start: Date, end: Date) {
 
 };
 
-// Gets all ANS 104 Bundle Transactions
-export async function getBundleTransactions(start: Date, end: Date): Promise<BundleTx[]> {
-    let bundles : BundleTx[] = []
-    let firstPage : number = 100; // Max size of query for GQL
-    let cursor : string = "";
-    let hasNextPage = true;
-    let timeStamp = new Date(end);
-    let minBlock = await getMinBlock(start);
-    try {
-        while (hasNextPage) {
-            const query = {
-                query: `query {
-                transactions(
-                  tags: [
-                    { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}"]}
-                    { name: "Bundle-Format", values: "binary"}
-                  ]
-                  sort: HEIGHT_ASC
-                  block: {min: ${minBlock}}
-                  first: ${firstPage}
-                  after: "${cursor}"
-                ) {
-                  pageInfo {
-                    hasNextPage
-                  }
-                  edges {
-                    cursor
-                    node {
-                      tags {
-                          name
-                          value
-                      }
-                      quantity {
-                        ar
-                      }
-                      fee {
-                        ar
-                      }
-                      data {
-                        size
-                      }
-                      block {
-                        height
-                        timestamp
-                      }
-                    }
-                  }
-                }
-              }`,
-            };
-            const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
-                const { data } = response.data;
-                const { transactions } = data;
-                return transactions;
-            });
-            const { edges } = transactions;
-            hasNextPage = transactions.pageInfo.hasNextPage
-            edges.forEach((edge: any) => {
-                cursor = edge.cursor;
-                const { node } = edge;
-                const { data } = node;
-                const { block } = node;
-                const { tags } = node;
-                if (block !== null) {
-                    timeStamp = new Date(block.timestamp * 1000);
-                    if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
-                        let bundle = newBundleTx();
-                        // We only want data transactions
-                        if (data.size > 0) {
-                            //console.log ("Matching bundled data transaction: ", timeStamp)
-                            tags.forEach((tag: any) => {
-                                const key = tag.name;
-                                const { value } = tag;
-                                switch (key) {
-                                case 'App-Name':
-                                    bundle.appName = value;
-                                    break;
-                                case 'App-Version':
-                                    bundle.appVersion = value;
-                                    break;
-                                default:
-                                    break;
-                                };
-                            })
-                            bundle.dataSize = +data.size;
-                            bundle.quantity = +node.quantity.ar;
-                            bundle.fee = +node.fee.ar;
-                            bundles.push(bundle);
-                        }
-                    } else if (timeStamp.getTime() > end.getTime()) {
-                        //console.log ("Result too early %s", timeStamp)
-                        hasNextPage = false;
-                    } else {
-                        //console.log ("Result too old %s", timeStamp)
-                    }
-                }
-            })
-        }
-    return bundles;
-    } catch (err) {
-        console.log (err);
-        console.log ("Error collecting total amount of uploaded data");
-        return bundles;
-    }
-
-};
-
 // Sums up all ArDrive Community Tips/Fees
 export async function getSumOfAllCommunityFees(start: Date, end: Date) {
     let totalFees = 0;
@@ -1863,9 +1755,117 @@ export async function getAllTransactions(start: Date, end: Date) {
 
 }
 
+// Gets all ANS 104 Bundle Transactions
+export async function getBundleTransactions_ASC(start: Date, end: Date): Promise<BundleTx[]> {
+    let bundles : BundleTx[] = []
+    let firstPage : number = 100; // Max size of query for GQL
+    let cursor : string = "";
+    let hasNextPage = true;
+    let timeStamp = new Date(end);
+    let minBlock = await getMinBlock(start);
+    try {
+        while (hasNextPage) {
+            const query = {
+                query: `query {
+                transactions(
+                  tags: [
+                    { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}"]}
+                    { name: "Bundle-Format", values: "binary"}
+                  ]
+                  sort: HEIGHT_ASC
+                  block: {min: ${minBlock}}
+                  first: ${firstPage}
+                  after: "${cursor}"
+                ) {
+                  pageInfo {
+                    hasNextPage
+                  }
+                  edges {
+                    cursor
+                    node {
+                      tags {
+                          name
+                          value
+                      }
+                      quantity {
+                        ar
+                      }
+                      fee {
+                        ar
+                      }
+                      data {
+                        size
+                      }
+                      block {
+                        height
+                        timestamp
+                      }
+                    }
+                  }
+                }
+              }`,
+            };
+            const transactions = await queryGateway(async (url: string) => {
+                const response = await arweave.api.request().post(url + "/graphql", query)
+                const { data } = response.data;
+                const { transactions } = data;
+                return transactions;
+            });
+            const { edges } = transactions;
+            hasNextPage = transactions.pageInfo.hasNextPage
+            edges.forEach((edge: any) => {
+                cursor = edge.cursor;
+                const { node } = edge;
+                const { data } = node;
+                const { block } = node;
+                const { tags } = node;
+                if (block !== null) {
+                    timeStamp = new Date(block.timestamp * 1000);
+                    if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                        let bundle = newBundleTx();
+                        // We only want data transactions
+                        if (data.size > 0) {
+                            //console.log ("Matching bundled data transaction: ", timeStamp)
+                            tags.forEach((tag: any) => {
+                                const key = tag.name;
+                                const { value } = tag;
+                                switch (key) {
+                                case 'App-Name':
+                                    bundle.appName = value;
+                                    break;
+                                case 'App-Version':
+                                    bundle.appVersion = value;
+                                    break;
+                                default:
+                                    break;
+                                };
+                            })
+                            bundle.dataSize = +data.size;
+                            bundle.quantity = +node.quantity.ar;
+                            bundle.fee = +node.fee.ar;
+                            bundles.push(bundle);
+                        }
+                    } else if (timeStamp.getTime() > end.getTime()) {
+                        //console.log ("Result too early %s", timeStamp)
+                        hasNextPage = false;
+                    } else {
+                        //console.log ("Result too old %s", timeStamp)
+                    }
+                }
+            })
+        }
+    return bundles;
+    } catch (err) {
+        console.log (err);
+        console.log ("Error collecting total amount of uploaded data");
+        return bundles;
+    }
+
+};
+
 // Sums up every data transaction for a start and end period.
-// Uses an estimate of block time to try to reduce query size
-export async function getAllAppTransactions(start: Date, end: Date, lastBlock: number) {
+// Uses an estimate of block time to try to reduce query size and returns oldest results first
+export async function getAllAppTransactions_ASC(start: Date, end: Date, lastBlock: number) {
     let firstPage : number = 100; // Max size of query for GQL
     let cursor : string = "";
     let timeStamp = new Date(end);
@@ -1947,8 +1947,8 @@ export async function getAllAppTransactions(start: Date, end: Date, lastBlock: n
                 const { block } = node;
                 if (block !== null) {
                     timeStamp = new Date(block.timestamp * 1000);
-                    lastBlock = block.height;
                     if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                        lastBlock = block.height;
                         // Prepare our files
                         const { tags } = node;
                         const { data } = node;
@@ -2136,3 +2136,270 @@ export async function getAllAppTransactions(start: Date, end: Date, lastBlock: n
     }
     return {bundleTxs, fileDataTxs, fileTxs, folderTxs, driveTxs, tipTxs, lastBlock}
 }
+
+// Sums up every data transaction for a start and end period and returns newest results first
+export async function getAllAppTransactions_DESC(start: Date, end: Date) {
+    let firstPage : number = 100; // Max size of query for GQL
+    let cursor : string = "";
+    let timeStamp = new Date(end);
+    let hasNextPage = true;
+    let lastBlock = 0;
+
+    let fileTxs: ArFSFileTx[] = [];
+    let folderTxs: ArFSFolderTx[] = [];
+    let driveTxs: ArFSDriveTx[] = [];
+    let fileDataTxs: ArFSFileDataTx[] = [];
+    let bundleTxs: BundleTx[] = [];
+    let tipTxs: ArFSTipTx[] =[];
+
+    while (hasNextPage) {
+        const query = {
+          query: `query {
+          transactions(
+            tags: [
+                { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}"]}
+            ]
+            sort: HEIGHT_DESC
+            first: ${firstPage}
+            after: "${cursor}"
+          ) {
+            pageInfo {
+              hasNextPage
+            }
+            edges {
+              cursor
+              node {
+                id
+                bundledIn {
+                    id
+                }
+                owner {
+                    address
+                }
+                fee {
+                    ar
+                }
+                quantity {
+                    ar
+                }
+                tags {
+                    name
+                    value
+                }
+                data {
+                  size
+                }
+                block {
+                  height
+                  timestamp
+                }
+              }
+            }
+          }
+        }`,
+        };
+        try {
+            const transactions = await queryGateway(async (url: string) => {
+                const response = await arweave.api.request().post(url + "/graphql", query)
+                const { data } = response.data;
+                const { transactions } = data;
+                return transactions;
+            });
+            hasNextPage = transactions.pageInfo.hasNextPage
+            const { edges } = transactions;
+            edges.forEach((edge: any) => {
+                cursor = edge.cursor;
+                const { node } = edge;
+                const { block } = node;
+                if (block !== null) {
+                    timeStamp = new Date(block.timestamp * 1000);
+                    if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                        lastBlock = block.height;
+                        // Prepare our files
+                        const { tags } = node;
+                        const { data } = node;
+                        const { fee } = node;
+                        let bundleTx = newBundleTx();
+                        let fileTx = newArFSFileTx();
+                        let fileDataTx = newArFSFileDataTx();
+                        let folderTx = newArFSFolderTx();
+                        let driveTx = newArFSDriveTx();
+                        let tipTx = newArFSTipTx();
+                        let encrypted = false;
+                        let contentType = '';
+                        let appName = '';
+                        let appVersion = '';
+                        let clientName = '';
+                        let entityType = 'data';
+                        let arFsVersion = '';
+                        let bundleFormat = '';
+                        let bundledIn = '';
+                        let communityTip = 0;
+
+                        tags.forEach((tag: any) => {
+                            const key = tag.name;
+                            const { value } = tag;
+                            switch (key) {
+                            case 'Cipher-IV':
+                                encrypted = true;
+                                break;
+                            case 'Entity-Type':
+                                entityType = value;
+                                break;
+                            case 'Content-Type':
+                                contentType = value;
+                                break;
+                            case 'App-Name':
+                                appName = value;
+                                break;
+                            case 'App-Version':
+                                appVersion = value;
+                                break;
+                            case 'ArFS':
+                                arFsVersion = value;
+                                break;
+                            case 'ArDrive-Client':
+                                clientName = value;
+                                break;
+                            case 'Bundle-Format':
+                                bundleFormat = value;
+                                break;
+                            case 'Tip-Type':
+                                if (value === 'data upload') {
+                                    communityTip = +node.quantity.ar
+                                }
+                                break;
+                            default:
+                                break;
+                            };
+                        });
+
+                        if (clientName.includes('ArConnect')) {
+                            appName = 'ArConnect';
+                        };
+
+                        if (node.bundledIn) {
+                            bundledIn = node.bundledIn.id
+                        }; 
+
+                        if (bundleFormat === 'binary') {
+                            // this is a bundle
+                            bundleTx.appName = appName;
+                            bundleTx.appVersion = appVersion;
+                            bundleTx.dataSize = +data.size;
+                            bundleTx.fee = +fee.ar;
+                            bundleTx.quantity = +node.quantity.ar;
+                            bundleTxs.push(bundleTx);
+                        } else if (communityTip !== 0) {
+                            tipTx.appName = appName;
+                            tipTx.appVersion = appVersion;
+                            tipTx.owner = node.owner.address;
+                            tipTx.quantity = +communityTip;
+                            tipTx.id = node.id;
+                            tipTx.blockHeight = block.height;
+                            tipTx.blockTime = block.timestamp;
+                            tipTx.friendlyDate = timeStamp.toLocaleString();
+                            tipTxs.push(tipTx);
+                        } else if (entityType === 'data' && arFsVersion === '' && communityTip === 0) {
+                            // this is a file data tx and therefore has no ArFS tag or entity type tag or community tip tag
+                            if (+fee.ar === 0) { // This is a bundle
+                                fileDataTx.dataItemSize = +data.size;
+                            } else {
+                                fileDataTx.dataSize = +data.size;
+                            }                                
+                            fileDataTx.appName = appName;
+                            fileDataTx.appVersion = appVersion;
+                            fileDataTx.owner = node.owner.address;
+                            fileDataTx.private = encrypted;
+                            fileDataTx.fee = +fee.ar;
+                            fileDataTx.contentType = contentType;
+                            fileDataTx.bundledIn = bundledIn;
+                            fileDataTx.id = node.id;
+                            fileDataTx.blockHeight = block.height;
+                            fileDataTx.blockTime = block.timestamp;
+                            fileDataTx.friendlyDate = timeStamp.toLocaleString();
+                            fileDataTxs.push(fileDataTx);
+
+                        } else if (entityType === 'file') {
+                            // THIS IS A FILE METADATA TX
+                            if (+fee.ar === 0) { // This is a bundle
+                                fileTx.dataItemSize = +data.size;
+                            } else {
+                                fileTx.dataSize = +data.size;
+                            }   
+                            fileTx.appName = appName;
+                            fileTx.appVersion = appVersion;
+                            fileTx.arfsVersion = arFsVersion;
+                            fileTx.owner = node.owner.address;
+                            fileTx.private = encrypted;
+                            fileTx.fee = +fee.ar;
+                            fileTx.contentType = contentType;
+                            fileTx.bundledIn = bundledIn;
+                            fileTx.id = node.id;
+                            fileTx.blockHeight = block.height;
+                            fileTx.blockTime = block.timestamp;
+                            fileTx.friendlyDate = timeStamp.toLocaleString();
+                            fileTxs.push(fileTx);
+                            
+                        } else if (entityType === 'folder') {
+                            // THIS IS A FOLDER METADATA TX
+                            if (+fee.ar === 0) { // This is a bundle
+                                folderTx.dataItemSize = +data.size;
+                            } else {
+                                folderTx.dataSize = +data.size;
+                            }   
+                            folderTx.appName = appName;
+                            folderTx.appVersion = appVersion;
+                            folderTx.arfsVersion = arFsVersion;
+                            folderTx.owner = node.owner.address;
+                            folderTx.private = encrypted;
+                            folderTx.fee = +fee.ar;
+                            folderTx.contentType = contentType;
+                            folderTx.bundledIn = bundledIn;
+                            folderTx.id = node.id;
+                            folderTx.blockHeight = block.height;
+                            folderTx.blockTime = block.timestamp;
+                            folderTx.friendlyDate = timeStamp.toLocaleString();
+                            folderTxs.push(folderTx);
+
+                        } else if (entityType === 'drive') {
+                            // THIS IS A DRIVE METADATA TX
+                            if (+fee.ar === 0) { // This is a bundle
+                                driveTx.dataItemSize = +data.size;
+                            } else {
+                                driveTx.dataSize = +data.size;
+                            }   
+                            driveTx.appName = appName;
+                            driveTx.appVersion = appVersion;
+                            driveTx.arfsVersion = arFsVersion;
+                            driveTx.owner = node.owner.address;
+                            driveTx.private = encrypted;
+                            driveTx.fee = +fee.ar;
+                            driveTx.contentType = contentType;
+                            driveTx.bundledIn = bundledIn;
+                            driveTx.id = node.id;
+                            driveTx.blockHeight = block.height;
+                            driveTx.blockTime = block.timestamp;
+                            driveTx.friendlyDate = timeStamp.toLocaleString();
+                            driveTxs.push(driveTx);
+                        }
+
+                    } else if (timeStamp.getTime() > end.getTime()) {
+                        // console.log ("Result too early %s", timeStamp)
+                    } else {
+                        // console.log ("Result too old %s", timeStamp)
+                        hasNextPage = false;
+                    }
+                }
+            })
+        } 
+        catch (err) {
+            console.log(err);
+            console.log(
+              'Error getting transactions at Blockheight: %s', lastBlock);
+            hasNextPage = false;
+        }
+    }
+    return {bundleTxs, fileDataTxs, fileTxs, folderTxs, driveTxs, tipTxs}
+}
+
