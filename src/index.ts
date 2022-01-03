@@ -1,22 +1,11 @@
 import { getArUSDPrice, getCurrentBlockHeight, getDataPrice, getLatestBlockInfo, getMempoolSize } from './arweave'
-import { getAllMetrics, getArDriveCommunityWalletARBalances, getArDriveCommunityWalletArDriveBalances, getOtherWalletARBalances } from './common';
-import { getAllAppTransactions_DESC} from './gql';
-import { sendBundlesToGraphite, sendDriveMetadataToGraphite, sendFileDataToGraphite, sendFileMetadataToGraphite, sendFolderMetadataToGraphite, sendMessageToGraphite, sendResultsToGraphite, sendv2CommunityTipsToGraphite } from './graphite';
-import { Results, BlockInfo } from './types';
+import { getArDriveCommunityWalletARBalances, getArDriveCommunityWalletArDriveBalances, getOtherWalletARBalances} from './common';
+import { getAllAppTransactions_DESC, getAllDrives_ASC } from './gql';
+import { sendBundlesToGraphite, sendDriveMetadataToGraphite, sendFileDataToGraphite, sendFileMetadataToGraphite, sendFolderMetadataToGraphite, sendMessageToGraphite, sendv2CommunityTipsToGraphite } from './graphite';
+import { BlockInfo } from './types';
 
 // Used for scheduling the jobs
 const cron = require('node-cron');
-
-export async function dailyArDriveUsageAnalytics () {
-    let today = new Date();
-    let start = new Date();
-
-    // Take off one day
-    start.setDate(start.getDate() - 1);
-
-    const dailyResults : Results = await getAllMetrics(start, today, 1, undefined, false);
-    await sendResultsToGraphite(dailyResults);
-}
 
 export async function hourlyArDriveUsageAnalytics (hours: number) {
     let bufferHours = 4; // The amount of hours to buffer to ensure items have been indexed.
@@ -32,7 +21,21 @@ export async function hourlyArDriveUsageAnalytics (hours: number) {
     await sendFolderMetadataToGraphite(results.folderTxs, end);
     await sendDriveMetadataToGraphite(results.driveTxs, end);
     await sendv2CommunityTipsToGraphite(results.tipTxs, end);
-}
+
+    // Determine how many unique new users in this period by checking for drives created, getting user information, and checking full user list
+    const newUsers: string[] = [...new Set(results.driveTxs.map((item: { owner: string; }) => item.owner))];
+    const allTimeStart = new Date(2020, 8, 26) // beginning date for ArDrive transactions
+    const allDrives = await getAllDrives_ASC(allTimeStart, start, 1) // We want to get all drive information going up to the most recent period
+    const allUsers: string[] = [...new Set(allDrives.map((item: { owner: string }) => item.owner))];
+
+    // need to compare new ardrive users to total ardrive users
+    let newUserCount = 0;
+    newUsers.forEach((user: string) => {
+         newUserCount += allUsers.filter(item => item === user).length;
+    });
+    await sendMessageToGraphite('ardrive.apps.users.new', newUserCount, end);
+    await sendMessageToGraphite('ardrive.apps.users.total', allUsers.length, end);
+};
 
 // Gets non-GQL related data
 // Includes Weave height, size, difficulty and last block size

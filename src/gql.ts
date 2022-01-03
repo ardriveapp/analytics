@@ -1875,7 +1875,7 @@ export async function getAllAppTransactions_ASC(start: Date, end: Date, lastBloc
         minBlock = await getMinBlock(start);
     } else {
         minBlock = lastBlock;
-        console.log ("continuing from %s", lastBlock)
+        console.log ("Continuing querying for All App Transactions from block %s", lastBlock)
     }
 
     let fileTxs: ArFSFileTx[] = [];
@@ -2403,3 +2403,168 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date) {
     return {bundleTxs, fileDataTxs, fileTxs, folderTxs, driveTxs, tipTxs}
 }
 
+// Gets ArDrive Drive information from a start and end date
+export async function getAllDrives_ASC(start: Date, end: Date, lastBlock: number): Promise<ArFSDriveTx[]> {
+    let firstPage : number = 100; // Max size of query for GQL
+    let cursor : string = "";
+    let driveTxs: ArFSDriveTx[] = [];
+    let hasNextPage = true;
+    let timeStamp = new Date(end);
+
+    let minBlock = 1;
+    if (lastBlock === 1) {
+        minBlock = await getMinBlock(start);
+    } else {
+        minBlock = lastBlock;
+        console.log ("Continuing getting all Drives from block %s", lastBlock)
+    }
+
+    try {
+      while (hasNextPage) {
+        const query = {
+            query: `query {
+                transactions(
+                    tags: [
+                        { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}"]}
+                        { name: "Entity-Type", values: "drive" }
+                      ]
+                    sort: HEIGHT_ASC
+                    block: {min: ${minBlock}}
+                    first: ${firstPage}
+                    after: "${cursor}"
+                ) {
+                    pageInfo {
+                      hasNextPage
+                    }
+                    edges {
+                      cursor
+                      node {
+                        id
+                        bundledIn {
+                            id
+                        }
+                        owner {
+                            address
+                        }
+                        fee {
+                            ar
+                        }
+                        quantity {
+                            ar
+                        }
+                        tags {
+                            name
+                            value
+                        }
+                        data {
+                          size
+                        }
+                        block {
+                          height
+                          timestamp
+                        }
+                      }
+                    }
+                }
+            }`,
+        };
+        const transactions = await queryGateway(async (url: string) => {
+            const response = await arweave.api.request().post(url + "/graphql", query)
+            const { data } = response.data;
+            const { transactions } = data;
+            return transactions;
+        });
+        const { edges } = transactions;
+        hasNextPage = transactions.pageInfo.hasNextPage
+        edges.forEach((edge: any) => {
+            cursor = edge.cursor;
+            const { node } = edge;
+            const { block } = node;
+            if (block !== null) {
+                timeStamp = new Date(block.timestamp * 1000);
+                if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
+                    lastBlock = block.height;
+                    // Prepare our files
+                    const { tags } = node;
+                    const { data } = node;
+                    const { fee } = node;
+                    let driveTx = newArFSDriveTx();
+                    let encrypted = false;
+                    let appName = '';
+                    let appVersion = '';
+                    let clientName = '';
+                    let contentType = '';
+                    let arFsVersion = '';
+                    let bundledIn = '';
+
+                    tags.forEach((tag: any) => {
+                        const key = tag.name;
+                        const { value } = tag;
+                        switch (key) {
+                        case 'Cipher-IV':
+                            encrypted = true;
+                            break;
+                        case 'App-Name':
+                            appName = value;
+                            break;
+                        case 'App-Version':
+                            appVersion = value;
+                            break;
+                        case 'ArFS':
+                            arFsVersion = value;
+                            break;
+                        case 'ArDrive-Client':
+                            clientName = value;
+                            break;
+                        case 'Content-Type':
+                            contentType = value;
+                            break;
+                        default:
+                            break;
+                        };
+                    });
+
+                    if (clientName.includes('ArConnect')) {
+                        appName = 'ArConnect';
+                    };
+
+                    if (node.bundledIn) {
+                        bundledIn = node.bundledIn.id
+                    }; 
+
+                    if (+fee.ar === 0) { // This is a bundle
+                        driveTx.dataItemSize = +data.size;
+                    } else {
+                        driveTx.dataSize = +data.size; // this is a v2 tx
+                    }   
+
+                    driveTx.appName = appName;
+                    driveTx.appVersion = appVersion;
+                    driveTx.arfsVersion = arFsVersion;
+                    driveTx.owner = node.owner.address;
+                    driveTx.private = encrypted;
+                    driveTx.fee = +fee.ar;
+                    driveTx.contentType = contentType;
+                    driveTx.bundledIn = bundledIn;
+                    driveTx.id = node.id;
+                    driveTx.blockHeight = block.height;
+                    driveTx.blockTime = block.timestamp;
+                    driveTx.friendlyDate = timeStamp.toLocaleString();
+                    driveTxs.push(driveTx);
+
+                } else if (timeStamp.getTime() > end.getTime()) {
+                  // console.log ("Result too old")
+                  hasNextPage = false;
+                } else {
+                  // result too early
+                }
+            }
+        })
+      }
+      return driveTxs;
+    } catch (err) {
+        console.log (err)
+        console.log ("Error collecting total number of Drives")
+        return driveTxs;
+    }
+};
