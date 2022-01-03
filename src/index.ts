@@ -14,6 +14,7 @@ export async function hourlyArDriveUsageAnalytics (hours: number) {
     let end = new Date();
     end.setHours(start.getHours() - bufferHours);
 
+    console.log ("Getting all ArDrive App Stats from %s to %s", start.toLocaleString(), end.toLocaleString());
     let results = await getAllAppTransactions_DESC(start, end);
     await sendBundlesToGraphite(results.bundleTxs, end);
     await sendFileMetadataToGraphite(results.fileTxs, end);
@@ -35,6 +36,15 @@ export async function hourlyArDriveUsageAnalytics (hours: number) {
     });
     await sendMessageToGraphite('ardrive.apps.users.new', newUserCount, end);
     await sendMessageToGraphite('ardrive.apps.users.total', allUsers.length, end);
+
+    console.log ("BundledTxs: %s", results.bundleTxs.length);
+    console.log ("FileDataTxs: %s", results.fileDataTxs.length);
+    console.log ("FileTxs: %s", results.fileTxs.length);
+    console.log ("FolderTxs: %s", results.folderTxs.length);
+    console.log ("DriveTxs: %s", results.driveTxs.length);
+    console.log ("V2 Tips: %s", results.tipTxs.length);
+    console.log ("New Users: %s", newUserCount);
+    console.log ("All Users: %s", allUsers.length);
 };
 
 // Gets non-GQL related data

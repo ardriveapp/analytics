@@ -28,7 +28,7 @@ async function main () {
 
     while (start < today) {
         const end = new Date(addHoursToDate(start, hoursToQuery));
-        console.log ("Stats from %s to %s", start.toLocaleString(), end.toLocaleString());
+        console.log ("Getting all ArDrive App Stats from %s to %s", start.toLocaleString(), end.toLocaleString());
         let results = await getAllAppTransactions_ASC(start, end, lastBlock);
 
         console.log ("BundledTxs: %s", results.bundleTxs.length);
