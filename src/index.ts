@@ -34,8 +34,8 @@ export async function hourlyArDriveUsageAnalytics (hours: number) {
     newUsers.forEach((user: string) => {
          newUserCount += allUsers.filter(item => item === user).length;
     });
-    await sendMessageToGraphite('ardrive.apps.users.new', newUserCount, end);
-    await sendMessageToGraphite('ardrive.apps.users.total', allUsers.length, end);
+    await sendMessageToGraphite('ardrive.users.new', newUserCount, end);
+    await sendMessageToGraphite('ardrive.users.total', allUsers.length, end);
 
     console.log ("BundledTxs: %s", results.bundleTxs.length);
     console.log ("FileDataTxs: %s", results.fileDataTxs.length);
