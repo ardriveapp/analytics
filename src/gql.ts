@@ -1,4 +1,4 @@
-import { arweave, getArUSDPrice, getCurrentBlockHeight } from './arweave';
+import { arweave, getArUSDPrice } from './arweave';
 import { asyncForEach, formatBytes, getMinBlock, newArFSDriveTx, newArFSFileDataTx, newArFSFileTx, newArFSFolderTx, newArFSTipTx, newBundleTx, sleep } from './common';
 import { ArDriveCommunityFee, ArDriveStat, ArFSDriveTx, ArFSFileDataTx, ArFSFileTx, ArFSFolderTx, ArFSTipTx, AstatineReward, BundleTx, ContentType, FileInfo, SmartweaveTx } from './types';
 import limestone from 'limestone-api';
@@ -32,10 +32,10 @@ export async function queryGateway(query: (url: string) => Promise<any>): Promis
 		try {
 			return await query(gateways[currentGateway]);
 		} catch (err) {
-			//console.log(err);
+			console.log(err);
 			console.log("Gateway error with " + gateways[currentGateway] + ", retrying...");
 			tries += 1;
-            await sleep(300000);
+            await sleep(60000);
 			if (tries >= 5) {
 			    tries = 0;
 			    switchGateway ();
@@ -88,7 +88,7 @@ export async function getUserSize(owner: string, start: Date, end: Date) {
                 }`,
             };
             const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
+                const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
                 const { transactions } = data;
                 return transactions;
@@ -163,7 +163,7 @@ export async function getAllDrives(start: Date, end: Date): Promise<ArDriveStat[
             }`,
         };
         const transactions = await queryGateway(async (url: string) => {
-            const response = await arweave.api.request().post(url + "/graphql", query)
+            const response = await arweave.api.post(url + "/graphql", query)
             const { data } = response.data;
             const { transactions } = data;
             return transactions;
@@ -267,7 +267,7 @@ export async function getAllFolders(start: Date, end: Date):Promise <string[]> {
             }`,
         };
         const transactions = await queryGateway(async (url: string) => {
-            const response = await arweave.api.request().post(url + "/graphql", query)
+            const response = await arweave.api.post(url + "/graphql", query)
             const { data } = response.data;
             const { transactions } = data;
             return transactions;
@@ -354,7 +354,7 @@ export async function getAllFiles(start: Date, end: Date):Promise <FileInfo[]> {
             }`,
         };
         const transactions = await queryGateway(async (url: string) => {
-            const response = await arweave.api.request().post(url + "/graphql", query)
+            const response = await arweave.api.post(url + "/graphql", query)
             const { data } = response.data;
             const { transactions } = data;
             return transactions;
@@ -465,7 +465,7 @@ export async function getAllAppData(appTarget: string, start: Date, end: Date):P
             }`,
         };
         const transactions = await queryGateway(async (url: string) => {
-            const response = await arweave.api.request().post(url + "/graphql", query)
+            const response = await arweave.api.post(url + "/graphql", query)
             const { data } = response.data;
             const { transactions } = data;
             return transactions;
@@ -523,18 +523,9 @@ export async function getUniqueArDriveUsers(start: Date, end: Date):Promise <{fo
     let dataSize = 0;
     let foundUsers: string[] = [];
     let hasNextPage = true;
-    let today = new Date();
-
 
     // To calculate the no. of days between two dates
-    const blocksPerDay = 720;
-    let height = await getCurrentBlockHeight();
-    let minBlock = height - blocksPerDay // Search the last min block time by default
-    const startDays = today.getTime() - start.getTime()
-    const startDaysDiff = Math.floor(startDays / (1000 * 3600 * 24));
-    if (startDaysDiff !== 0) {
-        minBlock = height - (blocksPerDay * startDaysDiff)
-    } 
+    let minBlock = await getMinBlock(start);
 
     try {
       while (hasNextPage) {
@@ -542,7 +533,7 @@ export async function getUniqueArDriveUsers(start: Date, end: Date):Promise <{fo
             query: `query {
                 transactions(
                     tags: [
-                        { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
+                        { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}"]}
                         { name: "Entity-Type", values: ["file", "folder", "drive"]}
                       ]
                     sort: HEIGHT_ASC
@@ -576,7 +567,7 @@ export async function getUniqueArDriveUsers(start: Date, end: Date):Promise <{fo
             }`,
         };
         const transactions = await queryGateway(async (url: string) => {
-            const response = await arweave.api.request().post(url + "/graphql", query)
+            const response = await arweave.api.post(url + "/graphql", query)
             const { data } = response.data;
             const { transactions } = data;
             return transactions;
@@ -592,17 +583,17 @@ export async function getUniqueArDriveUsers(start: Date, end: Date):Promise <{fo
             if (block !== null) {
                 let timeStamp = new Date(block.timestamp * 1000);
                 // We only want results between our start and end dates, defined by milliseconds since epoch
-                console.log (timeStamp.toLocaleString())
+                // console.log (timeStamp.toLocaleString())
                 if ((start.getTime() <= timeStamp.getTime()) && (end.getTime() >= timeStamp.getTime())) {
-                    console.log ("Matching ardrive transaction: ", timeStamp)
+                    // console.log ("Matching ardrive transaction: ", timeStamp)
                     foundTransactions += 1;
                     dataSize += +data.size;
                     foundUsers.push(owner.address)
                 } else if (timeStamp.getTime() > end.getTime()) {
-                  console.log ("Result too early")
+                  // console.log ("Result too early")
                   hasNextPage = false;
                 } else {
-                  console.log ("Result too old")
+                  // console.log ("Result too old")
                 }
             }
         })
@@ -659,7 +650,7 @@ export async function getANS102Transactions(start: Date, end: Date) {
               }`,
             };
             const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
+                const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
                 const { transactions } = data;
                 return transactions;
@@ -770,7 +761,7 @@ export async function getSumOfAllCommunityFees(start: Date, end: Date) {
                 }`,
             }
             const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
+                const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
                 const { transactions } = data;
                 return transactions;
@@ -895,7 +886,7 @@ export async function getAllCommunityFees(start: Date, end: Date): Promise<ArDri
               }`,
             };
             const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
+                const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
                 const { transactions } = data;
                 return transactions;
@@ -1039,7 +1030,7 @@ export async function getAllAstatineRewards(start: Date, end: Date): Promise<Ast
               }`,
             };
             const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
+                const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
                 const { transactions } = data;
                 return transactions;
@@ -1168,7 +1159,7 @@ export async function getAllArDriveCommunityTokenTransactions(owner: string, sta
               }`,
             };
             const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
+                const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
                 const { transactions } = data;
                 return transactions;
@@ -1290,7 +1281,7 @@ export async function getMyCommunityFees(friendlyName: string, owner: string, st
               }`,
             };
             const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
+                const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
                 const { transactions } = data;
                 return transactions;
@@ -1456,7 +1447,7 @@ export async function getAllTransactions_WithBlocks(start: Date, end: Date) {
         };
         try {
             const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
+                const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
                 const { transactions } = data;
                 return transactions;
@@ -1640,7 +1631,7 @@ export async function getAllTransactions(start: Date, end: Date) {
         };
         try {
             const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
+                const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
                 const { transactions } = data;
                 return transactions;
@@ -1806,7 +1797,7 @@ export async function getBundleTransactions_ASC(start: Date, end: Date): Promise
               }`,
             };
             const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
+                const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
                 const { transactions } = data;
                 return transactions;
@@ -1934,7 +1925,7 @@ export async function getAllAppTransactions_ASC(start: Date, end: Date, lastBloc
         };
         try {
             const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
+                const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
                 const { transactions } = data;
                 return transactions;
@@ -2200,7 +2191,7 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date) {
         };
         try {
             const transactions = await queryGateway(async (url: string) => {
-                const response = await arweave.api.request().post(url + "/graphql", query)
+                const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
                 const { transactions } = data;
                 return transactions;
@@ -2469,7 +2460,7 @@ export async function getAllDrives_ASC(start: Date, end: Date, lastBlock: number
             }`,
         };
         const transactions = await queryGateway(async (url: string) => {
-            const response = await arweave.api.request().post(url + "/graphql", query)
+            const response = await arweave.api.post(url + "/graphql", query)
             const { data } = response.data;
             const { transactions } = data;
             return transactions;

@@ -72,7 +72,6 @@ const main = async () => {
 
 		console.log(col.green('main ends'))
 	} catch(e){
-		console.info(col.green(e.name), ':', col.italic.green(e.message))
 		console.log(e)
 	}
 }
