@@ -13,7 +13,6 @@
     "node-cron": "^3.0.0",
     "node-fetch": "^2.6.1",
     "package.json": "^2.0.1",
-    "redstone-smartweave": "^0.4.15",
     "smartweave": "^0.4.46",
     "typescript": "^4.2.3"
   },
