@@ -1927,6 +1927,10 @@ export async function getAllAppTransactions_ASC(start: Date, end: Date, lastBloc
             const transactions = await queryGateway(async (url: string) => {
                 const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
+                if (data === undefined) {
+                    console.log ("Undefined data!!!")
+                    console.log (response);
+                }
                 const { transactions } = data;
                 return transactions;
             });
@@ -2122,7 +2126,7 @@ export async function getAllAppTransactions_ASC(start: Date, end: Date, lastBloc
             console.log(err);
             console.log(
               'Error getting transactions at Blockheight: %s', lastBlock);
-            hasNextPage = false;
+            // hasNextPage = false;
         }
     }
     return {bundleTxs, fileDataTxs, fileTxs, folderTxs, driveTxs, tipTxs, lastBlock}
