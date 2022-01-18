@@ -2193,6 +2193,10 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date) {
             const transactions = await queryGateway(async (url: string) => {
                 const response = await arweave.api.post(url + "/graphql", query)
                 const { data } = response.data;
+                if (data === undefined) {
+                    console.log ("Undefined data!!!")
+                    console.log (response);
+                }
                 const { transactions } = data;
                 return transactions;
             });

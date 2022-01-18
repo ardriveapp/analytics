@@ -43,7 +43,7 @@ export async function sendBundlesToGraphite (bundles: BundleTx[], end: Date) {
 export async function sendFileDataToGraphite (txs: ArFSFileDataTx[], end: Date) {
   console.log ("Sending File Data Txs to Graphite", end)
   const appNames: string[] = [...new Set(txs.map(item => item.appName))];
-  const message = 'ardrive.apps';
+  const message = 'ardrive.apps.';
   const type = '.fileData'
 
   await asyncForEach (appNames, async (appName: string) => {
