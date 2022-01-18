@@ -120,7 +120,7 @@ export async function sendFileDataToGraphite (txs: ArFSFileDataTx[], end: Date) 
 export async function sendFileMetadataToGraphite (txs: ArFSFileTx[], end: Date) {
   console.log ("Sending File Metadata Txs to Graphite", end)
   const appNames: string[] = [...new Set(txs.map(item => item.appName))];
-  const message = 'ardrive.apps';
+  const message = 'ardrive.apps.';
   const type = '.fileMetaData';
   await asyncForEach (appNames, async (appName: string) => {
       // Public
@@ -182,7 +182,7 @@ export async function sendFileMetadataToGraphite (txs: ArFSFileTx[], end: Date) 
 export async function sendFolderMetadataToGraphite (txs: ArFSFolderTx[], end: Date) {
   console.log ("Sending Folder Metadata Txs to Graphite", end)
   const appNames: string[] = [...new Set(txs.map(item => item.appName))];
-  const message = 'ardrive.apps';
+  const message = 'ardrive.apps.';
   const type = '.folderMetaData';
   await asyncForEach (appNames, async (appName: string) => {
       // Public
