@@ -35,7 +35,7 @@ export async function queryGateway(query: (url: string) => Promise<any>): Promis
 			console.log(err);
 			console.log("Gateway error with " + gateways[currentGateway] + ", retrying...");
 			tries += 1;
-            await sleep(60000);
+            await sleep(300000);
 			if (tries >= 5) {
 			    tries = 0;
 			    switchGateway ();
@@ -1929,7 +1929,7 @@ export async function getAllAppTransactions_ASC(start: Date, end: Date, lastBloc
                 const { data } = response.data;
                 if (data === undefined) {
                     console.log ("Undefined data!!!")
-                    console.log (response);
+                    console.log (response.statusText);
                 }
                 const { transactions } = data;
                 return transactions;
@@ -2199,7 +2199,7 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date) {
                 const { data } = response.data;
                 if (data === undefined) {
                     console.log ("Undefined data!!!")
-                    console.log (response);
+                    console.log (response.statusText);
                 }
                 const { transactions } = data;
                 return transactions;

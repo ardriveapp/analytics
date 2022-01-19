@@ -23,6 +23,7 @@ async function main () {
     start = addHoursToDate(start, hoursToQuery);
     let lastBlock = await getMinBlock(start);
 
+    lastBlock = 711855;
     console.log ("Running analytics from %s to %s", start.toLocaleString(), today.toLocaleString());
     console.log ("--------------------------------------------------------------------------------");
 
