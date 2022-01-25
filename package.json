@@ -33,6 +33,7 @@
     "start": "yarn run build && node ./lib/index.js",
     "test": "yarn run build && node ./lib/index_manual.js",
     "full-run": "yarn run build && node ./lib/fully_populate.js",
+    "full-run-drives": "yarn run build && node ./lib/fully_populate_drives.js",
     "get-finances": "yarn run build && node ./lib/communityFinanceReport.js",
     "export-tips": "yarn run build && node ./lib/exportCommunityTips.js",
     "export-astatine-txs": "yarn run build && node ./lib/exportAstatineTransactions.js",
