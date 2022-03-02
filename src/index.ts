@@ -105,7 +105,7 @@ async function networkAnalytics() {
 
 console.log ("Start ArDrive Analytics Cron Jobs");
 console.log ("---------------------------------");
-networkAnalytics()
+
 /*cron.schedule('0 17 * * *', function(){
     console.log('Running ArDrive Daiy Analytics Every 24 hours at 1pm');
     dailyArDriveUsageAnalytics();
