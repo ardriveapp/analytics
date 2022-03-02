@@ -1,4 +1,4 @@
-import { getArDriveTokenSnapshot, getArDriveTokenSnapshot_Redstone } from "./smartweave";
+import { getArDriveTokenSnapshot } from "./smartweave";
 
 export async function main () {
     const today = new Date().toISOString().slice(0, 10);
@@ -19,7 +19,7 @@ export async function main () {
     });
     
     const result = await getArDriveTokenSnapshot();
-    await getArDriveTokenSnapshot_Redstone();
+    // await getArDriveTokenSnapshot_Redstone();
     csvWriter.writeRecords(result)
     .then(() => {
         console.log('...Done writing ArDrive Token Snapshot');

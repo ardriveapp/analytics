@@ -1,15 +1,14 @@
 import { readContract } from 'smartweave';
-import { SmartWeaveNodeFactory } from "redstone-smartweave";
+// import { SmartWeaveNodeFactory } from "redstone-smartweave";
 import { arweave, getWalletBalance } from './arweave';
-import { ArDriveTokenHolder, SmartweaveTx } from './types';
+import { ArDriveTokenHolder } from './types';
 
 // ArDrive Profit Sharing Community Smart Contract
 const communityTxId = '-8A6RexFkpfWwuyVO98wzSFZh0d6VJuI-buTJvlwOJQ';
 
-const smartweave = SmartWeaveNodeFactory.memCached(arweave);
-
-  // connecting to a given contract
-const providersRegistryContract = smartweave.contract(communityTxId);
+// For use with Redstone
+// const smartweave = SmartWeaveNodeFactory.memCached(arweave);
+// const providersRegistryContract = smartweave.contract(communityTxId);
 
 // Gets a random ArDrive token holder based off their weight (amount of tokens they hold)
 export async function selectTokenHolder() {
@@ -57,12 +56,12 @@ export async function getArDriveCommunityState(): Promise<any> {
 };
 
 // Gets the ArDrive Community Smwartweave state with Redstone
-export async function getArDriveCommunityState_Redstone(): Promise<any> {
+/*export async function getArDriveCommunityState_Redstone(): Promise<any> {
 	// Read the ArDrive Smart Contract to get the latest state
     console.log ("Getting ArDrive Community State with Redstone")
 	const results = await providersRegistryContract.readState();
     return results.state;
-};
+};*/
 
 // Gets a count of all ArDrive tokens that have been minted
 export async function getTotalTokenCount(state: any): Promise<number> {
@@ -196,7 +195,7 @@ export async function getWalletArDriveUnlockedBalance(state: any, wallet: string
     return total;
 }
 
-export async function getArDriveTokenSnapshot_Redstone() {
+/*export async function getArDriveTokenSnapshot_Redstone() {
 
 	const contractTxId = communityTxId;
   
@@ -224,4 +223,4 @@ export async function validateSmartweaveTxs(smartweaveTxs: SmartweaveTx[]) {
 		smartweaveTxs[i].validSmartweaveTx = state.validity[smartweaveTxs[i].id];
 	};
 	return smartweaveTxs;
-}
+}*/

@@ -1,3 +1,5 @@
+import axios, { AxiosResponse } from 'axios';
+import axiosRetry, { exponentialDelay } from 'axios-retry';
 import { 
     getAllBlockDates, 
     getCurrentBlockHeight, 
@@ -7,7 +9,7 @@ import {
 } from './arweave'
 import { getAllCommunityFees, getAllDrives, getAllTransactions_WithBlocks, getMyCommunityFees, getUserSize, getAllTransactions, getSumOfAllCommunityFees, getAllArDriveCommunityTokenTransactions } from './gql';
 import { sendArDriveCommunityFinancesToGraphite, sendMessageToGraphite } from './graphite';
-import { getArDriveCommunityState, getTotalTokenCount, getWalletArDriveLockedBalance, getWalletArDriveUnlockedBalance, getTokenHolderCount, validateSmartweaveTxs } from './smartweave';
+import { getArDriveCommunityState, getTotalTokenCount, getWalletArDriveLockedBalance, getWalletArDriveUnlockedBalance, getTokenHolderCount } from './smartweave';
 import { Results, BlockInfo, ArDriveCommunityFee, BlockDate, SmartweaveTx, BundleTx, ArFSFileTx, ArFSDriveTx, ArFSFolderTx, ArFSFileDataTx, ArFSTipTx } from './types';
 
 export const communityWallets : string[] = [
@@ -55,7 +57,7 @@ export async function getArDriveTokenTransfers (start: Date, end: Date): Promise
   await asyncForEach (communityWallets, async (communityWallet: string) => {
     results = results.concat(await getAllArDriveCommunityTokenTransactions(communityWallet, start, end));
   });
-  results = await validateSmartweaveTxs(results);
+  // results = await validateSmartweaveTxs(results);
   return results;
 }
 
@@ -628,3 +630,18 @@ export function newArFSTipTx(): ArFSTipTx {
   }
   return arFSTipTx;
 };
+
+export async function statsFetch(reqURL: string): Promise<AxiosResponse<any>> {
+  const axiosInstance = axios.create();
+  const maxRetries = 5;
+  axiosRetry(axiosInstance, {
+    retries: maxRetries,
+    retryDelay: (retryNumber) => {
+      console.error(`Retry attempt ${retryNumber}/${maxRetries} of request to ${reqURL}`);
+      return exponentialDelay(retryNumber);
+    }
+  });
+  return await axiosInstance.get(reqURL, {
+    responseType: 'arraybuffer'
+  });
+}
