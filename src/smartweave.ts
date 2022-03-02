@@ -209,12 +209,13 @@ export async function getWalletArDriveUnlockedBalance(state: any, wallet: string
 	const { state, validity } = await contract.readState();
   
 	console.log (JSON.stringify(state, null, 4));
-	console.log (validity);
-}
+	console.log (validity); 
+};
 
 export async function validateSmartweaveTxs(smartweaveTxs: SmartweaveTx[]) {
+	
 	// Get the latest state of the smartweave contract using redstone
-	const smartweave = SmartWeaveNodeFactory.memCached(arweave);
+	//const smartweave = SmartWeaveNodeFactory.memCached(arweave);
 	const contract = smartweave.contract(communityTxId);
 	const state  = await contract.readState();
 

@@ -18,8 +18,8 @@ async function main () {
     // The amount of hours to search for i.e. 12, 24 or other range
     let hoursToQuery: number = 12;
 
-    // const start = new Date(2020, 8, 26) // the beginning history of ardrive
-    let start = new Date(2021, 11, 30);
+    let start = new Date(2020, 8, 26) // the beginning history of ardrive
+    // let start = new Date(2021, 11, 30);
     start = addHoursToDate(start, hoursToQuery);
     let lastBlock = await getMinBlock(start);
 

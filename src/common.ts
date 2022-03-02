@@ -24,6 +24,7 @@ export const communityWallets : string[] = [
 
 export const otherAppWallets : string[] = [
   'OXcT1sVRSA5eGwt2k6Yuz8-3e3g9WJi5uSE99CWqsBs', // bundler node wallet
+  'zuPbEeWn8R9d4p-fU5eZjuizPX5WM-5c-7etrjk3U7Q', // akord wallet
 ];
 
 // Pauses application
