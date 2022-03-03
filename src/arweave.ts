@@ -30,10 +30,15 @@ export async function getArUSDPrice() : Promise<number> {
 
 // Gets the price of AR based on amount of data
 export async function getDataPrice(bytes: number) {
-    // change to axios w/ retry
-    const response = await statsFetch(`https://arweave.net/price/${bytes}`);
-    const winstonAmount = await response.data;
-    const arweaveAmount = +winstonAmount * 0.000000000001;
+  let arweaveAmount = 0;
+    try {
+      const response = await statsFetch(`https://arweave.net/price/${bytes}`);
+      const winstonAmount = await response.data;
+      arweaveAmount = +winstonAmount * 0.000000000001;
+    } catch (err) {
+      console.log ("Error getting Arweave data price for %s bytes", bytes);
+      console.log (err)
+    }
     return arweaveAmount;
 };
 
@@ -45,19 +50,20 @@ export async function getCurrentBlockHeight() {
     height = await response.data
     return height
   } catch (err) {
-    console.log (err)
+
   }
   return height
 };
 
 // Gets the latest block height
 export async function getMempoolSize() {
-  let pendingTxs: any;
+  let pendingTxs: string[] = [];
   try {
     const response = await statsFetch(`https://arweave.net/tx/pending`);
     pendingTxs = await response.data
     return pendingTxs
   } catch (err) {
+    console.log ("Error getting mempool size");
     console.log (err)
   }
   return pendingTxs
@@ -67,7 +73,7 @@ export async function getMempoolSize() {
 export async function getLatestBlockTransactions() {
   const lastBlockHeight = await getCurrentBlockHeight();
   const response = await statsFetch(`https://arweave.net/block/height/${lastBlockHeight}`);
-  const block = await response.data;
+  const block = await JSON.parse(response.data);
   return block;
 }
 // Takes all transactions in the mempool and gets the average fee per byte in winston
@@ -77,7 +83,7 @@ export async function getAvgPerByteFee (memPool: string[]) {
   
   await asyncForEach (memPool, async (tx: string) => {
     const response = await statsFetch(`https://arweave.net/tx/${tx}`);
-    const txDetails = await response.data;
+    const txDetails = JSON.parse(await response.data);
     const txReward = +txDetails.reward;
     const dataSize = +txDetails.data_size;
     const rewardPerByte = dataSize / txReward;
@@ -97,7 +103,7 @@ export async function getLatestBlockInfo (height: number) {
     }
     try {
       const response = await statsFetch(`https://arweave.net/block/height/${height}`);
-      const blockInfo = await response.data;
+      const blockInfo = JSON.parse(await response.data);
       latestBlock.weaveSize = blockInfo['weave_size']
       latestBlock.difficulty = blockInfo['diff']
       latestBlock.blockSize = blockInfo['block_size']
@@ -114,7 +120,7 @@ export async function getLatestBlockInfo (height: number) {
 // Not used anywhere
 export async function getBlockDate (height: number): Promise<BlockDate> {
   const response = await statsFetch(`https://arweave.net/block/height/${height}`);
-  const blockInfo = await response.data;
+  const blockInfo = await JSON.parse(response.data);
   const blockTimeStampDate = new Date(+blockInfo['timestamp'] * 1000);
   const friendlyDate = blockTimeStampDate.toLocaleString();
   const blockDate: BlockDate = {
@@ -148,6 +154,7 @@ export async function getWalletBalance(walletPublicKey: string): Promise<number>
 		balance = arweave.ar.winstonToAr(balance);
 		return +balance;
 	} catch (err) {
+    console.log ("Error getting Wallet Balance");
 		console.log(err);
 		return 0;
 	}
@@ -158,7 +165,8 @@ export async function getTransactionStatus(txid: string): Promise<number> {
 		const response = await arweave.transactions.getStatus(txid);
 		return response.status;
 	} catch (err) {
-		// console.log(err);
+      console.log ("Error getting transaction status");
+		  console.log(err);
 		return 0;
 	}
 }

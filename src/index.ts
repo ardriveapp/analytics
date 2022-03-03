@@ -14,7 +14,7 @@ export async function hourlyArDriveUsageAnalytics (hours: number) {
     let end = new Date();
     end.setHours(start.getHours() - bufferHours);
 
-    console.log ("Getting all ArDrive App Stats from %s to %s", start.toLocaleString(), end.toLocaleString());
+    console.log ("Hourly %s ArDrive Usage Analytics.  Getting all ArDrive App Stats from %s to %s", hours, start.toLocaleString(), end.toLocaleString());
     let results = await getAllAppTransactions_DESC(start, end);
     await sendBundlesToGraphite(results.bundleTxs, end);
     await sendFileMetadataToGraphite(results.fileTxs, end);
@@ -45,6 +45,7 @@ export async function hourlyArDriveUsageAnalytics (hours: number) {
     console.log ("V2 Tips: %s", results.tipTxs.length);
     console.log ("New Users: %s", newUserCount);
     console.log ("All Users: %s", allUsers.length);
+    console.log ("Hourly ArDrive Usage Analytics Completed")
 };
 
 // Gets non-GQL related data
@@ -52,14 +53,14 @@ export async function hourlyArDriveUsageAnalytics (hours: number) {
 async function networkAnalytics() {
     let today = new Date();
     
-    console.log ("%s Starting to collect latest block and price info", today);
-    console.log ("");
+    console.log ("%s Network Analytics.  Starting to collect latest block and price info", today);
 
     let pendingTxs = await getMempoolSize();
-    await sendMessageToGraphite('arweave.mempool.pendingTxs', pendingTxs.length, today);
     console.log ("Mempool size: %s", pendingTxs.length);
+    await sendMessageToGraphite('arweave.mempool.pendingTxs', pendingTxs.length, today);
 
     let height = await getCurrentBlockHeight();
+    console.log ("Block Height is: %s", height);
 
     await sendMessageToGraphite('arweave.blockHeight', +height, today);
 
@@ -101,11 +102,13 @@ async function networkAnalytics() {
         await sendMessageToGraphite('ardrive.price.usd.500mb', (+priceOf500MB.toFixed(5) * arUSDPrice), today);
         await sendMessageToGraphite('ardrive.price.usd.1gb', (+priceOf1GB.toFixed(5) * arUSDPrice), today);
     }
+    let finished = new Date();
+    console.log ("%s Finished collecting Network Analytics", finished);
 }
 
 console.log ("Start ArDrive Analytics Cron Jobs");
 console.log ("---------------------------------");
-
+networkAnalytics();
 /*cron.schedule('0 17 * * *', function(){
     console.log('Running ArDrive Daiy Analytics Every 24 hours at 1pm');
     dailyArDriveUsageAnalytics();
