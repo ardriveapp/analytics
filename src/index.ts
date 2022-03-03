@@ -123,10 +123,10 @@ cron.schedule('0 */12 * * *', function(){
 cron.schedule('*/5 * * * *', function(){
     console.log('Running ArDrive Block Info and Price Collection Analytics Every 5 minutes');
     networkAnalytics();
-    getOtherWalletARBalances();
 });
 
 cron.schedule('*/60 * * * *', function(){
-    console.log('Collecting ArDrive Community Wallet Balances (AR tokens) Every 30 minutes');
+    console.log('Collecting ArDrive Community Wallet Balances (AR tokens) Every 60 minutes');
     getArDriveCommunityWalletARBalances();
+    getOtherWalletARBalances();
 });
