@@ -32,7 +32,7 @@ export async function getArUSDPrice() : Promise<number> {
 export async function getDataPrice(bytes: number) {
     // change to axios w/ retry
     const response = await statsFetch(`https://arweave.net/price/${bytes}`);
-    const winstonAmount = await response.data.json();
+    const winstonAmount = await response.data;
     const arweaveAmount = +winstonAmount * 0.000000000001;
     return arweaveAmount;
 };
