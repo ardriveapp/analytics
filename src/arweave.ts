@@ -1,6 +1,6 @@
 
 import Arweave from 'arweave';
-import { asyncForEach, statsFetch } from './common';
+import { asyncForEach, retryFetch } from './common';
 import { BlockInfo, BlockDate } from './types';
 
 const fetch = require('node-fetch')
@@ -8,7 +8,7 @@ export const arweave = Arweave.init({
     host: 'arweave.net', // Arweave Gateway
     port: 443,
     protocol: 'https',
-    timeout: 600000,
+    timeout: 900000,
     logging: false
   });
 
@@ -32,7 +32,7 @@ export async function getArUSDPrice() : Promise<number> {
 export async function getDataPrice(bytes: number) {
   let arweaveAmount = 0;
     try {
-      const response = await statsFetch(`https://arweave.net/price/${bytes}`);
+      const response = await retryFetch(`https://arweave.net/price/${bytes}`);
       const winstonAmount = await response.data;
       arweaveAmount = +winstonAmount * 0.000000000001;
     } catch (err) {
@@ -46,7 +46,7 @@ export async function getDataPrice(bytes: number) {
 export async function getCurrentBlockHeight() {
   let height = 0;
   try {
-    const response = await statsFetch(`https://arweave.net/height/`);
+    const response = await retryFetch(`https://arweave.net/height/`);
     height = await response.data
     return height
   } catch (err) {
@@ -59,7 +59,7 @@ export async function getCurrentBlockHeight() {
 export async function getMempoolSize() {
   let pendingTxs: string[] = [];
   try {
-    const response = await statsFetch(`https://arweave.net/tx/pending`);
+    const response = await retryFetch(`https://arweave.net/tx/pending`);
     pendingTxs = await response.data
     return pendingTxs
   } catch (err) {
@@ -72,7 +72,7 @@ export async function getMempoolSize() {
 // Gets all transactions from the latest block
 export async function getLatestBlockTransactions() {
   const lastBlockHeight = await getCurrentBlockHeight();
-  const response = await statsFetch(`https://arweave.net/block/height/${lastBlockHeight}`);
+  const response = await retryFetch(`https://arweave.net/block/height/${lastBlockHeight}`);
   const block = await JSON.parse(response.data);
   return block;
 }
@@ -82,7 +82,7 @@ export async function getAvgPerByteFee (memPool: string[]) {
   let avgRewardPerByte = 0;
   
   await asyncForEach (memPool, async (tx: string) => {
-    const response = await statsFetch(`https://arweave.net/tx/${tx}`);
+    const response = await retryFetch(`https://arweave.net/tx/${tx}`);
     const txDetails = JSON.parse(await response.data);
     const txReward = +txDetails.reward;
     const dataSize = +txDetails.data_size;
@@ -102,7 +102,7 @@ export async function getLatestBlockInfo (height: number) {
         blockSize: 0,
     }
     try {
-      const response = await statsFetch(`https://arweave.net/block/height/${height}`);
+      const response = await retryFetch(`https://arweave.net/block/height/${height}`);
       const blockInfo = JSON.parse(await response.data);
       latestBlock.weaveSize = blockInfo['weave_size']
       latestBlock.difficulty = blockInfo['diff']
@@ -119,7 +119,7 @@ export async function getLatestBlockInfo (height: number) {
 // Basic function to get the date for a block height
 // Not used anywhere
 export async function getBlockDate (height: number): Promise<BlockDate> {
-  const response = await statsFetch(`https://arweave.net/block/height/${height}`);
+  const response = await retryFetch(`https://arweave.net/block/height/${height}`);
   const blockInfo = await JSON.parse(response.data);
   const blockTimeStampDate = new Date(+blockInfo['timestamp'] * 1000);
   const friendlyDate = blockTimeStampDate.toLocaleString();

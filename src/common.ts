@@ -632,9 +632,9 @@ export function newArFSTipTx(): ArFSTipTx {
   return arFSTipTx;
 };
 
-export async function statsFetch(reqURL: string): Promise<AxiosResponse<any>> {
+export async function retryFetch(reqURL: string): Promise<AxiosResponse<any>> {
   const axiosInstance = axios.create();
-  const maxRetries = 5;
+  const maxRetries = 10;
   axiosRetry(axiosInstance, {
     retries: maxRetries,
     retryDelay: (retryNumber) => {
