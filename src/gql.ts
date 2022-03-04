@@ -61,7 +61,7 @@ export async function queryGateway(
         "Gateway error with " + gateways[currentGateway] + ", retrying..."
       );
       tries += 1;
-      await sleep(300000);
+      await sleep(150000);
       if (tries >= 5) {
         tries = 0;
         switchGateway();
@@ -2687,10 +2687,11 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date) {
       });
       if (transactions === 0) {
         console.log(
-          "%s Gateway returned an empty JSON at %s.  Trying again",
+          "%s Gateway returned an empty JSON at %s.  Waiting 15 seconds and trying again",
           timeStamp,
           lastBlock
         );
+        await sleep(150000);
       } else {
         hasNextPage = transactions.pageInfo.hasNextPage;
         const { edges } = transactions;
