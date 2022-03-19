@@ -57,6 +57,15 @@ export const otherAppWallets: string[] = [
   "zuPbEeWn8R9d4p-fU5eZjuizPX5WM-5c-7etrjk3U7Q", // akord wallet
 ];
 
+export const appNames: string[] = [
+  "ArDrive-Web",
+  "ArDrive-CLI",
+  "ArDrive-Sync",
+  "ArDrive-Desktop",
+  "ArDrive-Mobile",
+  "ArDrive-Core"
+];
+
 // Pauses application
 export async function sleep(ms: number): Promise<number> {
   return new Promise((resolve) => {

@@ -2608,12 +2608,11 @@ export async function getAllAppDriveTransactions_ASC(
 }
 
 // Sums up every data transaction for a start and end period and returns newest results first
-export async function getAllAppTransactions_DESC(start: Date, end: Date) {
+export async function getAllAppTransactions_DESC(start: Date, end: Date, appName: string, lastBlock: number) {
   let firstPage: number = 100; // Max size of query for GQL
   let cursor: string = "";
   let timeStamp = new Date(end);
   let hasNextPage = true;
-  let lastBlock = 0;
   let missingDataErrors = 0;
 
   let fileTxs: ArFSFileTx[] = [];
@@ -2623,14 +2622,25 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date) {
   let bundleTxs: BundleTx[] = [];
   let tipTxs: ArFSTipTx[] = [];
 
+  let minBlock: number;
+  if (lastBlock === 1) {
+    minBlock = await getMinBlock(start);
+  } else {
+    minBlock = lastBlock;
+  }
+  console.log(
+    "Continuing querying for All App Transactions after block %s",
+    minBlock
+  );
+
   while (hasNextPage) {
     const query = {
       query: `query {
           transactions(
             tags: [
-                { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}"]}
+                { name: "App-Name", values: ["${appName}"]}
             ]
-            sort: HEIGHT_DESC
+            block: {min: ${minBlock}}
             first: ${firstPage}
             after: "${cursor}"
           ) {
@@ -2675,6 +2685,7 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date) {
         const { data } = response.data;
         if (data === undefined) {
           console.log(response.statusText);
+          console.log (response);
           console.log(
             "Get All App Transactions DESC... Undefined data returned from Gateway"
           );
@@ -2687,26 +2698,27 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date) {
       });
       if (transactions === 0) {
         console.log(
-          "%s Gateway returned an empty JSON at %s.  Waiting 15 seconds and trying again",
+          "%s Gateway returned an empty JSON at %s.",
           timeStamp,
           lastBlock
         );
-        await sleep(150000);
+        await sleep(1000);
       } else {
         hasNextPage = transactions.pageInfo.hasNextPage;
         const { edges } = transactions;
-        console.log("Yay the JSON had data %s", edges.length);
+        console.log("Edges Found: %s", edges.length);
         edges.forEach((edge: any) => {
           cursor = edge.cursor;
           const { node } = edge;
           const { block } = node;
           if (block !== null) {
+            lastBlock = block.height;
             timeStamp = new Date(block.timestamp * 1000);
             if (
               start.getTime() <= timeStamp.getTime() &&
               end.getTime() >= timeStamp.getTime()
             ) {
-              lastBlock = block.height;
+              console.log ("Block: %s Time: %s", lastBlock, timeStamp.getTime())
               // Prepare our files
               const { tags } = node;
               const { data } = node;
@@ -2880,12 +2892,15 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date) {
                 driveTx.friendlyDate = timeStamp.toLocaleString();
                 driveTxs.push(driveTx);
               }
-            } else if (timeStamp.getTime() > end.getTime()) {
-              // console.log ("Result too early %s", timeStamp)
-            } else {
-              // console.log ("Result too old %s", timeStamp)
-              hasNextPage = false;
-            }
+            } 
+          } 
+          if (timeStamp.getTime() > end.getTime()) {
+            console.log ("Result too early %s", timeStamp)
+          } else if (timeStamp.getTime() < start.getTime()) {
+            console.log ("Result too old %s", timeStamp)
+            hasNextPage = false;
+          } else {
+            console.log ("Block is null so we skip this transaction %s", node.Id);
           }
         });
       }

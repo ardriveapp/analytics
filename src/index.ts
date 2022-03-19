@@ -6,11 +6,13 @@ import {
   getMempoolSize,
 } from "./arweave";
 import {
+  appNames,
+  asyncForEach,
   getArDriveCommunityWalletARBalances,
   getArDriveCommunityWalletArDriveBalances,
   getOtherWalletARBalances,
 } from "./common";
-import { getAllAppTransactions_DESC, getAllDrives_ASC } from "./gql";
+import { getAllAppTransactions_DESC } from "./gql";
 import {
   sendBundlesToGraphite,
   sendDriveMetadataToGraphite,
@@ -28,6 +30,7 @@ const cron = require("node-cron");
 export async function hourlyArDriveUsageAnalytics(hours: number) {
   let bufferHours = 4; // The amount of hours to buffer to ensure items have been indexed.
   let start = new Date();
+  let results;
   start.setHours(start.getHours() - hours - bufferHours);
   let end = new Date();
   end.setHours(start.getHours() - bufferHours);
@@ -38,23 +41,34 @@ export async function hourlyArDriveUsageAnalytics(hours: number) {
     start.toLocaleString(),
     end.toLocaleString()
   );
-  let results = await getAllAppTransactions_DESC(start, end);
-  await sendBundlesToGraphite(results.bundleTxs, end);
-  await sendFileMetadataToGraphite(results.fileTxs, end);
-  await sendFileDataToGraphite(results.fileDataTxs, end);
-  await sendFolderMetadataToGraphite(results.folderTxs, end);
-  await sendDriveMetadataToGraphite(results.driveTxs, end);
-  await sendv2CommunityTipsToGraphite(results.tipTxs, end);
+  await asyncForEach(appNames, async (appName: string) => {
+    results = await getAllAppTransactions_DESC(start, end, appName, 1);
+    await sendBundlesToGraphite(results.bundleTxs, end);
+    await sendFileMetadataToGraphite(results.fileTxs, end);
+    await sendFileDataToGraphite(results.fileDataTxs, end);
+    await sendFolderMetadataToGraphite(results.folderTxs, end);
+    await sendDriveMetadataToGraphite(results.driveTxs, end);
+    await sendv2CommunityTipsToGraphite(results.tipTxs, end);
+
+    console.log("Results for %s", appName);
+    console.log(" - BundledTxs: %s", results.bundleTxs.length);
+    console.log(" - FileDataTxs: %s", results.fileDataTxs.length);
+    console.log(" - FileTxs: %s", results.fileTxs.length);
+    console.log(" - FolderTxs: %s", results.folderTxs.length);
+    console.log(" - DriveTxs: %s", results.driveTxs.length);
+    console.log(" - V2 Tips: %s", results.tipTxs.length);
+  });
+
 
   // Determine how many unique new users in this period by checking for drives created, getting user information, and checking full user list
-  const newUsers: string[] = [
+  /*const newUsers: string[] = [
     ...new Set(results.driveTxs.map((item: { owner: string }) => item.owner)),
   ];
   const allTimeStart = new Date(2020, 8, 26); // beginning date for ArDrive transactions
   const allDrives = await getAllDrives_ASC(allTimeStart, start, 1); // We want to get all drive information going up to the most recent period
   const allUsers: string[] = [
     ...new Set(allDrives.map((item: { owner: string }) => item.owner)),
-  ];
+  ]; 
 
   // need to compare new ardrive users to total ardrive users
   let newUserCount = 0;
@@ -64,14 +78,9 @@ export async function hourlyArDriveUsageAnalytics(hours: number) {
   await sendMessageToGraphite("ardrive.users.new", newUserCount, end);
   await sendMessageToGraphite("ardrive.users.total", allUsers.length, end);
 
-  console.log("BundledTxs: %s", results.bundleTxs.length);
-  console.log("FileDataTxs: %s", results.fileDataTxs.length);
-  console.log("FileTxs: %s", results.fileTxs.length);
-  console.log("FolderTxs: %s", results.folderTxs.length);
-  console.log("DriveTxs: %s", results.driveTxs.length);
-  console.log("V2 Tips: %s", results.tipTxs.length);
+
   console.log("New Users: %s", newUserCount);
-  console.log("All Users: %s", allUsers.length);
+  console.log("All Users: %s", allUsers.length); */
   console.log("Hourly ArDrive Usage Analytics Completed");
 }
 
