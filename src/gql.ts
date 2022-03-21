@@ -23,6 +23,7 @@ import {
   BundleTx,
   ContentType,
   FileInfo,
+  ResultSet,
   SmartweaveTx,
 } from "./types";
 import limestone from "limestone-api";
@@ -2608,7 +2609,7 @@ export async function getAllAppDriveTransactions_ASC(
 }
 
 // Sums up every data transaction for a start and end period and returns newest results first
-export async function getAllAppTransactions_DESC(start: Date, end: Date, appName: string, lastBlock: number) {
+export async function getAllAppTransactions_DESC(start: Date, end: Date, appName: string, lastBlock: number):Promise <ResultSet> {
   let firstPage: number = 100; // Max size of query for GQL
   let cursor: string = "";
   let timeStamp = new Date(end);
@@ -2629,8 +2630,11 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date, appName
     minBlock = lastBlock;
   }
   console.log(
-    "Continuing querying for All App Transactions after block %s",
-    minBlock
+    "Querying for %s Transactions after block %s from %s to %s",
+    appName,
+    minBlock,
+    start.toLocaleString(),
+    end.toLocaleString()
   );
 
   while (hasNextPage) {
@@ -2640,6 +2644,7 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date, appName
             tags: [
                 { name: "App-Name", values: ["${appName}"]}
             ]
+            sort: HEIGHT_ASC
             block: {min: ${minBlock}}
             first: ${firstPage}
             after: "${cursor}"
@@ -2706,19 +2711,17 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date, appName
       } else {
         hasNextPage = transactions.pageInfo.hasNextPage;
         const { edges } = transactions;
-        console.log("Edges Found: %s", edges.length);
         edges.forEach((edge: any) => {
           cursor = edge.cursor;
           const { node } = edge;
           const { block } = node;
           if (block !== null) {
-            lastBlock = block.height;
             timeStamp = new Date(block.timestamp * 1000);
             if (
               start.getTime() <= timeStamp.getTime() &&
               end.getTime() >= timeStamp.getTime()
             ) {
-              console.log ("Block: %s Time: %s", lastBlock, timeStamp.getTime())
+              // console.log ("Found Tx in Block: %s at Time: %s", lastBlock, timeStamp.toLocaleString())
               // Prepare our files
               const { tags } = node;
               const { data } = node;
@@ -2892,15 +2895,17 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date, appName
                 driveTx.friendlyDate = timeStamp.toLocaleString();
                 driveTxs.push(driveTx);
               }
+              lastBlock = block.height;
             } 
           } 
           if (timeStamp.getTime() > end.getTime()) {
-            console.log ("Result too early %s", timeStamp)
+            // console.log ("Result too early %s", timeStamp)
+            hasNextPage = false; // if it is ASC
           } else if (timeStamp.getTime() < start.getTime()) {
-            console.log ("Result too old %s", timeStamp)
-            hasNextPage = false;
+            // console.log ("Result too old %s", timeStamp)
+            // hasNextPage = false; // if it is DESC
           } else {
-            console.log ("Block is null so we skip this transaction %s", node.Id);
+            // console.log ("Block is null so we skip this transaction %s", node.Id);
           }
         });
       }
@@ -2911,7 +2916,7 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date, appName
     }
   }
   console.log("Missing Data Errors: %s", missingDataErrors);
-  return { bundleTxs, fileDataTxs, fileTxs, folderTxs, driveTxs, tipTxs };
+  return { bundleTxs, fileDataTxs, fileTxs, folderTxs, driveTxs, tipTxs, lastBlock};
 }
 
 // Gets ArDrive Drive information from a start and end date

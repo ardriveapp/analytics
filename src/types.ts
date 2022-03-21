@@ -223,10 +223,11 @@ export interface BundleTx {
 }
 
 export interface ResultSet {
-  bundles: BundleTx[];
-  fileDatas: ArFSFileDataTx[];
-  files: ArFSFileTx[];
-  folders: ArFSFolderTx[];
-  drives: ArFSDriveTx[];
-  v2CommunityTips: ArFSTipTx[];
+  bundleTxs: BundleTx[];
+  fileDataTxs: ArFSFileDataTx[];
+  fileTxs: ArFSFileTx[];
+  folderTxs: ArFSFolderTx[];
+  driveTxs: ArFSDriveTx[];
+  tipTxs: ArFSTipTx[];
+  lastBlock: number;
 }

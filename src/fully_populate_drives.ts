@@ -5,12 +5,13 @@ import { ResultSet } from "./types";
 
 async function main() {
   let allResults: ResultSet = {
-    bundles: [],
-    fileDatas: [],
-    files: [],
-    folders: [],
-    drives: [],
-    v2CommunityTips: [],
+    bundleTxs: [],
+    fileDataTxs: [],
+    fileTxs: [],
+    folderTxs: [],
+    driveTxs: [],
+    tipTxs: [],
+    lastBlock: 0
   };
 
   let today = new Date();
@@ -41,7 +42,7 @@ async function main() {
     );
     let results = await getAllAppDriveTransactions_ASC(start, end, lastBlock);
     console.log("DriveTxs: %s", results.driveTxs.length);
-    allResults.drives = allResults.drives.concat(results.driveTxs);
+    allResults.driveTxs = allResults.driveTxs.concat(results.driveTxs);
     start = addHoursToDate(start, hoursToQuery);
     await sendDriveMetadataToGraphite(results.driveTxs, end);
     lastBlock = results.lastBlock - 1; // Start the search from 1 block previous to the last block
@@ -50,7 +51,7 @@ async function main() {
     "--------------------------------------------------------------------------------"
   );
   console.log("All Results");
-  console.log("DriveTxs: %s", allResults.drives.length);
+  console.log("DriveTxs: %s", allResults.driveTxs.length);
 }
 
 main();

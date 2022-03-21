@@ -58,12 +58,12 @@ export const otherAppWallets: string[] = [
 ];
 
 export const appNames: string[] = [
-  "ArDrive-Web",
   "ArDrive-CLI",
-  "ArDrive-Sync",
   "ArDrive-Desktop",
   "ArDrive-Mobile",
-  "ArDrive-Core"
+  "ArDrive-Core",
+  "ArDrive-Sync",
+  "ArDrive-Web"
 ];
 
 // Pauses application
@@ -670,7 +670,7 @@ export function countDistinct(arr: any[], n: number) {
 // Return the number of blocks to start searching from based on a date
 export async function getMinBlock(start: Date): Promise<number> {
   // calculate the no. of days between two dates
-  const blocksPerDay = 725;
+  const blocksPerDay = 695;
   let today = new Date();
   let height = await getCurrentBlockHeight();
   let minBlock = height - blocksPerDay; // Search the last min block time by default
