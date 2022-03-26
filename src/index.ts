@@ -108,6 +108,7 @@ async function networkAnalytics() {
   await sendMessageToGraphite("arweave.blockHeight", +height, today);
 
   let latestBlock: BlockInfo = await getLatestBlockInfo(height);
+  console.log("Transactions Mined: %s", latestBlock.transactionCount);
   await sendMessageToGraphite( "arweave.transactionsMined", latestBlock.transactionCount, today);
   await sendMessageToGraphite(
     "arweave.weaveSize",
