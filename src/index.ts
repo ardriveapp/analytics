@@ -108,6 +108,7 @@ async function networkAnalytics() {
   await sendMessageToGraphite("arweave.blockHeight", +height, today);
 
   let latestBlock: BlockInfo = await getLatestBlockInfo(height);
+  await sendMessageToGraphite( "arweave.transactionsMined", latestBlock.transactionCount, today);
   await sendMessageToGraphite(
     "arweave.weaveSize",
     latestBlock.weaveSize,
@@ -127,6 +128,21 @@ async function networkAnalytics() {
   );
   console.log("Arweave Last Block Size: %s", latestBlock.blockSize);
 
+  // Include the 15% fee
+  const arweavePriceOf1GB = (await getDataPrice(1073741824));
+  await sendMessageToGraphite(
+    "arweave.price.ar.1gb",
+    +arweavePriceOf1GB.toFixed(5),
+    today
+  );
+
+  const arDrivePriceOf1GB = arweavePriceOf1GB * 1.15
+  await sendMessageToGraphite(
+    "ardrive.price.ar.1gb",
+    +arDrivePriceOf1GB.toFixed(5),
+    today
+  );
+
   // Get price of AR in USD
   let arUSDPrice = await getArUSDPrice();
 
@@ -134,77 +150,15 @@ async function networkAnalytics() {
   if (arUSDPrice !== 0) {
     console.log("Price of AR is: $%s", arUSDPrice);
 
-    // Include the 15% fee
-    const priceOf1MB = (await getDataPrice(1048576)) * 1.15;
-    const priceOf5MB = (await getDataPrice(1048576 * 5)) * 1.15;
-    const priceOf25MB = (await getDataPrice(1048576 * 25)) * 1.15;
-    const priceOf100MB = (await getDataPrice(1048576 * 100)) * 1.15;
-    const priceOf500MB = (await getDataPrice(1048576 * 500)) * 1.15;
-    const priceOf1GB = (await getDataPrice(1073741824)) * 1.15;
     await sendMessageToGraphite("arweave.price.usd", arUSDPrice, today);
-    await sendMessageToGraphite(
-      "ardrive.price.ar.1mb",
-      +priceOf1MB.toFixed(5),
-      today
-    );
-    await sendMessageToGraphite(
-      "ardrive.price.ar.5mb",
-      +priceOf5MB.toFixed(5),
-      today
-    );
-    await sendMessageToGraphite(
-      "ardrive.price.ar.25mb",
-      +priceOf25MB.toFixed(5),
-      today
-    );
-    await sendMessageToGraphite(
-      "ardrive.price.ar.100mb",
-      +priceOf100MB.toFixed(5),
-      today
-    );
-    await sendMessageToGraphite(
-      "ardrive.price.ar.500mb",
-      +priceOf500MB.toFixed(5),
-      today
-    );
-    await sendMessageToGraphite(
-      "ardrive.price.ar.1gb",
-      +priceOf1GB.toFixed(5),
-      today
-    );
 
-    // Get the data prices in USD
-    await sendMessageToGraphite(
-      "ardrive.price.usd.1mb",
-      +priceOf1MB.toFixed(5) * arUSDPrice,
-      today
-    );
-    await sendMessageToGraphite(
-      "ardrive.price.usd.5mb",
-      +priceOf5MB.toFixed(5) * arUSDPrice,
-      today
-    );
-    await sendMessageToGraphite(
-      "ardrive.price.usd.25mb",
-      +priceOf25MB.toFixed(5) * arUSDPrice,
-      today
-    );
-    await sendMessageToGraphite(
-      "ardrive.price.usd.100mb",
-      +priceOf100MB.toFixed(5) * arUSDPrice,
-      today
-    );
-    await sendMessageToGraphite(
-      "ardrive.price.usd.500mb",
-      +priceOf500MB.toFixed(5) * arUSDPrice,
-      today
-    );
     await sendMessageToGraphite(
       "ardrive.price.usd.1gb",
-      +priceOf1GB.toFixed(5) * arUSDPrice,
+      +arDrivePriceOf1GB.toFixed(5) * arUSDPrice,
       today
     );
   }
+
   let finished = new Date();
   console.log("%s Finished collecting Network Analytics", finished);
 }
@@ -224,9 +178,9 @@ cron.schedule("0 */12 * * *", function () {
   getArDriveCommunityWalletArDriveBalances();
 });
 
-cron.schedule("*/5 * * * *", function () {
+cron.schedule("*/2 * * * *", function () {
   console.log(
-    "Running ArDrive Block Info and Price Collection Analytics Every 5 minutes"
+    "Running ArDrive Block Info and Price Collection Analytics Every 2 minutes"
   );
   networkAnalytics();
 });

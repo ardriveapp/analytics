@@ -12,6 +12,7 @@ export interface BlockInfo {
   weaveSize: number;
   difficulty: number;
   blockSize: number;
+  transactionCount: number;
 }
 
 export interface Results {

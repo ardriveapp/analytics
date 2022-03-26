@@ -98,8 +98,10 @@ export async function getLatestBlockInfo(height: number) {
     weaveSize: 0,
     difficulty: 0,
     blockSize: 0,
+    transactionCount: 0
   };
   try {
+    let transactions: string[] = []
     const response = await retryFetch(
       `https://arweave.net/block/height/${height}`
     );
@@ -107,6 +109,8 @@ export async function getLatestBlockInfo(height: number) {
     latestBlock.weaveSize = blockInfo["weave_size"];
     latestBlock.difficulty = blockInfo["diff"];
     latestBlock.blockSize = blockInfo["block_size"];
+    transactions = blockInfo["txs"];
+    latestBlock.transactionCount = transactions.length
     return latestBlock;
   } catch (err) {
     console.log("Error getting latest block info");
