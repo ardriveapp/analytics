@@ -53,11 +53,11 @@ export async function getCurrentBlockHeight() {
 
 // Gets the latest block height
 export async function getMempoolSize() {
-  let pendingTxs: string[] = [];
+  let pendingTxs;
   try {
     const response = await retryFetch(`https://arweave.net/tx/pending`);
-    pendingTxs = await response.data;
-    return pendingTxs;
+    let pendingTxs = await response.data;
+    return JSON.parse(pendingTxs);
   } catch (err) {
     console.log("Error getting mempool size");
     console.log(err);

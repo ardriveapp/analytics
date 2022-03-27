@@ -170,7 +170,7 @@ console.log("---------------------------------");
     console.log('Running ArDrive Daiy Analytics Every 24 hours at 1pm');
     dailyArDriveUsageAnalytics();
 });*/
-
+networkAnalytics()
 cron.schedule("0 */12 * * *", function () {
   console.log(
     "Running ArDrive Daiy Analytics and ArDrive Community Wallet Balances (ARDRIVE tokens) Every 12 hours"
