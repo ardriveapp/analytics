@@ -44,7 +44,7 @@ export async function getDataPrice(bytes: number) {
 export async function getCurrentBlockHeight() {
   let height = 0;
   try {
-    const response = await retryFetch(`https://arweave.net/height/`);
+    const response = await retryFetch(`https://arweave.net/height`);
     height = await response.data;
     return height;
   } catch (err) {}
