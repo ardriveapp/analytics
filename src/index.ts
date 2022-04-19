@@ -33,7 +33,7 @@ export async function hourlyArDriveUsageAnalytics(hours: number) {
   let results;
   start.setHours(start.getHours() - hours - bufferHours);
   let end = new Date();
-  end.setHours(start.getHours() - bufferHours);
+  end.setHours(end.getHours() - bufferHours);
 
   console.log(
     "Hourly %s ArDrive Usage Analytics.  Getting all ArDrive App Stats from %s to %s",
