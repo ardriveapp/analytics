@@ -2,6 +2,7 @@ import { arweave, getArUSDPrice } from "./arweave";
 import {
   asyncForEach,
   formatBytes,
+  getMaxBlock,
   getMinBlock,
   newArFSDriveTx,
   newArFSFileDataTx,
@@ -3276,7 +3277,7 @@ export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, ma
           console.log(response.statusText);
           console.log (response);
           console.log(
-            "Get All App Transactions DESC... Undefined data returned from Gateway"
+            "getAllAppTransactionsByBlocks_Inferno... Undefined data returned from Gateway"
           );
           return 0;
         } else {
@@ -3286,7 +3287,7 @@ export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, ma
       });
       if (transactions === 0) {
         console.log(
-          "%s Gateway returned an empty JSON.",
+          "Gateway returned an empty JSON.",
         );
         await sleep(1000);
       } else {
@@ -3363,13 +3364,14 @@ export async function getAllAppTransactionsByDate_Inferno(start: Date, end: Date
   let startBlock = 0;
   let endBlock = 0;
 
-  let minBlock: number;
-  minBlock = await getMinBlock(start);
+  let minBlock = await getMinBlock(start);
+  let maxBlock = await getMaxBlock(end);
 
   console.log(
-    "Querying for %s Transactions after block %s from %s to %s",
+    "Querying for %s Transactions after block %s to %s from %s to %s",
     appName,
     minBlock,
+    maxBlock,
     start.toLocaleString(),
     end.toLocaleString()
   );
@@ -3382,7 +3384,7 @@ export async function getAllAppTransactionsByDate_Inferno(start: Date, end: Date
                 { name: "App-Name", values: ["${appName}"]}
             ]
             sort: HEIGHT_ASC
-            block: {min: ${minBlock}}
+            block: {min: ${minBlock}, max: ${maxBlock}}
             first: ${firstPage}
             after: "${cursor}"
           ) {
@@ -3517,7 +3519,6 @@ export async function getAllAppTransactionsByDate_Inferno(start: Date, end: Date
     }
   }
   // console.log("Missing Data Errors: %s", missingDataErrors);
-  console.log ("Started on %s ended on %s", startBlock, endBlock);
   return {appResults, minBlock: startBlock, maxBlock: endBlock};
 }
 
