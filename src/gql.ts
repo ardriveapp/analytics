@@ -2901,10 +2901,10 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date, appName
           } 
           if (timeStamp.getTime() > end.getTime()) {
             // console.log ("Result too early %s", timeStamp)
-            hasNextPage = false; // if it is ASC
+            // hasNextPage = false; // if it is ASC
           } else if (timeStamp.getTime() < start.getTime()) {
             // console.log ("Result too old %s", timeStamp)
-            // hasNextPage = false; // if it is DESC
+            hasNextPage = false; // if it is DESC
           } else {
             // console.log ("Block is null so we skip this transaction %s", node.Id);
           }
@@ -2948,7 +2948,7 @@ export async function getAllAppTransactionsWithBlocks_DESC(minBlock: number, max
             tags: [
                 { name: "App-Name", values: ["${appName}"]}
             ]
-            sort: HEIGHT_ASC
+            sort: HEIGHT_DESC
             block: {min: ${minBlock}, max: ${maxBlock}}
             first: ${firstPage}
             after: "${cursor}"

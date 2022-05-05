@@ -11,6 +11,7 @@ async function main() {
   let maxBlock = 0;
   let startDate: Date;
   let endDate: Date;
+  let elligibleUsers = 0;
 
   //Handle arguments from STDIN
   const myArgs = process.argv.slice(2);
@@ -76,6 +77,7 @@ async function main() {
       rank++;
       if (allResults[i].size > 1048576000) { // the minimum amount required
         allResults[i].elligible = true;
+        elligibleUsers++;
       } 
     };
 
@@ -90,6 +92,7 @@ async function main() {
     maxBlock,
     totalDataSize,
     infernoUsers: allResults.length,
+    elligibleUsers,
     allResults
   };
 

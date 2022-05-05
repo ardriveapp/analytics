@@ -5,7 +5,8 @@ export interface InfernoStatus {
   maxBlock: number;
   totalDataSize: number;
   infernoUsers: number;
-  allResults: InfernoUser[]
+  elligibleUsers: number;
+  allResults: InfernoUser[];
 }
 
 export interface AstatineItem {
