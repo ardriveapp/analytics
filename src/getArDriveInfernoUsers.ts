@@ -9,6 +9,8 @@ async function main() {
   let allResults: InfernoUser[] = [];
   let minBlock = 0;
   let maxBlock = 0;
+  let gqlStart;
+  let gqlEnd;
   let startDate: Date;
   let endDate: Date;
   let elligibleUsers = 0;
@@ -24,6 +26,8 @@ async function main() {
       minBlock,
       maxBlock
     );
+    gqlStart = minBlock.toString();
+    gqlEnd = maxBlock.toString();
   } else {
     startDate = new Date(myArgs[0]);
     endDate = new Date(myArgs[1]);
@@ -39,6 +43,8 @@ async function main() {
         startDate,
         endDate
       );
+      gqlStart = startDate.getDate() + "-" + startDate.getDay() + "-" + startDate.getFullYear();
+      gqlEnd = endDate.getDate() + "-" + endDate.getDay() + "-" + endDate.getFullYear();
     }
   }
 
@@ -85,18 +91,23 @@ async function main() {
   console.log(allResults);
   console.log("Total Size collected %s bytes | %s", totalDataSize, formatBytes(totalDataSize));
 
+  if (maxBlock !== 0) {
+
+  } else {
+    
+  }
   const infernoStatus: InfernoStatus = {
     jobStart,
     jobEnd: new Date,
-    minBlock,
-    maxBlock,
+    gqlStart,
+    gqlEnd,
     totalDataSize,
     infernoUsers: allResults.length,
     elligibleUsers,
     allResults
   };
 
-  let fileName = 'infernoStatus_' + minBlock.toString() + '_to_' + maxBlock.toString() + '.json'
+  let fileName = 'infernoStatus_' + gqlStart + '_to_' + gqlEnd + '.json'
   fs.writeFileSync(fileName, JSON.stringify(infernoStatus, null, 2));
   return "Success"
 }

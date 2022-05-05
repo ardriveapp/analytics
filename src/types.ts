@@ -1,8 +1,8 @@
 export interface InfernoStatus {
   jobStart: Date;
   jobEnd: Date;
-  minBlock: number;
-  maxBlock: number;
+  gqlStart: string;
+  gqlEnd: string;
   totalDataSize: number;
   infernoUsers: number;
   elligibleUsers: number;
