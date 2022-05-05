@@ -3229,7 +3229,7 @@ export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, ma
             tags: [
                 { name: "App-Name", values: ["${appName}"]}
             ]
-            sort: HEIGHT_ASC
+            sort: HEIGHT_DESC
             block: {min: ${minBlock}, max: ${maxBlock}}
             first: ${firstPage}
             after: "${cursor}"
@@ -3383,7 +3383,7 @@ export async function getAllAppTransactionsByDate_Inferno(start: Date, end: Date
             tags: [
                 { name: "App-Name", values: ["${appName}"]}
             ]
-            sort: HEIGHT_ASC
+            sort: HEIGHT_DESC
             block: {min: ${minBlock}, max: ${maxBlock}}
             first: ${firstPage}
             after: "${cursor}"
@@ -3502,10 +3502,10 @@ export async function getAllAppTransactionsByDate_Inferno(start: Date, end: Date
             }
             if (timeStamp.getTime() > end.getTime()) {
               // console.log ("Result too early %s", timeStamp)
-              hasNextPage = false; // if it is ASC
+              // hasNextPage = false; // if it is ASC
             } else if (timeStamp.getTime() < start.getTime()) {
               // console.log ("Result too old %s", timeStamp)
-              // hasNextPage = false; // if it is DESC
+              hasNextPage = false; // if it is DESC
             } else {
               // console.log ("Block is null so we skip this transaction %s", node.Id);
             }
