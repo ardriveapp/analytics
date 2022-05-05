@@ -2,6 +2,7 @@ import axios, { AxiosResponse } from "axios";
 import axiosRetry, { exponentialDelay } from "axios-retry";
 import {
   getAllBlockDates,
+  getBlockTimestamp,
   getCurrentBlockHeight,
   getLatestBlockInfo,
   getWalletBalance,
@@ -625,9 +626,9 @@ export const formatBytes = (bytes: number) => {
 // Compares two data object sizes
 export function dataCompare(a: any, b: any) {
   let comparison = 0;
-  if (a.weight > b.weight) {
+  if (a.size > b.size) {
     comparison = 1;
-  } else if (a.weight < b.weight) {
+  } else if (a.size < b.size) {
     comparison = -1;
   }
   return comparison * -1;
@@ -668,9 +669,11 @@ export function countDistinct(arr: any[], n: number) {
 }
 
 // Return the number of blocks to start searching from based on a date
-export async function getMinBlock(start: Date): Promise<number> {
+export async function getMinBlock(start: Date, blocksPerDay?: number): Promise<number> {
   // calculate the no. of days between two dates
-  const blocksPerDay = 695;
+  if (!blocksPerDay) {
+    blocksPerDay = 700;
+  }
   let today = new Date();
   let height = await getCurrentBlockHeight();
   let minBlock = height - blocksPerDay; // Search the last min block time by default
@@ -679,8 +682,12 @@ export async function getMinBlock(start: Date): Promise<number> {
   if (startDaysDiff !== 0) {
     minBlock = height - blocksPerDay * startDaysDiff;
   }
-  //console.log ("Starting at %s on %s", minBlock, start )
-  return minBlock;
+  let timeStamp = await getBlockTimestamp(minBlock)
+  if (start < timeStamp) {
+    return await getMinBlock(start, (blocksPerDay+30))
+  } else {
+    return minBlock;
+  }
 }
 
 // Adds an amount of hours to a date

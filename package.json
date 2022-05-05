@@ -49,6 +49,8 @@
     "get-all-files": "yarn run build && node ./lib/getAllFiles.js",
     "get-all-txs": "yarn run build && node ./lib/getAllTxs.js",
     "get-all-app-data": "yarn run build && node ./lib/getAllAppData.js",
+    "get-ardrive-data": "yarn run build && node ./lib/getArDriveAppData.js",
+    "get-ardrive-inferno-users": "yarn run build && node ./lib/getArDriveInfernoUsers.js",
     "get-unique-ardrive-users": "yarn run build && node ./lib/getUniqueArDriveUsers.js"
   },
   "license": "GPL-3.0-or-later",

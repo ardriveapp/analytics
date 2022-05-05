@@ -92,6 +92,19 @@ export async function getAvgPerByteFee(memPool: string[]) {
   console.log(avgRewardPerByte);
 }
 
+// Gets the the time stamp from a given block
+export async function getBlockTimestamp(height: number) {
+  try {
+    const response = await retryFetch(
+      `https://arweave.net/block/height/${height}`
+    );
+    const blockInfo = JSON.parse(await response.data);
+    let timeStamp = new Date(+blockInfo["timestamp"] * 1000);
+    return timeStamp
+  } catch (err) {}
+  return height;
+}
+
 // Gets the total weave size from the latest block
 export async function getLatestBlockInfo(height: number) {
   let latestBlock: BlockInfo = {

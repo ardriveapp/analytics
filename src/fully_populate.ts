@@ -24,10 +24,10 @@ async function main() {
     lastBlock: 0
   };
 
-  let today = new Date();
+  let end = new Date();
 
   // The amount of hours to search for i.e. 12, 24 or other range
-  let hoursToQuery: number = 12;
+  let hoursToQuery: number = 24;
 
   // let start = new Date(2020, 8, 26); // the beginning history of ardrive
   let start = new Date(2022, 1, 15);
@@ -37,13 +37,13 @@ async function main() {
   console.log(
     "Running analytics from %s to %s",
     start.toLocaleString(),
-    today.toLocaleString()
+    end.toLocaleString()
   );
   console.log(
     "--------------------------------------------------------------------------------"
   );
 
-  while (start < today) {
+  while (start < end) {
     const end = new Date(addHoursToDate(start, hoursToQuery));
     await asyncForEach(appNames, async (appName: string) => {
       results = await getAllAppTransactions_DESC(start, end, appName, lastBlock);

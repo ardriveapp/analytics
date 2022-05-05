@@ -23,6 +23,7 @@ import {
   BundleTx,
   ContentType,
   FileInfo,
+  InfernoUser,
   ResultSet,
   SmartweaveTx,
 } from "./types";
@@ -593,7 +594,6 @@ export async function getUniqueArDriveUsers(
         query: `query {
                 transactions(
                     tags: [
-                        { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}"]}
                         { name: "Entity-Type", values: ["file", "folder", "drive"]}
                       ]
                     sort: HEIGHT_ASC
@@ -2917,6 +2917,608 @@ export async function getAllAppTransactions_DESC(start: Date, end: Date, appName
   }
   console.log("Missing Data Errors: %s", missingDataErrors);
   return { bundleTxs, fileDataTxs, fileTxs, folderTxs, driveTxs, tipTxs, lastBlock};
+}
+
+// Sums up every data transaction for a start and end period and returns newest results first
+export async function getAllAppTransactionsWithBlocks_DESC(minBlock: number, maxBlock: number, appName: string):Promise <ResultSet> {
+  let firstPage: number = 100; // Max size of query for GQL
+  let cursor: string = "";
+  let hasNextPage = true;
+  let missingDataErrors = 0;
+  let lastBlock = 0;
+  let fileTxs: ArFSFileTx[] = [];
+  let folderTxs: ArFSFolderTx[] = [];
+  let driveTxs: ArFSDriveTx[] = [];
+  let fileDataTxs: ArFSFileDataTx[] = [];
+  let bundleTxs: BundleTx[] = [];
+  let tipTxs: ArFSTipTx[] = [];
+
+  console.log(
+    "Querying for %s Transactions after block %s to block %s",
+    appName,
+    minBlock,
+    maxBlock
+  );
+
+  while (hasNextPage) {
+    const query = {
+      query: `query {
+          transactions(
+            tags: [
+                { name: "App-Name", values: ["${appName}"]}
+            ]
+            sort: HEIGHT_ASC
+            block: {min: ${minBlock}, max: ${maxBlock}}
+            first: ${firstPage}
+            after: "${cursor}"
+          ) {
+            pageInfo {
+              hasNextPage
+            }
+            edges {
+              cursor
+              node {
+                id
+                bundledIn {
+                    id
+                }
+                owner {
+                    address
+                }
+                fee {
+                    ar
+                }
+                quantity {
+                    ar
+                }
+                tags {
+                    name
+                    value
+                }
+                data {
+                  size
+                }
+                block {
+                  height
+                  timestamp
+                }
+              }
+            }
+          }
+        }`,
+    };
+    try {
+      const transactions = await queryGateway(async (url: string) => {
+        const response = await arweave.api.post(url + "/graphql", query);
+        const { data } = response.data;
+        if (data === undefined) {
+          console.log(response.statusText);
+          console.log (response);
+          console.log(
+            "Get All App Transactions DESC... Undefined data returned from Gateway"
+          );
+          missingDataErrors += 1;
+          return 0;
+        } else {
+          const { transactions } = data;
+          return transactions;
+        }
+      });
+      if (transactions === 0) {
+        console.log(
+          "%s Gateway returned an empty JSON.",
+        );
+        await sleep(1000);
+      } else {
+        hasNextPage = transactions.pageInfo.hasNextPage;
+        const { edges } = transactions;
+        edges.forEach((edge: any) => {
+          cursor = edge.cursor;
+          const { node } = edge;
+          const { block } = node;
+          if (block !== null) {
+            let timeStamp = new Date(block.timestamp * 1000);
+            // console.log ("Found Tx in Block: %s at Time: %s", lastBlock, timeStamp.toLocaleString())
+            // Prepare our files
+            const { tags } = node;
+            const { data } = node;
+            const { fee } = node;
+            let bundleTx = newBundleTx();
+            let fileTx = newArFSFileTx();
+            let fileDataTx = newArFSFileDataTx();
+            let folderTx = newArFSFolderTx();
+            let driveTx = newArFSDriveTx();
+            let tipTx = newArFSTipTx();
+            let encrypted = false;
+            let contentType = "";
+            let appName = "";
+            let appVersion = "";
+            let clientName = "";
+            let entityType = "data";
+            let arFsVersion = "";
+            let bundleFormat = "";
+            let bundledIn = "";
+            let communityTip = 0;
+
+            tags.forEach((tag: any) => {
+              const key = tag.name;
+              const { value } = tag;
+              switch (key) {
+                case "Cipher-IV":
+                  encrypted = true;
+                  break;
+                case "Entity-Type":
+                  entityType = value;
+                  break;
+                case "Content-Type":
+                  contentType = value;
+                  break;
+                case "App-Name":
+                  appName = value;
+                  break;
+                case "App-Version":
+                  appVersion = value;
+                  break;
+                case "ArFS":
+                  arFsVersion = value;
+                  break;
+                case "ArDrive-Client":
+                  clientName = value;
+                  break;
+                case "Bundle-Format":
+                  bundleFormat = value;
+                  break;
+                case "Tip-Type":
+                  if (value === "data upload") {
+                    communityTip = +node.quantity.ar;
+                  }
+                  break;
+                default:
+                  break;
+              }
+            });
+
+            if (clientName.includes("ArConnect")) {
+              appName = "ArConnect";
+            }
+
+            if (node.bundledIn) {
+              bundledIn = node.bundledIn.id;
+            }
+
+            if (bundleFormat === "binary") {
+              // this is a bundle
+              bundleTx.appName = appName;
+              bundleTx.appVersion = appVersion;
+              bundleTx.dataSize = +data.size;
+              bundleTx.fee = +fee.ar;
+              bundleTx.quantity = +node.quantity.ar;
+              bundleTxs.push(bundleTx);
+            } else if (communityTip !== 0) {
+              tipTx.appName = appName;
+              tipTx.appVersion = appVersion;
+              tipTx.owner = node.owner.address;
+              tipTx.quantity = +communityTip;
+              tipTx.id = node.id;
+              tipTx.blockHeight = block.height;
+              tipTx.blockTime = block.timestamp;
+              tipTx.friendlyDate = timeStamp.toLocaleString();
+              tipTxs.push(tipTx);
+            } else if (
+              entityType === "data" &&
+              arFsVersion === "" &&
+              communityTip === 0
+            ) {
+              // this is a file data tx and therefore has no ArFS tag or entity type tag or community tip tag
+              if (+fee.ar === 0) {
+                // This is a bundle
+                fileDataTx.dataItemSize = +data.size;
+              } else {
+                fileDataTx.dataSize = +data.size;
+              }
+              fileDataTx.appName = appName;
+              fileDataTx.appVersion = appVersion;
+              fileDataTx.owner = node.owner.address;
+              fileDataTx.private = encrypted;
+              fileDataTx.fee = +fee.ar;
+              fileDataTx.contentType = contentType;
+              fileDataTx.bundledIn = bundledIn;
+              fileDataTx.id = node.id;
+              fileDataTx.blockHeight = block.height;
+              fileDataTx.blockTime = block.timestamp;
+              fileDataTx.friendlyDate = timeStamp.toLocaleString();
+              fileDataTxs.push(fileDataTx);
+            } else if (entityType === "file") {
+              // THIS IS A FILE METADATA TX
+              if (+fee.ar === 0) {
+                // This is a bundle
+                fileTx.dataItemSize = +data.size;
+              } else {
+                fileTx.dataSize = +data.size;
+              }
+              fileTx.appName = appName;
+              fileTx.appVersion = appVersion;
+              fileTx.arfsVersion = arFsVersion;
+              fileTx.owner = node.owner.address;
+              fileTx.private = encrypted;
+              fileTx.fee = +fee.ar;
+              fileTx.contentType = contentType;
+              fileTx.bundledIn = bundledIn;
+              fileTx.id = node.id;
+              fileTx.blockHeight = block.height;
+              fileTx.blockTime = block.timestamp;
+              fileTx.friendlyDate = timeStamp.toLocaleString();
+              fileTxs.push(fileTx);
+            } else if (entityType === "folder") {
+              // THIS IS A FOLDER METADATA TX
+              if (+fee.ar === 0) {
+                // This is a bundle
+                folderTx.dataItemSize = +data.size;
+              } else {
+                folderTx.dataSize = +data.size;
+              }
+              folderTx.appName = appName;
+              folderTx.appVersion = appVersion;
+              folderTx.arfsVersion = arFsVersion;
+              folderTx.owner = node.owner.address;
+              folderTx.private = encrypted;
+              folderTx.fee = +fee.ar;
+              folderTx.contentType = contentType;
+              folderTx.bundledIn = bundledIn;
+              folderTx.id = node.id;
+              folderTx.blockHeight = block.height;
+              folderTx.blockTime = block.timestamp;
+              folderTx.friendlyDate = timeStamp.toLocaleString();
+              folderTxs.push(folderTx);
+            } else if (entityType === "drive") {
+              // THIS IS A DRIVE METADATA TX
+              if (+fee.ar === 0) {
+                // This is a bundle
+                driveTx.dataItemSize = +data.size;
+              } else {
+                driveTx.dataSize = +data.size;
+              }
+              driveTx.appName = appName;
+              driveTx.appVersion = appVersion;
+              driveTx.arfsVersion = arFsVersion;
+              driveTx.owner = node.owner.address;
+              driveTx.private = encrypted;
+              driveTx.fee = +fee.ar;
+              driveTx.contentType = contentType;
+              driveTx.bundledIn = bundledIn;
+              driveTx.id = node.id;
+              driveTx.blockHeight = block.height;
+              driveTx.blockTime = block.timestamp;
+              driveTx.friendlyDate = timeStamp.toLocaleString();
+              driveTxs.push(driveTx);
+            }
+            lastBlock = block.height;
+          } 
+        });
+      }
+    } catch (err) {
+      console.log(err);
+      console.log("Error getting transactions at Blockheight");
+      hasNextPage = false;
+    }
+  }
+  console.log("Missing Data Errors: %s", missingDataErrors);
+  return { bundleTxs, fileDataTxs, fileTxs, folderTxs, driveTxs, tipTxs, lastBlock};
+}
+
+// Queries a range of blocks and sums up every data transaction for a start and end period and returns newest results first
+export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, maxBlock: number, appName: string):Promise <InfernoUser[]> {
+  let firstPage: number = 100; // Max size of query for GQL
+  let cursor: string = "";
+  let hasNextPage = true;
+  //let lastBlock = 0;
+  let results: InfernoUser[] = []
+
+  console.log(
+    "Querying for %s Transactions after block %s to block %s",
+    appName,
+    minBlock,
+    maxBlock
+  );
+
+  while (hasNextPage) {
+    const query = {
+      query: `query {
+          transactions(
+            tags: [
+                { name: "App-Name", values: ["${appName}"]}
+            ]
+            sort: HEIGHT_ASC
+            block: {min: ${minBlock}, max: ${maxBlock}}
+            first: ${firstPage}
+            after: "${cursor}"
+          ) {
+            pageInfo {
+              hasNextPage
+            }
+            edges {
+              cursor
+              node {
+                id
+                bundledIn {
+                    id
+                }
+                owner {
+                    address
+                }
+                fee {
+                    ar
+                }
+                quantity {
+                    ar
+                }
+                tags {
+                    name
+                    value
+                }
+                data {
+                  size
+                }
+                block {
+                  height
+                  timestamp
+                }
+              }
+            }
+          }
+        }`,
+    };
+    try {
+      const transactions = await queryGateway(async (url: string) => {
+        const response = await arweave.api.post(url + "/graphql", query);
+        const { data } = response.data;
+        if (data === undefined) {
+          console.log(response.statusText);
+          console.log (response);
+          console.log(
+            "Get All App Transactions DESC... Undefined data returned from Gateway"
+          );
+          return 0;
+        } else {
+          const { transactions } = data;
+          return transactions;
+        }
+      });
+      if (transactions === 0) {
+        console.log(
+          "%s Gateway returned an empty JSON.",
+        );
+        await sleep(1000);
+      } else {
+        hasNextPage = transactions.pageInfo.hasNextPage;
+        const { edges } = transactions;
+        edges.forEach((edge: any) => {
+          cursor = edge.cursor;
+          const { node } = edge;
+          const { block } = node;
+          const { owner } = node;
+          if (block !== null) {
+            // let timeStamp = new Date(block.timestamp * 1000);
+            // Prepare our files
+            const { tags } = node;
+            const { data } = node;
+            let dataSize = 0;
+            let bundleFormat = "";
+
+            tags.forEach((tag: any) => {
+              const key = tag.name;
+              const { value } = tag;
+              switch (key) {
+                case "Bundle-Format":
+                  bundleFormat = value;
+                  break;
+                default:
+                  break;
+              }
+            });
+
+            if (!node.bundledIn || bundleFormat === "binary") {
+              //console.log ("Found Inferno User %s Tx in Block: %s at Time: %s with size", owner.address, lastBlock, timeStamp.toLocaleString(), +data.size)
+              //console.log (tags)
+              dataSize = +data.size
+            }
+
+            let objIndex = results.findIndex((obj => obj.address === owner.address));
+            if (objIndex >= 0) {
+              // If it exists, then we increment the existing data amount
+              // console.log ("Existing wallet found %s with %s data", results[objIndex].address, results[objIndex].size);
+              results[objIndex].size += dataSize;
+            } else {
+              // Else we add a new user into our Astatine List
+              // console.log("Adding new wallet ", owner.address);
+              let infernoUser: InfernoUser = {
+                  address: owner.address,
+                  size: dataSize,
+                  elligible: false,
+                  rank: 0
+              };
+              results.push(infernoUser);
+            }
+            //lastBlock = block.height;
+          } 
+        });
+      }
+    } catch (err) {
+      console.log(err);
+      console.log("Error getting transactions at Blockheight");
+      hasNextPage = false;
+    }
+  }
+  // console.log("Missing Data Errors: %s", missingDataErrors);
+  return results;
+}
+
+// Queries a range of blocks and sums up every data transaction for a start and end period and returns newest results first
+export async function getAllAppTransactionsByDate_Inferno(start: Date, end: Date, appName: string):Promise <{appResults: InfernoUser[], minBlock: number, maxBlock: number}> {
+  let firstPage: number = 100; // Max size of query for GQL
+  let timeStamp = new Date(end);
+  let cursor: string = "";
+  let hasNextPage = true;
+  let appResults: InfernoUser[] = []
+  let startBlock = 0;
+  let endBlock = 0;
+
+  let minBlock: number;
+  minBlock = await getMinBlock(start);
+
+  console.log(
+    "Querying for %s Transactions after block %s from %s to %s",
+    appName,
+    minBlock,
+    start.toLocaleString(),
+    end.toLocaleString()
+  );
+
+  while (hasNextPage) {
+    const query = {
+      query: `query {
+          transactions(
+            tags: [
+                { name: "App-Name", values: ["${appName}"]}
+            ]
+            sort: HEIGHT_ASC
+            block: {min: ${minBlock}}
+            first: ${firstPage}
+            after: "${cursor}"
+          ) {
+            pageInfo {
+              hasNextPage
+            }
+            edges {
+              cursor
+              node {
+                id
+                bundledIn {
+                    id
+                }
+                owner {
+                    address
+                }
+                fee {
+                    ar
+                }
+                quantity {
+                    ar
+                }
+                tags {
+                    name
+                    value
+                }
+                data {
+                  size
+                }
+                block {
+                  height
+                  timestamp
+                }
+              }
+            }
+          }
+        }`,
+    };
+    try {
+      const transactions = await queryGateway(async (url: string) => {
+        const response = await arweave.api.post(url + "/graphql", query);
+        const { data } = response.data;
+        if (data === undefined) {
+          console.log(response.statusText);
+          console.log (response);
+          console.log(
+            "getAllAppTransactionsByDate_Inferno... Undefined data returned from Gateway"
+          );
+          return 0;
+        } else {
+          const { transactions } = data;
+          return transactions;
+        }
+      });
+      if (transactions === 0) {
+        console.log(
+          "Gateway returned an empty JSON.",
+        );
+        await sleep(1000);
+      } else {
+        hasNextPage = transactions.pageInfo.hasNextPage;
+        const { edges } = transactions;
+        edges.forEach((edge: any) => {
+          cursor = edge.cursor;
+          const { node } = edge;
+          const { block } = node;
+          const { owner } = node;
+          if (block !== null) {
+            timeStamp = new Date(block.timestamp * 1000);
+            if (start.getTime() <= timeStamp.getTime() && end.getTime() >= timeStamp.getTime()) {
+              if (startBlock === 0) {
+                startBlock = block.height;
+              }
+              endBlock = block.height;
+              // Prepare our files
+              const { tags } = node;
+              const { data } = node;
+              let dataSize = 0;
+              let bundleFormat = "";
+
+              tags.forEach((tag: any) => {
+                const key = tag.name;
+                const { value } = tag;
+                switch (key) {
+                  case "Bundle-Format":
+                    bundleFormat = value;
+                    break;
+                  default:
+                    break;
+                }
+              });
+
+              if (!node.bundledIn || bundleFormat === "binary") {
+                //console.log ("Found Inferno User %s Tx in Block: %s at Time: %s with size", owner.address, lastBlock, timeStamp.toLocaleString(), +data.size)
+                //console.log (tags)
+                dataSize = +data.size
+              }
+
+              let objIndex = appResults.findIndex((obj => obj.address === owner.address));
+              if (objIndex >= 0) {
+                // If it exists, then we increment the existing data amount
+                // console.log ("Existing wallet found %s with %s data", results[objIndex].address, results[objIndex].size);
+                appResults[objIndex].size += dataSize;
+              } else {
+                // Else we add a new user into our Astatine List
+                // console.log("Adding new wallet ", owner.address);
+                let infernoUser: InfernoUser = {
+                    address: owner.address,
+                    size: dataSize,
+                    elligible: false,
+                    rank: 0
+                };
+                appResults.push(infernoUser);
+              }
+            }
+            if (timeStamp.getTime() > end.getTime()) {
+              // console.log ("Result too early %s", timeStamp)
+              hasNextPage = false; // if it is ASC
+            } else if (timeStamp.getTime() < start.getTime()) {
+              // console.log ("Result too old %s", timeStamp)
+              // hasNextPage = false; // if it is DESC
+            } else {
+              // console.log ("Block is null so we skip this transaction %s", node.Id);
+            }
+          } 
+        });
+      }
+    } catch (err) {
+      console.log(err);
+      console.log("Error getting transactions at Blockheight");
+      hasNextPage = false;
+    }
+  }
+  // console.log("Missing Data Errors: %s", missingDataErrors);
+  console.log ("Started on %s ended on %s", startBlock, endBlock);
+  return {appResults, minBlock: startBlock, maxBlock: endBlock};
 }
 
 // Gets ArDrive Drive information from a start and end date

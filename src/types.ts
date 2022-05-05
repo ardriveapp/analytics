@@ -1,6 +1,23 @@
+export interface InfernoStatus {
+  jobStart: Date;
+  jobEnd: Date;
+  minBlock: number;
+  maxBlock: number;
+  totalDataSize: number;
+  infernoUsers: number;
+  allResults: InfernoUser[]
+}
+
 export interface AstatineItem {
   address: string;
   weight: number;
+}
+
+export interface InfernoUser {
+  address: string;
+  size: number;
+  elligible: boolean;
+  rank: number;
 }
 
 export interface ContentType {

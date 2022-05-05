@@ -1,10 +1,11 @@
 import { countDistinct } from "./common";
 import { getUniqueArDriveUsers } from "./gql";
 
+// Gets all unique users who have uploaded to ArDrive in the given time range
 export async function main() {
   const today = new Date().toISOString().slice(0, 10);
-  const start = new Date(2021, 11, 1);
-  const end = new Date(2022, 0, 1);
+  const start = new Date(2022, 2, 1);
+  const end = new Date(2022, 2, 31);
 
   const appTarget = "ArDrive"; // Change this to whatever app target you like
 
