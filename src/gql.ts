@@ -3208,12 +3208,13 @@ export async function getAllAppTransactionsWithBlocks_DESC(minBlock: number, max
 }
 
 // Queries a range of blocks and sums up every data transaction for a start and end period and returns newest results first
-export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, maxBlock: number, appName: string):Promise <InfernoUser[]> {
+export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, maxBlock: number, appName: string):Promise <{appResults: InfernoUser[], gqlRequests: number}> {
+  let gqlRequests = 0;
   let firstPage: number = 100; // Max size of query for GQL
   let cursor: string = "";
   let hasNextPage = true;
   //let lastBlock = 0;
-  let results: InfernoUser[] = []
+  let appResults: InfernoUser[] = []
 
   console.log(
     "Querying for %s Transactions after block %s to block %s",
@@ -3285,6 +3286,7 @@ export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, ma
           return transactions;
         }
       });
+      gqlRequests++;
       if (transactions === 0) {
         console.log(
           "Gateway returned an empty JSON.",
@@ -3324,11 +3326,11 @@ export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, ma
               dataSize = +data.size
             }
 
-            let objIndex = results.findIndex((obj => obj.address === owner.address));
+            let objIndex = appResults.findIndex((obj => obj.address === owner.address));
             if (objIndex >= 0) {
               // If it exists, then we increment the existing data amount
               // console.log ("Existing wallet found %s with %s data", results[objIndex].address, results[objIndex].size);
-              results[objIndex].size += dataSize;
+              appResults[objIndex].size += dataSize;
             } else {
               // Else we add a new user into our Astatine List
               // console.log("Adding new wallet ", owner.address);
@@ -3338,7 +3340,7 @@ export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, ma
                   elligible: false,
                   rank: 0
               };
-              results.push(infernoUser);
+              appResults.push(infernoUser);
             }
             //lastBlock = block.height;
           } 
@@ -3351,11 +3353,12 @@ export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, ma
     }
   }
   // console.log("Missing Data Errors: %s", missingDataErrors);
-  return results;
+  return {appResults, gqlRequests};
 }
 
 // Queries a range of blocks and sums up every data transaction for a start and end period and returns newest results first
-export async function getAllAppTransactionsByDate_Inferno(start: Date, end: Date, appName: string):Promise <{appResults: InfernoUser[], minBlock: number, maxBlock: number}> {
+export async function getAllAppTransactionsByDate_Inferno(start: Date, end: Date, appName: string):Promise <{appResults: InfernoUser[], minBlock: number, maxBlock: number, gqlRequests: number}> {
+  let gqlRequests = 0;
   let firstPage: number = 100; // Max size of query for GQL
   let timeStamp = new Date(end);
   let cursor: string = "";
@@ -3439,6 +3442,7 @@ export async function getAllAppTransactionsByDate_Inferno(start: Date, end: Date
           return transactions;
         }
       });
+      gqlRequests++;
       if (transactions === 0) {
         console.log(
           "Gateway returned an empty JSON.",
@@ -3519,7 +3523,7 @@ export async function getAllAppTransactionsByDate_Inferno(start: Date, end: Date
     }
   }
   // console.log("Missing Data Errors: %s", missingDataErrors);
-  return {appResults, minBlock: startBlock, maxBlock: endBlock};
+  return {appResults, minBlock: startBlock, maxBlock: endBlock, gqlRequests};
 }
 
 // Gets ArDrive Drive information from a start and end date

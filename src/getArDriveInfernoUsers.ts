@@ -14,10 +14,11 @@ async function main() {
   let startDate: Date;
   let endDate: Date;
   let elligibleUsers = 0;
+  let totalGqlRequests = 0;
 
   //Handle arguments from STDIN
   const myArgs = process.argv.slice(2);
-  if ((+myArgs[0] > 0) && (+myArgs[1] > 0)) {
+  if ((+myArgs[0] > 0) && (+myArgs[1] > 0)) { // Check if it is a valid block height
     minBlock = +myArgs[0];
     maxBlock = +myArgs[1];
     console.log(
@@ -25,26 +26,26 @@ async function main() {
       jobStart,
       minBlock,
       maxBlock
-    );
+    ); 
     gqlStart = minBlock.toString();
     gqlEnd = maxBlock.toString();
-  } else {
-    startDate = new Date(myArgs[0]);
+  } else { 
+    startDate = new Date(myArgs[0]); // 
     endDate = new Date(myArgs[1]);
-    if (startDate.toString() === "Invalid Date" || endDate.toString() === "Invalid Date") {
+    if (startDate.toString() === "Invalid Date" || endDate.toString() === "Invalid Date") { // It isnt a block height, so check if it is a date
       console.log ("You have entered an invalid date");
       console.log ("Start Date: %s", startDate.toString());
       console.log ("End Date: %s", endDate.toString());
       return 0;
-    } else {
+    } else { // Run with a date
       console.log(
         "%s Running analytics from %s to %s",
         jobStart,
         startDate,
         endDate
       );
-      gqlStart = startDate.getDate() + "-" + startDate.getDay() + "-" + startDate.getFullYear();
-      gqlEnd = endDate.getDate() + "-" + endDate.getDay() + "-" + endDate.getFullYear();
+      gqlStart = startDate.getDate() + "-" + startDate.getMonth() + "-" + startDate.getFullYear();
+      gqlEnd = endDate.getDate() + "-" + endDate.getMonth() + "-" + endDate.getFullYear();
     }
   }
 
@@ -53,12 +54,17 @@ async function main() {
   );
 
   await asyncForEach(appNames, async (appName: string) => {
+    let results;
     if (maxBlock !== 0) { // This means we are querying by blocks and not dates
-      appResults = await getAllAppTransactionsByBlocks_Inferno(minBlock, maxBlock, appName);
-    } else { // We query by date range instead
-      let results = await getAllAppTransactionsByDate_Inferno(startDate, endDate, appName);
+      results = await getAllAppTransactionsByBlocks_Inferno(minBlock, maxBlock, appName);
       appResults = results.appResults
+    } else { // We query by date range instead
+      results = await getAllAppTransactionsByDate_Inferno(startDate, endDate, appName);
     }
+    console.log ("Made %s GQL requests for %s", results.gqlRequests, appName);
+    appResults = results.appResults;
+    totalGqlRequests += results.gqlRequests;
+
     await asyncForEach(appResults, async (result: InfernoUser) => {
       let objIndex = allResults.findIndex((obj => obj.address === result.address));
       if (objIndex >= 0) {
@@ -68,7 +74,7 @@ async function main() {
       } else {
         // Else we add a new user into our Astatine List
         allResults.push(result);
-      }
+      };
     });
   });
   
@@ -88,7 +94,7 @@ async function main() {
     };
 
   console.log("All Results");
-  console.log(allResults);
+  //console.log(allResults);
   console.log("Total Size collected %s bytes | %s", totalDataSize, formatBytes(totalDataSize));
 
   if (maxBlock !== 0) {
@@ -101,6 +107,7 @@ async function main() {
     jobEnd: new Date,
     gqlStart,
     gqlEnd,
+    totalGqlRequests,
     totalDataSize,
     infernoUsers: allResults.length,
     elligibleUsers,

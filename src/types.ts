@@ -3,6 +3,7 @@ export interface InfernoStatus {
   jobEnd: Date;
   gqlStart: string;
   gqlEnd: string;
+  totalGqlRequests: number;
   totalDataSize: number;
   infernoUsers: number;
   elligibleUsers: number;
