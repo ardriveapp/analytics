@@ -5,6 +5,7 @@ export interface InfernoStatus {
   gqlEnd: string;
   totalGqlRequests: number;
   totalDataSize: number;
+  totalFiles: number;
   infernoUsers: number;
   elligibleUsers: number;
   allResults: InfernoUser[];
@@ -18,6 +19,7 @@ export interface AstatineItem {
 export interface InfernoUser {
   address: string;
   size: number;
+  files: number;
   elligible: boolean;
   rank: number;
 }

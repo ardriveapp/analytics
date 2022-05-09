@@ -3296,6 +3296,7 @@ export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, ma
         hasNextPage = transactions.pageInfo.hasNextPage;
         const { edges } = transactions;
         edges.forEach((edge: any) => {
+          let entityType = '';
           cursor = edge.cursor;
           const { node } = edge;
           const { block } = node;
@@ -3315,6 +3316,9 @@ export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, ma
                 case "Bundle-Format":
                   bundleFormat = value;
                   break;
+                case "Entity-Type":
+                  entityType = value;
+                  break; 
                 default:
                   break;
               }
@@ -3331,15 +3335,22 @@ export async function getAllAppTransactionsByBlocks_Inferno(minBlock: number, ma
               // If it exists, then we increment the existing data amount
               // console.log ("Existing wallet found %s with %s data", results[objIndex].address, results[objIndex].size);
               appResults[objIndex].size += dataSize;
+              if (entityType === "file") {
+                appResults[objIndex].files++;
+              }
             } else {
               // Else we add a new user into our Astatine List
               // console.log("Adding new wallet ", owner.address);
               let infernoUser: InfernoUser = {
                   address: owner.address,
                   size: dataSize,
+                  files: 0,
                   elligible: false,
                   rank: 0
               };
+              if (entityType === "file") {
+                infernoUser.files++;
+              }
               appResults.push(infernoUser);
             }
             //lastBlock = block.height;
@@ -3452,6 +3463,7 @@ export async function getAllAppTransactionsByDate_Inferno(start: Date, end: Date
         hasNextPage = transactions.pageInfo.hasNextPage;
         const { edges } = transactions;
         edges.forEach((edge: any) => {
+          let entityType = '';
           cursor = edge.cursor;
           const { node } = edge;
           const { block } = node;
@@ -3476,31 +3488,41 @@ export async function getAllAppTransactionsByDate_Inferno(start: Date, end: Date
                   case "Bundle-Format":
                     bundleFormat = value;
                     break;
+                  case "Entity-Type":
+                    entityType = value;
+                    break;
                   default:
                     break;
                 }
               });
 
-              if (!node.bundledIn || bundleFormat === "binary") {
+              if ((!node.bundledIn && entityType === '') || bundleFormat === "binary" ) {
                 //console.log ("Found Inferno User %s Tx in Block: %s at Time: %s with size", owner.address, lastBlock, timeStamp.toLocaleString(), +data.size)
                 //console.log (tags)
                 dataSize = +data.size
-              }
-
+              }; 
+              
               let objIndex = appResults.findIndex((obj => obj.address === owner.address));
               if (objIndex >= 0) {
                 // If it exists, then we increment the existing data amount
                 // console.log ("Existing wallet found %s with %s data", results[objIndex].address, results[objIndex].size);
                 appResults[objIndex].size += dataSize;
+                if (entityType === "file") {
+                  appResults[objIndex].files++;
+                }
               } else {
                 // Else we add a new user into our Astatine List
                 // console.log("Adding new wallet ", owner.address);
                 let infernoUser: InfernoUser = {
                     address: owner.address,
                     size: dataSize,
+                    files: 0,
                     elligible: false,
                     rank: 0
                 };
+                if (entityType === "file") {
+                  infernoUser.files++;
+                }
                 appResults.push(infernoUser);
               }
             }

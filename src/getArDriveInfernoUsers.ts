@@ -71,6 +71,7 @@ async function main() {
         // If it exists, then we increment the existing data amount
         // console.log ("Existing wallet found %s with %s data", results[objIndex].address, results[objIndex].size);
         allResults[objIndex].size += result.size;
+        allResults[objIndex].files += result.files;
       } else {
         // Else we add a new user into our Astatine List
         allResults.push(result);
@@ -82,9 +83,11 @@ async function main() {
     allResults.sort(dataCompare);
     // add up all of the data in the list for a total data size, set their rank and determine if they are eligible
     let totalDataSize = 0
+    let totalFiles = 0;
     let rank = 1;
     for (let i = 0; i < allResults.length; i++) {
       totalDataSize += allResults[i].size;
+      totalFiles += allResults[i].files;
       allResults[i].rank = rank;
       rank++;
       if (allResults[i].size > 1048576000) { // the minimum amount required
@@ -109,6 +112,7 @@ async function main() {
     gqlEnd,
     totalGqlRequests,
     totalDataSize,
+    totalFiles,
     infernoUsers: allResults.length,
     elligibleUsers,
     allResults

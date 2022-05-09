@@ -690,7 +690,7 @@ export async function getMaxBlock(end: Date, blocksPerHour?: number): Promise<nu
 // Return the number of blocks to start searching from based on a date
 export async function getMinBlock(start: Date): Promise<number> {
   // calculate the no. of days between two dates
-  const blocksPerDay = 695;
+  const blocksPerDay = 735;
   let today = new Date();
   let height = await getCurrentBlockHeight();
   let minBlock = height - blocksPerDay; // Search the last min block time by default
