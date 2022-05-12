@@ -688,19 +688,26 @@ export async function getMaxBlock(end: Date, blocksPerHour?: number): Promise<nu
 }
 
 // Return the number of blocks to start searching from based on a date
-export async function getMinBlock(start: Date): Promise<number> {
-  // calculate the no. of days between two dates
-  const blocksPerDay = 735;
+export async function getMinBlock(start: Date, blocksPerHour?: number): Promise<number> {
+  if (!blocksPerHour) {
+    blocksPerHour = 30;
+  }
   let today = new Date();
   let height = await getCurrentBlockHeight();
-  let minBlock = height - blocksPerDay; // Search the last min block time by default
   const startDays = today.getTime() - start.getTime();
-  const startDaysDiff = Math.floor(startDays / (1000 * 3600 * 24));
-  if (startDaysDiff !== 0) {
-    minBlock = height - blocksPerDay * startDaysDiff;
+  const startHoursDiff = Math.floor(startDays / (1000 * 3600));
+  let minBlock = height - blocksPerHour * startHoursDiff; // Search the last min block time by default
+
+  if (startHoursDiff !== 0) {
+    minBlock = height - blocksPerHour * startHoursDiff;
   }
-  //console.log ("Starting at %s on %s", minBlock, start )
-  return minBlock;
+
+  let timeStamp = await getBlockTimestamp(minBlock)
+  if (start < timeStamp) {
+    return await getMinBlock(start, (blocksPerHour-3));
+  } else {
+    return minBlock;
+  };
 }
 
 // Adds an amount of hours to a date
