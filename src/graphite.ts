@@ -14,6 +14,7 @@ export async function sendBundlesToGraphite(bundles: BundleTx[], end: Date) {
   console.log("Sending Bundle Txs to Graphite", end);
   const appNames: string[] = [...new Set(bundles.map((item) => item.appName))];
   const message = "ardrive.apps.";
+  const type = ".bundles2";
   await asyncForEach(appNames, async (appName: string) => {
     const appBundles = bundles.filter(
       (item) => item.appName === appName
@@ -43,25 +44,25 @@ export async function sendBundlesToGraphite(bundles: BundleTx[], end: Date) {
       appFees
     );
 
-    let graphiteMessage = message + appName + ".bundles.total";
+    let graphiteMessage = message + appName + type + ".total";
     await sendMessageToGraphite(graphiteMessage, appBundles, end);
 
-    graphiteMessage = message + appName + ".bundles.data";
+    graphiteMessage = message + appName + type + ".data";
     await sendMessageToGraphite(graphiteMessage, appData, end);
 
-    graphiteMessage = message + appName + ".bundles.averageBundleSize";
+    graphiteMessage = message + appName + type + ".averageBundleSize";
     await sendMessageToGraphite(graphiteMessage, averageBundleSize, end);
 
-    graphiteMessage = message + appName + ".bundles.averageBundleTipSize";
+    graphiteMessage = message + appName + type + ".averageBundleTipSize";
     await sendMessageToGraphite(graphiteMessage, averageBundleTipSize, end);
 
-    graphiteMessage = message + appName + ".bundles.averageBundleFees";
+    graphiteMessage = message + appName + type + ".averageBundleFees";
     await sendMessageToGraphite(graphiteMessage, averageBundleFees, end);
 
-    graphiteMessage = message + appName + ".bundles.tips";
+    graphiteMessage = message + appName + type + ".tips";
     await sendMessageToGraphite(graphiteMessage, appTips, end);
 
-    graphiteMessage = message + appName + ".bundles.fees";
+    graphiteMessage = message + appName + type + ".fees";
     await sendMessageToGraphite(graphiteMessage, appFees, end);
   });
 }
@@ -214,6 +215,113 @@ export async function sendFileDataToGraphite(txs: ArFSFileDataTx[], end: Date) {
       graphiteMessage = message + appName + ".contentTypes." + contentType;
       await sendMessageToGraphite(graphiteMessage, contentTypeCount, end);
     });
+  });
+}
+
+export async function sendFileDataSizeOnlyToGraphite(
+  txs: ArFSFileDataTx[],
+  end: Date
+) {
+  console.log("Sending File Data Txs to Graphite", end);
+  const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
+  const message = "ardrive.apps.";
+  const type = ".fileData2";
+
+  await asyncForEach(appNames, async (appName: string) => {
+    // Public
+    let privacy = ".public";
+    const publicTxs = txs.filter(
+      (item) => item.appName === appName && item.private === false
+    ).length;
+    const publicDataItems = txs.filter(
+      (item) =>
+        item.appName === appName && item.fee === 0 && item.private === false
+    ).length; // If the data has no fee, then it must be a data item
+    const publicV2Txs = txs.filter(
+      (item) =>
+        item.appName === appName &&
+        item.bundledIn === "" &&
+        item.fee !== 0 &&
+        item.private === false
+    ).length;
+    const publicV2DataSize = txs
+      .filter((item) => item.appName === appName && item.private === false)
+      .map((item) => item.dataSize)
+      .reduce((prev, curr) => prev + curr, 0);
+    const publicDataItemSize = txs
+      .filter((item) => item.appName === appName && item.private === false)
+      .map((item) => item.dataItemSize)
+      .reduce((prev, curr) => prev + curr, 0);
+    const publicFees = txs
+      .filter((item) => item.appName === appName && item.private === false)
+      .map((item) => item.fee)
+      .reduce((prev, curr) => prev + curr, 0);
+
+    let graphiteMessage = message + appName + privacy + type + ".v2DataSize";
+    await sendMessageToGraphite(graphiteMessage, publicV2DataSize, end);
+    console.log("  - %s", appName);
+    console.log("      - %s", privacy);
+    console.log(
+      "      - %s Txs: %s, V2Txs: %s, DataItemTxs: %s, Fees: %s",
+      type,
+      publicTxs,
+      publicV2Txs,
+      publicDataItems,
+      publicFees
+    );
+    console.log(
+      "      - V2Data: %s bytes, DataItem Data: %s bytes",
+      publicV2DataSize,
+      publicDataItemSize
+    );
+
+    // Private
+    privacy = ".private";
+    const privateTxs = txs.filter(
+      (item) => item.appName === appName && item.private === true
+    ).length;
+    const privateDataItems = txs.filter(
+      (item) =>
+        item.appName === appName && item.fee === 0 && item.private === true
+    ).length; // If the data has no fee, then it must be a data item
+    const privateV2Txs = txs.filter(
+      (item) =>
+        item.appName === appName &&
+        item.bundledIn === "" &&
+        item.fee !== 0 &&
+        item.private === true
+    ).length;
+    const privateV2DataSize = txs
+      .filter((item) => item.appName === appName && item.private === true)
+      .map((item) => item.dataSize)
+      .reduce((prev, curr) => prev + curr, 0);
+    const privateDataItemSize = txs
+      .filter((item) => item.appName === appName && item.private === true)
+      .map((item) => item.dataItemSize)
+      .reduce((prev, curr) => prev + curr, 0);
+    const privateFees = txs
+      .filter((item) => item.appName === appName && item.private === true)
+      .map((item) => item.fee)
+      .reduce((prev, curr) => prev + curr, 0);
+
+    graphiteMessage = message + appName + privacy + type + ".v2DataSize";
+    await sendMessageToGraphite(graphiteMessage, privateV2DataSize, end);
+
+    console.log("  - %s", appName);
+    console.log("      - %s", privacy);
+    console.log(
+      "      - %s Txs: %s, V2Txs: %s, DataItemTxs: %s, Fees: %s",
+      type,
+      privateTxs,
+      privateV2Txs,
+      privateDataItems,
+      privateFees
+    );
+    console.log(
+      "      - V2Data: %s bytes, DataItem Data: %s bytes",
+      privateV2DataSize,
+      privateDataItemSize
+    );
   });
 }
 

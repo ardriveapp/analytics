@@ -253,3 +253,12 @@ export interface ResultSet {
   tipTxs: ArFSTipTx[];
   lastBlock: number;
 }
+
+export interface L1ResultSet {
+  bundleTxs: BundleTx[];
+  fileDataTxs: ArFSFileDataTx[];
+  fileTxs: ArFSFileTx[];
+  folderTxs: ArFSFolderTx[];
+  driveTxs: ArFSDriveTx[];
+  tipTxs: ArFSTipTx[];
+}

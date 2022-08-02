@@ -1,6 +1,13 @@
 import { addHoursToDate, appNames, asyncForEach, getMinBlock } from "./common";
-import { getAllAppTransactions_DESC} from "./gql";
-import { sendBundlesToGraphite, sendFileMetadataToGraphite, sendFileDataToGraphite, sendFolderMetadataToGraphite, sendDriveMetadataToGraphite, sendv2CommunityTipsToGraphite } from "./graphite";
+import { getAllAppTransactions_DESC } from "./gql";
+import {
+  sendBundlesToGraphite,
+  sendFileMetadataToGraphite,
+  sendFileDataToGraphite,
+  sendFolderMetadataToGraphite,
+  sendDriveMetadataToGraphite,
+  sendv2CommunityTipsToGraphite,
+} from "./graphite";
 import { ResultSet } from "./types";
 
 async function main() {
@@ -11,7 +18,7 @@ async function main() {
     folderTxs: [],
     driveTxs: [],
     tipTxs: [],
-    lastBlock: 0
+    lastBlock: 0,
   };
 
   let results: ResultSet = {
@@ -21,7 +28,7 @@ async function main() {
     folderTxs: [],
     driveTxs: [],
     tipTxs: [],
-    lastBlock: 0
+    lastBlock: 0,
   };
 
   let end = new Date();
@@ -46,14 +53,19 @@ async function main() {
   while (start < end) {
     const end = new Date(addHoursToDate(start, hoursToQuery));
     await asyncForEach(appNames, async (appName: string) => {
-      results = await getAllAppTransactions_DESC(start, end, appName, lastBlock);
+      results = await getAllAppTransactions_DESC(
+        start,
+        end,
+        appName,
+        lastBlock
+      );
       await sendBundlesToGraphite(results.bundleTxs, end);
       await sendFileMetadataToGraphite(results.fileTxs, end);
       await sendFileDataToGraphite(results.fileDataTxs, end);
       await sendFolderMetadataToGraphite(results.folderTxs, end);
       await sendDriveMetadataToGraphite(results.driveTxs, end);
       await sendv2CommunityTipsToGraphite(results.tipTxs, end);
-  
+
       console.log("Results for %s", appName);
       console.log(" - BundledTxs: %s", results.bundleTxs.length);
       console.log(" - FileDataTxs: %s", results.fileDataTxs.length);
@@ -64,15 +76,14 @@ async function main() {
       console.log(" - Last Block Found %s", results.lastBlock);
 
       allResults.bundleTxs = allResults.bundleTxs.concat(results.bundleTxs);
-      allResults.fileDataTxs = allResults.fileDataTxs.concat(results.fileDataTxs);
+      allResults.fileDataTxs = allResults.fileDataTxs.concat(
+        results.fileDataTxs
+      );
       allResults.fileTxs = allResults.fileTxs.concat(results.fileTxs);
       allResults.folderTxs = allResults.folderTxs.concat(results.folderTxs);
       allResults.driveTxs = allResults.driveTxs.concat(results.driveTxs);
-      allResults.tipTxs = allResults.tipTxs.concat(
-        results.tipTxs
-      );
+      allResults.tipTxs = allResults.tipTxs.concat(results.tipTxs);
     });
-
 
     /* Determine how many unique new users in this period by checking for drives created, getting user information, and checking full user list
     const newUsers: string[] = [

@@ -4,8 +4,8 @@ import { getUniqueArDriveUsers } from "./gql";
 // Gets all unique users who have uploaded to ArDrive in the given time range
 export async function main() {
   const today = new Date().toISOString().slice(0, 10);
-  const start = new Date(2022, 2, 1);
-  const end = new Date(2022, 2, 31);
+  const start = new Date(2020, 8, 1);
+  const end = new Date(2022, 6, 29);
 
   const appTarget = "ArDrive"; // Change this to whatever app target you like
 
@@ -22,11 +22,20 @@ export async function main() {
   });
 
   console.log(
-    "Getting all data from from app %s from %s to %s",
+    "Getting all unique users from from app %s from %s to %s",
     appTarget,
     start.toLocaleString(),
     end.toLocaleString()
   );
+
+  // Determine how many unique new users in this period by checking for drives created, getting user information, and checking full user list
+  /*const allTimeStart = new Date(2020, 8, 26); // beginning date for ArDrive transactions
+  const allDrives = await getAllDrives_ASC(allTimeStart, end, 1); // We want to get all drive information going up to the most recent period
+  const allUsers: string[] = [
+    ...new Set(allDrives.map((item: { owner: string }) => item.owner)),
+  ]; 
+  console.log ("Number of unique users found", allUsers.length)*/
+
   const allData = await getUniqueArDriveUsers(start, end);
 
   const uniqueUsers = countDistinct(
@@ -38,9 +47,9 @@ export async function main() {
   console.log("Total Active Users found: %s", uniqueUsers);
 
   const recordToWrite = {
-    foundTransactions: allData.foundTransactions,
-    dataSize: allData.dataSize,
-    foundUsers: uniqueUsers,
+    foundTransactions: allData.foundTransactions.toString(),
+    dataSize: allData.dataSize.toString(),
+    foundUsers: uniqueUsers.toString(),
   };
   csvWriter.writeRecords(recordToWrite).then(() => {
     console.log("...Done getting all files");

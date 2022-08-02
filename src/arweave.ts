@@ -3,6 +3,7 @@ import { asyncForEach, retryFetch } from "./common";
 import { BlockInfo, BlockDate } from "./types";
 
 const fetch = require("node-fetch");
+
 export const arweave = Arweave.init({
   host: "arweave.net", // Arweave Gateway
   port: 443,
@@ -100,7 +101,7 @@ export async function getBlockTimestamp(height: number) {
     );
     const blockInfo = JSON.parse(await response.data);
     let timeStamp = new Date(+blockInfo["timestamp"] * 1000);
-    return timeStamp
+    return timeStamp;
   } catch (err) {}
   return height;
 }
@@ -111,10 +112,10 @@ export async function getLatestBlockInfo(height: number) {
     weaveSize: 0,
     difficulty: 0,
     blockSize: 0,
-    transactionCount: 0
+    transactionCount: 0,
   };
   try {
-    let transactions: string[] = []
+    let transactions: string[] = [];
     const response = await retryFetch(
       `https://arweave.net/block/height/${height}`
     );
@@ -123,7 +124,7 @@ export async function getLatestBlockInfo(height: number) {
     latestBlock.difficulty = blockInfo["diff"];
     latestBlock.blockSize = blockInfo["block_size"];
     transactions = blockInfo["txs"];
-    latestBlock.transactionCount = transactions.length
+    latestBlock.transactionCount = transactions.length;
     return latestBlock;
   } catch (err) {
     console.log("Error getting latest block info");

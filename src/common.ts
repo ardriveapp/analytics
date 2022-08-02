@@ -17,6 +17,7 @@ import {
   getAllTransactions,
   getSumOfAllCommunityFees,
   getAllArDriveCommunityTokenTransactions,
+  gateways,
 } from "./gql";
 import {
   sendArDriveCommunityFinancesToGraphite,
@@ -64,7 +65,7 @@ export const appNames: string[] = [
   "ArDrive-Mobile",
   "ArDrive-Core",
   "ArDrive-Sync",
-  "ArDrive-Web"
+  "ArDrive-Web",
 ];
 
 // Pauses application
@@ -97,7 +98,8 @@ export async function getArDriveTokenTransfers(
   end: Date
 ): Promise<SmartweaveTx[]> {
   console.log(
-    "Starting to collect ArDrive Community Token Transfers from %s to %s",
+    "Starting to collect ArDrive Community Transactions from %s within %s to %s",
+    gateways[0],
     start,
     end
   );
@@ -669,7 +671,10 @@ export function countDistinct(arr: any[], n: number) {
 }
 
 // Return the number of blocks to end searching from based on a date
-export async function getMaxBlock(end: Date, blocksPerHour?: number): Promise<number> {
+export async function getMaxBlock(
+  end: Date,
+  blocksPerHour?: number
+): Promise<number> {
   // calculate the no. of days between two dates
   if (!blocksPerHour) {
     blocksPerHour = 30;
@@ -679,18 +684,21 @@ export async function getMaxBlock(end: Date, blocksPerHour?: number): Promise<nu
   const endDaysDiff = today.getTime() - end.getTime();
   const endHoursDiff = Math.floor(endDaysDiff / (1000 * 3600));
   let maxBlock = height - blocksPerHour * endHoursDiff;
-  let timeStamp = await getBlockTimestamp(maxBlock)
+  let timeStamp = await getBlockTimestamp(maxBlock);
   if (end > timeStamp) {
-    return await getMaxBlock(end, (blocksPerHour-3))
+    return await getMaxBlock(end, blocksPerHour - 3);
   } else {
     return maxBlock;
   }
 }
 
 // Return the number of blocks to start searching from based on a date
-export async function getMinBlock(start: Date, blocksPerHour?: number): Promise<number> {
+export async function getMinBlock(
+  start: Date,
+  blocksPerHour?: number
+): Promise<number> {
   if (!blocksPerHour) {
-    blocksPerHour = 30;
+    blocksPerHour = 28;
   }
   let today = new Date();
   let height = await getCurrentBlockHeight();
@@ -702,12 +710,12 @@ export async function getMinBlock(start: Date, blocksPerHour?: number): Promise<
     minBlock = height - blocksPerHour * startHoursDiff;
   }
 
-  let timeStamp = await getBlockTimestamp(minBlock)
+  let timeStamp = await getBlockTimestamp(minBlock);
   if (start < timeStamp) {
-    return await getMinBlock(start, (blocksPerHour-3));
+    return await getMinBlock(start, blocksPerHour - 3);
   } else {
     return minBlock;
-  };
+  }
 }
 
 // Adds an amount of hours to a date
