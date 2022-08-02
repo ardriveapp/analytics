@@ -581,31 +581,31 @@ export async function getUniqueArDriveUsers(
 ): Promise<{
   foundTransactions: number;
   dataSize: number;
-  foundUsers: string[];
+  foundUsers: {
+    [wallet: string]: string;
+  };
 }> {
-  let firstPage: number = 100; // Max size of query for GQL
+  let firstPage: number = 10000; // Max size of query for GQL
   let cursor: string = "";
   let foundTransactions = 0;
   let dataSize = 0;
-  let foundUsers: string[] = [];
+  let foundUsers: {
+    [wallet: string]: string;
+  };
   let hasNextPage = true;
-  let missingDataErrors = 0;
 
   // To calculate the no. of days between two dates
   let minBlock = await getMinBlock(start);
-  let maxBlock = await getMaxBlock(end);
-  console.log(minBlock, maxBlock);
 
   try {
     while (hasNextPage) {
       const query = {
         query: `query {
                 transactions(
-                    tags: [
+                    tags:
                       { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
-                      { name: "Bundle-Format", values: ["binary"] }
-                      ]
-                    sort: HEIGHT_DESC
+                    bundledIn: ""
+                    sort: HEIGHT_ASC
                     block: {min: ${minBlock}}
                     first: ${firstPage}
                     after: "${cursor}"
@@ -645,7 +645,6 @@ export async function getUniqueArDriveUsers(
           console.log(
             "Get All Unique ArDrive Users... Undefined data returned from Gateway"
           );
-          missingDataErrors += 1;
           return 0;
         } else {
           const { transactions } = data;
@@ -678,7 +677,7 @@ export async function getUniqueArDriveUsers(
               //console.log ("Matching ardrive transaction: ", timeStamp)
               foundTransactions += 1;
               dataSize += +data.size;
-              foundUsers.push(owner.address);
+              foundUsers[owner.address] = block.height;
             } else if (timeStamp.getTime() > end.getTime()) {
               //console.log("Result too early");
               // hasNextPage = false;

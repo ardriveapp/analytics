@@ -217,6 +217,7 @@ export interface ArFSFileDataTx {
   dataItemSize: number;
   private: boolean;
   fee: number;
+  quantity: number;
   contentType: string;
   bundledIn: string;
   id: string;

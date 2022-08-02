@@ -766,6 +766,7 @@ export function newArFSFileDataTx(): ArFSFileDataTx {
     dataItemSize: 0,
     private: false,
     fee: 0,
+    quantity: 0,
     contentType: "",
     bundledIn: "",
     id: "",
