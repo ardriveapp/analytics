@@ -243,6 +243,8 @@ export interface BundleTx {
   dataSize: number;
   fee: number;
   quantity: number;
+  owner: string;
+  timeStamp: number;
 }
 
 export interface ResultSet {

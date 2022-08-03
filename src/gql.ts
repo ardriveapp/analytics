@@ -3738,6 +3738,9 @@ export async function getBundleTransactions_ASC(
                       quantity {
                         ar
                       }
+                      owner {
+                        address
+                      }
                       fee {
                         ar
                       }
@@ -3794,9 +3797,11 @@ export async function getBundleTransactions_ASC(
                     break;
                 }
               });
+              bundle.owner = node.owner.address;
               bundle.dataSize = +data.size;
               bundle.quantity = +node.quantity.ar;
               bundle.fee = +node.fee.ar;
+              bundle.timeStamp = timeStamp.getTime();
               bundles.push(bundle);
             }
           } else if (timeStamp.getTime() > end.getTime()) {
@@ -3811,7 +3816,7 @@ export async function getBundleTransactions_ASC(
     return bundles;
   } catch (err) {
     console.log(err);
-    console.log("Error collecting total amount of uploaded data");
+    console.log("Error collecting all bundles");
     return bundles;
   }
 }
@@ -3819,7 +3824,8 @@ export async function getBundleTransactions_ASC(
 // Sums up every data transaction for a start and end period and returns newest results first
 export async function getAllAppL1Transactions(
   start: Date,
-  end: Date
+  end: Date,
+  appName?: string
 ): Promise<L1ResultSet> {
   let firstPage: number = 10000; // Max size of query for GQL
   let cursor: string = "";
@@ -3837,6 +3843,9 @@ export async function getAllAppL1Transactions(
 
   let minBlock: number;
   minBlock = await getMinBlock(start);
+  if (appName === undefined) {
+    appName = `${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}`;
+  }
 
   console.log(`Querying for all L1Transactions starting at ${minBlock}`);
 
@@ -3845,7 +3854,7 @@ export async function getAllAppL1Transactions(
       query: `query {
           transactions(
             tags: [
-              { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}"]}
+              { name: "App-Name", values: ["${appName}"]}
             ]
             sort: HEIGHT_ASC
             block: {min: ${minBlock}}
@@ -4234,5 +4243,135 @@ export async function getAllInfernoRewards(
     console.log(err);
     console.log("Error collecting total amount of astatine transactions");
     return rewards;
+  }
+}
+
+// Gets ArDrive information from a start and and date
+export async function getArDriveUsers(
+  start: Date,
+  end: Date
+): Promise<{
+  foundTransactions: number;
+  foundUsers: {
+    [wallet: string]: number;
+  };
+}> {
+  let bundleTxs = await getBundleTransactions_ASC(start, end);
+  let firstPage: number = 10000; // Max size of query for GQL
+  let cursor: string = "";
+  let foundTransactions = 0;
+  let foundUsers: {
+    [wallet: string]: number;
+  } = {};
+  let hasNextPage = true;
+
+  // To calculate the no. of days between two dates
+  let minBlock = await getMinBlock(start);
+
+  try {
+    while (hasNextPage) {
+      const query = {
+        query: `query {
+                transactions(
+                    tags: [
+                      { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
+                      { name: "Entity-Type", values: "drive" }
+                    ]
+                    bundledIn: ""
+                    sort: HEIGHT_ASC
+                    block: {min: ${minBlock}}
+                    first: ${firstPage}
+                    after: "${cursor}"
+                ) {
+                    pageInfo {
+                        hasNextPage
+                    }
+                    edges {
+                        cursor
+                        node {
+                            id
+                            owner {
+                                address
+                            }
+                            tags {
+                                name
+                                value
+                            }
+                            block {
+                                timestamp
+                                height
+                            }
+                            data {
+                                size
+                            }
+                        }
+                    }
+                }
+            }`,
+      };
+      const transactions = await queryGateway(async (url: string) => {
+        const response = await arweave.api.post(url + "/graphql", query);
+        const { data } = response.data;
+        if (data === undefined) {
+          console.log(response.statusText);
+          console.log(response);
+          console.log(
+            "Get All Unique ArDrive Users... Undefined data returned from Gateway"
+          );
+          return 0;
+        } else {
+          const { transactions } = data;
+          return transactions;
+        }
+      });
+      if (transactions === 0) {
+        console.log("%s Gateway returned an empty JSON.");
+        await sleep(1000);
+      } else {
+        const { edges } = transactions;
+        console.log(
+          `Block: ${edges[0].node.block.height} - ${edges.length} results found`
+        );
+        hasNextPage = transactions.pageInfo.hasNextPage;
+        edges.forEach((edge: any) => {
+          cursor = edge.cursor;
+          const { node } = edge;
+          const { block } = node;
+          const { owner } = node;
+          if (block !== null) {
+            let timeStamp = new Date(block.timestamp * 1000);
+            // We only want results between our start and end dates, defined by milliseconds since epoch
+            // console.log(timeStamp.toLocaleString());
+            if (
+              start.getTime() <= timeStamp.getTime() &&
+              end.getTime() >= timeStamp.getTime()
+            ) {
+              //console.log ("Matching ardrive transaction: ", timeStamp)
+              foundTransactions += 1;
+              foundUsers[`${owner.address}`] = timeStamp.getTime();
+            } else if (timeStamp.getTime() > end.getTime()) {
+              //console.log("Result too early");
+              // hasNextPage = false;
+            } else {
+              console.log("Result too old");
+              hasNextPage = false;
+            }
+          }
+        });
+      }
+    }
+    // Merge results
+    bundleTxs.forEach((bundleTx) => {
+      if (!foundUsers[bundleTx.owner]) {
+        foundUsers[bundleTx.owner] = bundleTx.timeStamp;
+      } else if (foundUsers[bundleTx.owner] < bundleTx.timeStamp) {
+        foundUsers[bundleTx.owner] = bundleTx.timeStamp;
+      }
+    });
+    return { foundTransactions, foundUsers };
+  } catch (err) {
+    console.log(err);
+    console.log("Error collecting total number of ArDrive Users");
+    return { foundTransactions, foundUsers };
   }
 }

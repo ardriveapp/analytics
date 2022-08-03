@@ -18,6 +18,7 @@ import {
   getSumOfAllCommunityFees,
   getAllArDriveCommunityTokenTransactions,
   gateways,
+  getArDriveUsers,
 } from "./gql";
 import {
   sendArDriveCommunityFinancesToGraphite,
@@ -733,6 +734,8 @@ export function newBundleTx(): BundleTx {
     dataSize: 0,
     fee: 0,
     quantity: 0,
+    timeStamp: 0,
+    owner: "",
   };
   return bundle;
 }
@@ -846,4 +849,21 @@ export async function retryFetch(reqURL: string): Promise<AxiosResponse<any>> {
   return await axiosInstance.get(reqURL, {
     responseType: "arraybuffer",
   });
+}
+
+export async function getUniqueArDriveUsersInPeriod(
+  start: Date,
+  end: Date
+): Promise<number> {
+  console.log(
+    "Getting all unique users from from app %s from %s to %s",
+    start.toLocaleString(),
+    end.toLocaleString()
+  );
+
+  const allUsers = await getArDriveUsers(start, end);
+  const uniqueUserCount = Object.keys(allUsers.foundUsers).length;
+
+  console.log(`Unique ArDrive Users Found: ${uniqueUserCount}`);
+  return uniqueUserCount;
 }
