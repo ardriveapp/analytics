@@ -1,10 +1,7 @@
-import { addHoursToDate, appNames, asyncForEach, getMinBlock } from "./common";
-import { getAllAppL1Transactions, getBundleTransactions_ASC } from "./gql";
-import {
-  sendBundlesToGraphite,
-  sendFileDataSizeOnlyToGraphite,
-} from "./graphite";
-import { BundleTx, L1ResultSet, ResultSet } from "./types";
+import { addHoursToDate } from "./common";
+import { getAllAppL1Transactions } from "./gql";
+import { sendFileDataSizeOnlyToGraphite } from "./graphite";
+const message = "ardrive.apps.l1."; // this is where all of the logs will be stored
 
 async function main() {
   // The amount of hours to search for i.e. 12, 24 or other range
@@ -36,7 +33,7 @@ async function main() {
     //const bundleTxs: BundleTx[] = await getBundleTransactions_ASC(start, end);
     const l1Results = await getAllAppL1Transactions(start, end);
     //await sendBundlesToGraphite(bundleTxs, end);
-    await sendFileDataSizeOnlyToGraphite(l1Results.fileDataTxs, end);
+    await sendFileDataSizeOnlyToGraphite(message, l1Results.fileDataTxs, end);
     const totalL1TxsFound =
       l1Results.driveTxs.length +
       l1Results.fileDataTxs.length +

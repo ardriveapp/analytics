@@ -10,15 +10,23 @@ import {
   Results,
 } from "./types";
 
-export async function sendBundlesToGraphite(bundles: BundleTx[], end: Date) {
+export async function sendBundlesToGraphite(
+  message: string,
+  bundles: BundleTx[],
+  end: Date
+) {
+  const type = ".bundles";
   console.log("Sending Bundle Txs to Graphite", end);
   const appNames: string[] = [...new Set(bundles.map((item) => item.appName))];
-  const message = "ardrive.apps.";
-  const type = ".bundles2";
   await asyncForEach(appNames, async (appName: string) => {
     const appBundles = bundles.filter(
       (item) => item.appName === appName
     ).length;
+    const foundAddresses: string[] = [];
+    bundles.forEach((tx) => {
+      foundAddresses.push(tx.owner);
+    });
+    const appBundlers = new Set(foundAddresses).size;
     const appData = bundles
       .filter((item) => item.appName === appName)
       .map((item) => item.dataSize)
@@ -44,10 +52,10 @@ export async function sendBundlesToGraphite(bundles: BundleTx[], end: Date) {
       appFees
     );
 
-    let graphiteMessage = message + appName + type + ".total";
+    let graphiteMessage = message + appName + type + ".totalTxs";
     await sendMessageToGraphite(graphiteMessage, appBundles, end);
 
-    graphiteMessage = message + appName + type + ".data";
+    graphiteMessage = message + appName + type + ".dataSize";
     await sendMessageToGraphite(graphiteMessage, appData, end);
 
     graphiteMessage = message + appName + type + ".averageBundleSize";
@@ -64,14 +72,20 @@ export async function sendBundlesToGraphite(bundles: BundleTx[], end: Date) {
 
     graphiteMessage = message + appName + type + ".fees";
     await sendMessageToGraphite(graphiteMessage, appFees, end);
+
+    graphiteMessage = message + appName + type + ".bundlers";
+    await sendMessageToGraphite(graphiteMessage, appBundlers, end);
   });
 }
 
-export async function sendFileDataToGraphite(txs: ArFSFileDataTx[], end: Date) {
+export async function sendFileDataToGraphite(
+  message: string,
+  txs: ArFSFileDataTx[],
+  end: Date
+) {
+  const type = ".fileData";
   console.log("Sending File Data Txs to Graphite", end);
   const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
-  const message = "ardrive.apps.";
-  const type = ".fileData";
 
   await asyncForEach(appNames, async (appName: string) => {
     // Public
@@ -90,6 +104,10 @@ export async function sendFileDataToGraphite(txs: ArFSFileDataTx[], end: Date) {
         item.fee !== 0 &&
         item.private === false
     ).length;
+    const publicAppTips = txs
+      .filter((item) => item.appName === appName)
+      .map((item) => item.quantity)
+      .reduce((prev, curr) => prev + curr, 0);
     const publicV2DataSize = txs
       .filter((item) => item.appName === appName && item.private === false)
       .map((item) => item.dataSize)
@@ -107,19 +125,20 @@ export async function sendFileDataToGraphite(txs: ArFSFileDataTx[], end: Date) {
 
     let graphiteMessage = message + appName + privacy + type + ".totalTxs";
     await sendMessageToGraphite(graphiteMessage, publicTxs, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemTxs";
+    graphiteMessage = message + appName + privacy + type + ".l2Txs";
     await sendMessageToGraphite(graphiteMessage, publicDataItems, end);
-    graphiteMessage = message + appName + privacy + type + ".v2Txs";
+    graphiteMessage = message + appName + privacy + type + ".l1Txs";
     await sendMessageToGraphite(graphiteMessage, publicV2Txs, end);
-    graphiteMessage = message + appName + privacy + type + ".v2DataSize";
+    graphiteMessage = message + appName + privacy + type + ".l1DataSize";
     await sendMessageToGraphite(graphiteMessage, publicV2DataSize, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemSize";
+    graphiteMessage = message + appName + privacy + type + ".l2DataSize";
     await sendMessageToGraphite(graphiteMessage, publicDataItemSize, end);
-    graphiteMessage =
-      message + appName + privacy + type + ".averageFileDataSize";
+    graphiteMessage = message + appName + privacy + type + ".averageFileSize";
     await sendMessageToGraphite(graphiteMessage, publicAvgFileDataSize, end);
     graphiteMessage = message + appName + privacy + type + ".fees";
     await sendMessageToGraphite(graphiteMessage, publicFees, end);
+    graphiteMessage = message + appName + type + ".tips";
+    await sendMessageToGraphite(graphiteMessage, publicAppTips, end);
 
     console.log("  - %s", appName);
     console.log("      - %s", privacy);
@@ -153,6 +172,10 @@ export async function sendFileDataToGraphite(txs: ArFSFileDataTx[], end: Date) {
         item.fee !== 0 &&
         item.private === true
     ).length;
+    const privateAppTips = txs
+      .filter((item) => item.appName === appName)
+      .map((item) => item.quantity)
+      .reduce((prev, curr) => prev + curr, 0);
     const privateV2DataSize = txs
       .filter((item) => item.appName === appName && item.private === true)
       .map((item) => item.dataSize)
@@ -170,19 +193,21 @@ export async function sendFileDataToGraphite(txs: ArFSFileDataTx[], end: Date) {
 
     graphiteMessage = message + appName + privacy + type + ".totalTxs";
     await sendMessageToGraphite(graphiteMessage, privateTxs, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemTxs";
+    graphiteMessage = message + appName + privacy + type + ".l2Txs";
     await sendMessageToGraphite(graphiteMessage, privateDataItems, end);
-    graphiteMessage = message + appName + privacy + type + ".v2Txs";
+    graphiteMessage = message + appName + privacy + type + ".l1Txs";
     await sendMessageToGraphite(graphiteMessage, privateV2Txs, end);
-    graphiteMessage = message + appName + privacy + type + ".v2DataSize";
+    graphiteMessage = message + appName + privacy + type + ".l1DataSize";
     await sendMessageToGraphite(graphiteMessage, privateV2DataSize, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemSize";
+    graphiteMessage = message + appName + privacy + type + ".l2DataSize";
     await sendMessageToGraphite(graphiteMessage, privateDataItemSize, end);
     graphiteMessage =
       message + appName + privacy + type + ".averageFileDataSize";
     await sendMessageToGraphite(graphiteMessage, privateAvgFileDataSize, end);
     graphiteMessage = message + appName + privacy + type + ".fees";
     await sendMessageToGraphite(graphiteMessage, privateFees, end);
+    graphiteMessage = message + appName + type + ".tips";
+    await sendMessageToGraphite(graphiteMessage, privateAppTips, end);
 
     console.log("  - %s", appName);
     console.log("      - %s", privacy);
@@ -219,12 +244,12 @@ export async function sendFileDataToGraphite(txs: ArFSFileDataTx[], end: Date) {
 }
 
 export async function sendFileDataSizeOnlyToGraphite(
+  message: string,
   txs: ArFSFileDataTx[],
   end: Date
 ) {
   console.log("Sending File Data Txs to Graphite", end);
   const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
-  const message = "ardrive.apps.";
   const type = ".fileData2";
 
   await asyncForEach(appNames, async (appName: string) => {
@@ -257,7 +282,7 @@ export async function sendFileDataSizeOnlyToGraphite(
       .map((item) => item.fee)
       .reduce((prev, curr) => prev + curr, 0);
 
-    let graphiteMessage = message + appName + privacy + type + ".v2DataSize";
+    let graphiteMessage = message + appName + privacy + type + ".l1DataSize";
     await sendMessageToGraphite(graphiteMessage, publicV2DataSize, end);
     console.log("  - %s", appName);
     console.log("      - %s", privacy);
@@ -304,7 +329,7 @@ export async function sendFileDataSizeOnlyToGraphite(
       .map((item) => item.fee)
       .reduce((prev, curr) => prev + curr, 0);
 
-    graphiteMessage = message + appName + privacy + type + ".v2DataSize";
+    graphiteMessage = message + appName + privacy + type + ".l1DataSize";
     await sendMessageToGraphite(graphiteMessage, privateV2DataSize, end);
 
     console.log("  - %s", appName);
@@ -325,10 +350,13 @@ export async function sendFileDataSizeOnlyToGraphite(
   });
 }
 
-export async function sendFileMetadataToGraphite(txs: ArFSFileTx[], end: Date) {
+export async function sendFileMetadataToGraphite(
+  message: string,
+  txs: ArFSFileTx[],
+  end: Date
+) {
   console.log("Sending File Metadata Txs to Graphite", end);
   const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
-  const message = "ardrive.apps.";
   const type = ".fileMetaData";
   await asyncForEach(appNames, async (appName: string) => {
     // Public
@@ -362,13 +390,13 @@ export async function sendFileMetadataToGraphite(txs: ArFSFileTx[], end: Date) {
 
     let graphiteMessage = message + appName + privacy + type + ".totalTxs";
     await sendMessageToGraphite(graphiteMessage, publicTxs, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemTxs";
+    graphiteMessage = message + appName + privacy + type + ".l2Txs";
     await sendMessageToGraphite(graphiteMessage, publicDataItems, end);
-    graphiteMessage = message + appName + privacy + type + ".v2Txs";
+    graphiteMessage = message + appName + privacy + type + ".l1Txs";
     await sendMessageToGraphite(graphiteMessage, publicV2Txs, end);
-    graphiteMessage = message + appName + privacy + type + ".v2DataSize";
+    graphiteMessage = message + appName + privacy + type + ".l1DataSize";
     await sendMessageToGraphite(graphiteMessage, publicV2DataSize, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemSize";
+    graphiteMessage = message + appName + privacy + type + ".l2DataSize";
     await sendMessageToGraphite(graphiteMessage, publicDataItemSize, end);
     graphiteMessage = message + appName + privacy + type + ".fees";
     await sendMessageToGraphite(graphiteMessage, publicFees, end);
@@ -420,13 +448,13 @@ export async function sendFileMetadataToGraphite(txs: ArFSFileTx[], end: Date) {
 
     graphiteMessage = message + appName + privacy + type + ".totalTxs";
     await sendMessageToGraphite(graphiteMessage, privateTxs, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemTxs";
+    graphiteMessage = message + appName + privacy + type + ".l2Txs";
     await sendMessageToGraphite(graphiteMessage, privateDataItems, end);
-    graphiteMessage = message + appName + privacy + type + ".v2Txs";
+    graphiteMessage = message + appName + privacy + type + ".l1Txs";
     await sendMessageToGraphite(graphiteMessage, privateV2Txs, end);
-    graphiteMessage = message + appName + privacy + type + ".v2DataSize";
+    graphiteMessage = message + appName + privacy + type + ".l1DataSize";
     await sendMessageToGraphite(graphiteMessage, privateV2DataSize, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemSize";
+    graphiteMessage = message + appName + privacy + type + ".l2DataSize";
     await sendMessageToGraphite(graphiteMessage, privateDataItemSize, end);
     graphiteMessage = message + appName + privacy + type + ".fees";
     await sendMessageToGraphite(graphiteMessage, privateFees, end);
@@ -450,12 +478,12 @@ export async function sendFileMetadataToGraphite(txs: ArFSFileTx[], end: Date) {
 }
 
 export async function sendFolderMetadataToGraphite(
+  message: string,
   txs: ArFSFolderTx[],
   end: Date
 ) {
   console.log("Sending Folder Metadata Txs to Graphite", end);
   const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
-  const message = "ardrive.apps.";
   const type = ".folderMetaData";
   await asyncForEach(appNames, async (appName: string) => {
     // Public
@@ -489,13 +517,13 @@ export async function sendFolderMetadataToGraphite(
 
     let graphiteMessage = message + appName + privacy + type + ".totalTxs";
     await sendMessageToGraphite(graphiteMessage, publicTxs, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemTxs";
+    graphiteMessage = message + appName + privacy + type + ".l2Txs";
     await sendMessageToGraphite(graphiteMessage, publicDataItems, end);
-    graphiteMessage = message + appName + privacy + type + ".v2Txs";
+    graphiteMessage = message + appName + privacy + type + ".l1Txs";
     await sendMessageToGraphite(graphiteMessage, publicV2Txs, end);
-    graphiteMessage = message + appName + privacy + type + ".v2DataSize";
+    graphiteMessage = message + appName + privacy + type + ".l1DataSize";
     await sendMessageToGraphite(graphiteMessage, publicV2DataSize, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemSize";
+    graphiteMessage = message + appName + privacy + type + ".l2DataSize";
     await sendMessageToGraphite(graphiteMessage, publicDataItemSize, end);
     graphiteMessage = message + appName + privacy + type + ".fees";
     await sendMessageToGraphite(graphiteMessage, publicFees, end);
@@ -547,13 +575,13 @@ export async function sendFolderMetadataToGraphite(
 
     graphiteMessage = message + appName + privacy + type + ".totalTxs";
     await sendMessageToGraphite(graphiteMessage, privateTxs, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemTxs";
+    graphiteMessage = message + appName + privacy + type + ".l2Txs";
     await sendMessageToGraphite(graphiteMessage, privateDataItems, end);
-    graphiteMessage = message + appName + privacy + type + ".v2Txs";
+    graphiteMessage = message + appName + privacy + type + ".l1Txs";
     await sendMessageToGraphite(graphiteMessage, privateV2Txs, end);
-    graphiteMessage = message + appName + privacy + type + ".v2DataSize";
+    graphiteMessage = message + appName + privacy + type + ".l1DataSize";
     await sendMessageToGraphite(graphiteMessage, privateV2DataSize, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemSize";
+    graphiteMessage = message + appName + privacy + type + ".l2DataSize";
     await sendMessageToGraphite(graphiteMessage, privateDataItemSize, end);
     graphiteMessage = message + appName + privacy + type + ".fees";
     await sendMessageToGraphite(graphiteMessage, privateFees, end);
@@ -577,12 +605,12 @@ export async function sendFolderMetadataToGraphite(
 }
 
 export async function sendDriveMetadataToGraphite(
+  message: string,
   txs: ArFSFolderTx[],
   end: Date
 ) {
   console.log("Sending Drive Metadata Txs to Graphite", end);
   const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
-  const message = "ardrive.apps.";
   const type = ".driveMetaData";
   await asyncForEach(appNames, async (appName: string) => {
     // Public
@@ -616,13 +644,13 @@ export async function sendDriveMetadataToGraphite(
 
     let graphiteMessage = message + appName + privacy + type + ".totalTxs";
     await sendMessageToGraphite(graphiteMessage, publicTxs, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemTxs";
+    graphiteMessage = message + appName + privacy + type + ".l2Txs";
     await sendMessageToGraphite(graphiteMessage, publicDataItems, end);
-    graphiteMessage = message + appName + privacy + type + ".v2Txs";
+    graphiteMessage = message + appName + privacy + type + ".l1Txs";
     await sendMessageToGraphite(graphiteMessage, publicV2Txs, end);
-    graphiteMessage = message + appName + privacy + type + ".v2DataSize";
+    graphiteMessage = message + appName + privacy + type + ".l1DataSize";
     await sendMessageToGraphite(graphiteMessage, publicV2DataSize, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemSize";
+    graphiteMessage = message + appName + privacy + type + ".l2DataSize";
     await sendMessageToGraphite(graphiteMessage, publicDataItemSize, end);
     graphiteMessage = message + appName + privacy + type + ".fees";
     await sendMessageToGraphite(graphiteMessage, publicFees, end);
@@ -674,13 +702,13 @@ export async function sendDriveMetadataToGraphite(
 
     graphiteMessage = message + appName + privacy + type + ".totalTxs";
     await sendMessageToGraphite(graphiteMessage, privateTxs, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemTxs";
+    graphiteMessage = message + appName + privacy + type + ".l2Txs";
     await sendMessageToGraphite(graphiteMessage, privateDataItems, end);
-    graphiteMessage = message + appName + privacy + type + ".v2Txs";
+    graphiteMessage = message + appName + privacy + type + ".l1Txs";
     await sendMessageToGraphite(graphiteMessage, privateV2Txs, end);
-    graphiteMessage = message + appName + privacy + type + ".v2DataSize";
+    graphiteMessage = message + appName + privacy + type + ".l1DataSize";
     await sendMessageToGraphite(graphiteMessage, privateV2DataSize, end);
-    graphiteMessage = message + appName + privacy + type + ".dataItemSize";
+    graphiteMessage = message + appName + privacy + type + ".l2DataSize";
     await sendMessageToGraphite(graphiteMessage, privateDataItemSize, end);
     graphiteMessage = message + appName + privacy + type + ".fees";
     await sendMessageToGraphite(graphiteMessage, privateFees, end);
@@ -703,13 +731,13 @@ export async function sendDriveMetadataToGraphite(
   });
 }
 
-export async function sendv2CommunityTipsToGraphite(
+export async function sentL1CommunityTipsToGraphite(
+  message: string,
   txs: ArFSTipTx[],
   end: Date
 ) {
   console.log("Sending Tip Txs to Graphite", end);
   const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
-  const message = "ardrive.apps.";
   await asyncForEach(appNames, async (appName: string) => {
     const appTipTxs = txs.filter((item) => item.appName === appName).length;
     const appTipQuantity = txs

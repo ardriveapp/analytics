@@ -3,6 +3,8 @@ import { getAllAppDriveTransactions_ASC } from "./gql";
 import { sendDriveMetadataToGraphite } from "./graphite";
 import { ResultSet } from "./types";
 
+const message = "ardrive.apps.l1."; // this is where all of the logs will be stored
+
 async function main() {
   let allResults: ResultSet = {
     bundleTxs: [],
@@ -11,7 +13,7 @@ async function main() {
     folderTxs: [],
     driveTxs: [],
     tipTxs: [],
-    lastBlock: 0
+    lastBlock: 0,
   };
 
   let today = new Date();
@@ -44,7 +46,7 @@ async function main() {
     console.log("DriveTxs: %s", results.driveTxs.length);
     allResults.driveTxs = allResults.driveTxs.concat(results.driveTxs);
     start = addHoursToDate(start, hoursToQuery);
-    await sendDriveMetadataToGraphite(results.driveTxs, end);
+    await sendDriveMetadataToGraphite(message, results.driveTxs, end);
     lastBlock = results.lastBlock - 1; // Start the search from 1 block previous to the last block
   }
   console.log(

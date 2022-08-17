@@ -4002,6 +4002,7 @@ export async function getAllAppL1Transactions(
                 bundleTx.dataSize = +data.size;
                 bundleTx.fee = +fee.ar;
                 bundleTx.quantity = +node.quantity.ar;
+                bundleTx.owner = node.owner.address;
                 bundleTxs.push(bundleTx);
               } else if (communityTip !== 0) {
                 tipTx.appName = appName;
@@ -4024,6 +4025,7 @@ export async function getAllAppL1Transactions(
                 fileDataTx.appVersion = appVersion;
                 fileDataTx.owner = node.owner.address;
                 fileDataTx.private = encrypted;
+                fileDataTx.quantity = +node.quantity.ar;
                 fileDataTx.fee = +fee.ar;
                 fileDataTx.contentType = contentType;
                 fileDataTx.bundledIn = bundledIn;
@@ -4101,7 +4103,6 @@ export async function getAllAppL1Transactions(
       hasNextPage = false;
     }
   }
-  console.log("Missing Data Errors: %s", missingDataErrors);
   return {
     bundleTxs,
     fileDataTxs,
@@ -4123,7 +4124,7 @@ export async function getAllInfernoRewards(
   let timeStamp = new Date(end);
   let input: string;
   let rewards: AstatineReward[] = [];
-  console.log("Getting all Astatine Transactions");
+  console.log("Getting all Inferno Transactions");
   try {
     while (hasNextPage) {
       const query = {

@@ -1,11 +1,12 @@
 import { formatBytes } from "./common";
 import { getAllAppL1Transactions } from "./gql";
+import { L1ResultSet } from "./types";
 
 async function main() {
   // The end date for the query range
   let end = new Date(); // today
   // The start date for the query range
-  let start = new Date(2020, 9, 26); // the beginning history of ardrive
+  let start = new Date(2020, 8, 10);
 
   console.log(
     "Running analytics from %s to %s",
@@ -16,7 +17,8 @@ async function main() {
     "--------------------------------------------------------------------------------"
   );
 
-  const l1Results = await getAllAppL1Transactions(start, end, "Akord");
+  const foundAddresses: string[] = [];
+  const l1Results: L1ResultSet = await getAllAppL1Transactions(start, end);
   //await sendBundlesToGraphite(bundleTxs, end);
   // await sendFileDataSizeOnlyToGraphite(l1Results.fileDataTxs, end);
   const totalNonBundledTxsFound =
@@ -34,6 +36,7 @@ async function main() {
     totalBundleSize += tx.dataSize;
     totalBundleGas += tx.fee;
     totalBundleTips += tx.quantity;
+    foundAddresses.push(tx.owner);
   });
 
   let totalNonBundleSize = 0;
@@ -43,18 +46,22 @@ async function main() {
     totalNonBundleSize += tx.dataSize;
     totalNonBundleGas += tx.fee;
     totalFileDataTips += tx.quantity;
+    foundAddresses.push(tx.owner);
   });
   l1Results.fileTxs.forEach((tx) => {
     totalNonBundleSize += tx.dataSize;
     totalNonBundleGas += tx.fee;
+    foundAddresses.push(tx.owner);
   });
   l1Results.folderTxs.forEach((tx) => {
     totalNonBundleSize += tx.dataSize;
     totalNonBundleGas += tx.fee;
+    foundAddresses.push(tx.owner);
   });
   l1Results.driveTxs.forEach((tx) => {
     totalNonBundleSize += tx.dataSize;
     totalNonBundleGas += tx.fee;
+    foundAddresses.push(tx.owner);
   });
 
   let totalTipTxTips = 0;
@@ -62,6 +69,12 @@ async function main() {
     totalTipTxTips += tx.quantity;
   });
 
+  const uniqueUserCount = new Set(foundAddresses).size;
+  console.log(
+    "Completed analytics from %s to %s",
+    start.toLocaleString(),
+    end.toLocaleString()
+  );
   console.log(`-----------------------------------------`);
   console.log(`Bundles found: ${l1Results.bundleTxs.length}`);
   console.log(`Bundle Data Size (Bytes): ${formatBytes(totalBundleSize)}`);
@@ -91,6 +104,7 @@ async function main() {
       totalBundleTips + totalFileDataTips + totalTipTxTips
     }`
   );
+  console.log(`Total Unique Users Found: ${uniqueUserCount}`);
   console.log(`-----------------------------------------`);
   console.log("ArFS Stats");
   console.log(" - FileDataTxs: %s", l1Results.fileDataTxs.length);

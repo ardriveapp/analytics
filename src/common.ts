@@ -43,6 +43,7 @@ import {
   ArFSFolderTx,
   ArFSFileDataTx,
   ArFSTipTx,
+  L1ResultSet,
 } from "./types";
 
 export const communityWallets: string[] = [
@@ -713,7 +714,7 @@ export async function getMinBlock(
 
   let timeStamp = await getBlockTimestamp(minBlock);
   if (start < timeStamp) {
-    return await getMinBlock(start, blocksPerHour - 3);
+    return await getMinBlock(start, blocksPerHour + 1);
   } else {
     return minBlock;
   }
@@ -866,4 +867,93 @@ export async function getUniqueArDriveUsersInPeriod(
 
   console.log(`Unique ArDrive Users Found: ${uniqueUserCount}`);
   return uniqueUserCount;
+}
+
+export function printL1Results(l1Results: L1ResultSet) {
+  const foundAddresses: string[] = [];
+  const totalNonBundledTxsFound =
+    l1Results.driveTxs.length +
+    l1Results.fileDataTxs.length +
+    l1Results.fileTxs.length +
+    l1Results.folderTxs.length +
+    l1Results.tipTxs.length;
+
+  let totalBundleSize = 0;
+  let totalBundleGas = 0;
+  let totalBundleTips = 0;
+
+  l1Results.bundleTxs.forEach((tx) => {
+    totalBundleSize += tx.dataSize;
+    totalBundleGas += tx.fee;
+    totalBundleTips += tx.quantity;
+    foundAddresses.push(tx.owner);
+  });
+
+  let totalNonBundleSize = 0;
+  let totalNonBundleGas = 0;
+  let totalFileDataTips = 0;
+  l1Results.fileDataTxs.forEach((tx) => {
+    totalNonBundleSize += tx.dataSize;
+    totalNonBundleGas += tx.fee;
+    totalFileDataTips += tx.quantity;
+    foundAddresses.push(tx.owner);
+  });
+  l1Results.fileTxs.forEach((tx) => {
+    totalNonBundleSize += tx.dataSize;
+    totalNonBundleGas += tx.fee;
+    foundAddresses.push(tx.owner);
+  });
+  l1Results.folderTxs.forEach((tx) => {
+    totalNonBundleSize += tx.dataSize;
+    totalNonBundleGas += tx.fee;
+    foundAddresses.push(tx.owner);
+  });
+  l1Results.driveTxs.forEach((tx) => {
+    totalNonBundleSize += tx.dataSize;
+    totalNonBundleGas += tx.fee;
+    foundAddresses.push(tx.owner);
+  });
+
+  let totalTipTxTips = 0;
+  l1Results.tipTxs.forEach((tx) => {
+    totalTipTxTips += tx.quantity;
+  });
+
+  const uniqueUserCount = new Set(foundAddresses).size;
+  console.log(`-----------------------------------------`);
+  console.log(`Bundles found: ${l1Results.bundleTxs.length}`);
+  console.log(`Bundle Data Size (Bytes): ${formatBytes(totalBundleSize)}`);
+  console.log(`Bundle Gas Spent (AR): ${totalBundleGas}`);
+  console.log(`Non Bundled Txs found: ${totalNonBundledTxsFound}`);
+  console.log(
+    `Non Bundled Data Size (Bytes): ${formatBytes(totalNonBundleSize)}`
+  );
+  console.log(`Non Bundled Gas Spent (AR): ${totalNonBundleGas}`);
+  console.log(`Bundled Tip Amount (AR): ${totalBundleTips}`);
+  console.log(`Non Bundled Tip Amount (AR): ${totalFileDataTips}`);
+  console.log("Separated Tip Txs Sent: %s", l1Results.tipTxs.length);
+  console.log(`Separated Tip Amount (AR): ${totalTipTxTips}`);
+  console.log(`-----------------------------------------`);
+  console.log(
+    `Total L1 Transactions: ${
+      totalNonBundledTxsFound + l1Results.bundleTxs.length
+    }`
+  );
+  console.log(
+    `Total L1 Size (Bytes): ${formatBytes(
+      totalBundleSize + totalNonBundleSize
+    )}`
+  );
+  console.log(
+    `Total L1 Tip Amount (AR): ${
+      totalBundleTips + totalFileDataTips + totalTipTxTips
+    }`
+  );
+  console.log(`Total Unique Users Found: ${uniqueUserCount}`);
+  console.log(`-----------------------------------------`);
+  console.log("ArFS Stats");
+  console.log(" - FileDataTxs: %s", l1Results.fileDataTxs.length);
+  console.log(" - FileTxs: %s", l1Results.fileTxs.length);
+  console.log(" - FolderTxs: %s", l1Results.folderTxs.length);
+  console.log(" - DriveTxs: %s", l1Results.driveTxs.length);
 }
