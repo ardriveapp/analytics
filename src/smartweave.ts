@@ -1,21 +1,37 @@
-import { readContract } from "smartweave";
-// import { SmartWeaveNodeFactory } from "redstone-smartweave";
-import { arweave, getWalletBalance } from "./arweave";
+import { LoggerFactory, WarpNodeFactory } from "warp-contracts";
+import Arweave from "arweave";
+// import { getWalletBalance } from "./arweave";
 import { ArDriveTokenHolder } from "./types";
+
+const smartweaveGatewayHost = "test.arweave.ardrive.io";
+const port = 3002;
+const protocol = "http";
+
+export const smartweaveGateway = Arweave.init({
+  host: smartweaveGatewayHost, // Arweave Gateway
+  port,
+  protocol,
+  timeout: 600000,
+  logging: false,
+});
 
 // ArDrive Profit Sharing Community Smart Contract
 const communityTxId = "-8A6RexFkpfWwuyVO98wzSFZh0d6VJuI-buTJvlwOJQ";
 
-// For use with Redstone
-// const smartweave = SmartWeaveNodeFactory.memCached(arweave);
-// const providersRegistryContract = smartweave.contract(communityTxId);
+// ~~ Initialize 'LoggerFactory' ~~
+LoggerFactory.INST.logLevel("error");
+
+// Initialize SmartWeave
+const smartweave = WarpNodeFactory.memCachedBased(smartweaveGateway)
+  .useArweaveGateway()
+  .build();
 
 // Gets a random ArDrive token holder based off their weight (amount of tokens they hold)
 export async function selectTokenHolder() {
   // Read the ArDrive Smart Contract to get the latest state
-  const state = await readContract(arweave, communityTxId);
-  const balances = state.balances;
-  const vault = state.vault;
+  const stateJSON = await getArDriveCommunityState();
+  const balances = stateJSON.balances;
+  const vault = stateJSON.vault;
 
   // Get the total number of token holders
   let total = 0;
@@ -50,18 +66,18 @@ export async function selectTokenHolder() {
 // Gets the ArDrive Community Smwartweave state
 export async function getArDriveCommunityState(): Promise<any> {
   // Read the ArDrive Smart Contract to get the latest state
-  console.log("Getting ArDrive Community State");
-  const state = await readContract(arweave, communityTxId);
-  return state;
+  console.log(
+    `Getting ArDrive Community State using ${
+      protocol + "://" + smartweaveGatewayHost + ":" + port
+    }`
+  );
+  // Read the ArDrive Smart Contract to get the latest state
+  const pst = smartweave.pst(communityTxId);
+  const state = await pst.currentState();
+  const stateString = JSON.stringify(state);
+  const stateJSON = JSON.parse(stateString);
+  return stateJSON;
 }
-
-// Gets the ArDrive Community Smwartweave state with Redstone
-/*export async function getArDriveCommunityState_Redstone(): Promise<any> {
-	// Read the ArDrive Smart Contract to get the latest state
-    console.log ("Getting ArDrive Community State with Redstone")
-	const results = await providersRegistryContract.readState();
-    return results.state;
-};*/
 
 // Gets a count of all ArDrive tokens that have been minted
 export async function getTotalTokenCount(state: any): Promise<number> {
@@ -95,7 +111,7 @@ export async function getTotalTokenCount(state: any): Promise<number> {
 export async function getTokenHolderCount(): Promise<number> {
   try {
     // Read the ArDrive Smart Contract to get the latest state
-    const state = await readContract(arweave, communityTxId);
+    const state = await getArDriveCommunityState();
     const balances = state.balances;
 
     // Get the total number of token holders with balance > 0
@@ -117,15 +133,11 @@ export async function getAllArDriveTokenHolders(): Promise<
   ArDriveTokenHolder[]
 > {
   // Read the ArDrive Smart Contract to get the latest state
-  // const state = await getArDriveCommunityState_Redstone(); // Redstone version
-  const state = await getArDriveCommunityState(); // Smartweave-js version
-
-  console.log("Getting unlocked and vaulted balances");
+  console.log(`Getting unlocked and vaulted balances from ${communityTxId}`);
+  const state = await getArDriveCommunityState();
   const balances = state.balances;
   const vault = state.vault;
   let arDriveTokenHolders: ArDriveTokenHolder[] = [];
-  console.log(balances);
-  console.log(vault);
   for (const addr of Object.keys(balances)) {
     let vaultBalance = 0;
     if (vault[addr] !== undefined) {
@@ -140,7 +152,7 @@ export async function getAllArDriveTokenHolders(): Promise<
       lockedArDriveTokens: vaultBalance,
       totalArDriveTokens: balances[addr] + vaultBalance,
       voteWeight: 0,
-      arweaveTokens: await getWalletBalance(addr),
+      arweaveTokens: 0, // await getWalletBalance(addr),
     };
     //console.log (arDriveTokenHolder);
     arDriveTokenHolders.push(arDriveTokenHolder);
@@ -203,34 +215,3 @@ export async function getWalletArDriveUnlockedBalance(
   console.log("Total Unlocked ArDrive Tokens for %s: %s", wallet, total);
   return total;
 }
-
-/*export async function getArDriveTokenSnapshot_Redstone() {
-
-	const contractTxId = communityTxId;
-  
-	// using SmartWeaveNodeFactory to quickly obtain fully configured, mem-cacheable SmartWeave instance
-	// see custom-client-example.ts for a more detailed explanation of all the core modules of the SmartWeave instance.
-	const smartweave = SmartWeaveNodeFactory.memCached(arweave);
-  
-	// connecting to a given contract
-	const contract = smartweave.contract(contractTxId);
-  
-	const { state, validity } = await contract.readState();
-  
-	console.log (JSON.stringify(state, null, 4));
-	console.log (validity); 
-};
-
-export async function validateSmartweaveTxs(smartweaveTxs: SmartweaveTx[]) {
-	
-	// Get the latest state of the smartweave contract using redstone
-	//const smartweave = SmartWeaveNodeFactory.memCached(arweave);
-	const contract = smartweave.contract(communityTxId);
-	const state  = await contract.readState();
-
-	// Iterate through each found smartweave transaction and ensure it is valid
-	for(let i = 0; i < smartweaveTxs.length; i++) {
-		smartweaveTxs[i].validSmartweaveTx = state.validity[smartweaveTxs[i].id];
-	};
-	return smartweaveTxs;
-}*/

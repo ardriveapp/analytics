@@ -2,9 +2,9 @@ import { getArDriveTokenTransfers } from "./common";
 
 export async function main() {
   const today = new Date().toISOString().slice(0, 10);
-  const name = "ArDrive_Community_Token_Transfers_" + today + ".csv";
+  const name = "ArDrive_Community_Token_Transactions_" + today + ".csv";
   let end = new Date();
-  let start = new Date(2021, 0, 0);
+  let start = new Date(2020, 7, 1);
 
   const createCsvWriter = require("csv-writer").createObjectCsvWriter;
 
@@ -26,7 +26,8 @@ export async function main() {
   const results = await getArDriveTokenTransfers(start, end);
 
   csvWriter.writeRecords(results).then(() => {
-    console.log("...Done writing ArDrive Token Transfers");
+    console.log(`Found ${results.length} resuults`);
+    console.log(`...Done writing ArDrive Token Transfers`);
   });
 }
 

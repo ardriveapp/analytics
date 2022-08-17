@@ -17,6 +17,8 @@ import {
   getAllTransactions,
   getSumOfAllCommunityFees,
   getAllArDriveCommunityTokenTransactions,
+  gateways,
+  getArDriveUsers,
 } from "./gql";
 import {
   sendArDriveCommunityFinancesToGraphite,
@@ -41,6 +43,7 @@ import {
   ArFSFolderTx,
   ArFSFileDataTx,
   ArFSTipTx,
+  L1ResultSet,
 } from "./types";
 
 export const communityWallets: string[] = [
@@ -64,7 +67,7 @@ export const appNames: string[] = [
   "ArDrive-Mobile",
   "ArDrive-Core",
   "ArDrive-Sync",
-  "ArDrive-Web"
+  "ArDrive-Web",
 ];
 
 // Pauses application
@@ -97,7 +100,8 @@ export async function getArDriveTokenTransfers(
   end: Date
 ): Promise<SmartweaveTx[]> {
   console.log(
-    "Starting to collect ArDrive Community Token Transfers from %s to %s",
+    "Starting to collect ArDrive Community Transactions from %s within %s to %s",
+    gateways[0],
     start,
     end
   );
@@ -669,7 +673,10 @@ export function countDistinct(arr: any[], n: number) {
 }
 
 // Return the number of blocks to end searching from based on a date
-export async function getMaxBlock(end: Date, blocksPerHour?: number): Promise<number> {
+export async function getMaxBlock(
+  end: Date,
+  blocksPerHour?: number
+): Promise<number> {
   // calculate the no. of days between two dates
   if (!blocksPerHour) {
     blocksPerHour = 30;
@@ -679,18 +686,21 @@ export async function getMaxBlock(end: Date, blocksPerHour?: number): Promise<nu
   const endDaysDiff = today.getTime() - end.getTime();
   const endHoursDiff = Math.floor(endDaysDiff / (1000 * 3600));
   let maxBlock = height - blocksPerHour * endHoursDiff;
-  let timeStamp = await getBlockTimestamp(maxBlock)
+  let timeStamp = await getBlockTimestamp(maxBlock);
   if (end > timeStamp) {
-    return await getMaxBlock(end, (blocksPerHour-3))
+    return await getMaxBlock(end, blocksPerHour - 3);
   } else {
     return maxBlock;
   }
 }
 
 // Return the number of blocks to start searching from based on a date
-export async function getMinBlock(start: Date, blocksPerHour?: number): Promise<number> {
+export async function getMinBlock(
+  start: Date,
+  blocksPerHour?: number
+): Promise<number> {
   if (!blocksPerHour) {
-    blocksPerHour = 30;
+    blocksPerHour = 28;
   }
   let today = new Date();
   let height = await getCurrentBlockHeight();
@@ -702,12 +712,12 @@ export async function getMinBlock(start: Date, blocksPerHour?: number): Promise<
     minBlock = height - blocksPerHour * startHoursDiff;
   }
 
-  let timeStamp = await getBlockTimestamp(minBlock)
+  let timeStamp = await getBlockTimestamp(minBlock);
   if (start < timeStamp) {
-    return await getMinBlock(start, (blocksPerHour-3));
+    return await getMinBlock(start, blocksPerHour + 1);
   } else {
     return minBlock;
-  };
+  }
 }
 
 // Adds an amount of hours to a date
@@ -725,6 +735,8 @@ export function newBundleTx(): BundleTx {
     dataSize: 0,
     fee: 0,
     quantity: 0,
+    timeStamp: 0,
+    owner: "",
   };
   return bundle;
 }
@@ -758,6 +770,7 @@ export function newArFSFileDataTx(): ArFSFileDataTx {
     dataItemSize: 0,
     private: false,
     fee: 0,
+    quantity: 0,
     contentType: "",
     bundledIn: "",
     id: "",
@@ -837,4 +850,110 @@ export async function retryFetch(reqURL: string): Promise<AxiosResponse<any>> {
   return await axiosInstance.get(reqURL, {
     responseType: "arraybuffer",
   });
+}
+
+export async function getUniqueArDriveUsersInPeriod(
+  start: Date,
+  end: Date
+): Promise<number> {
+  console.log(
+    "Getting all unique users from from app %s from %s to %s",
+    start.toLocaleString(),
+    end.toLocaleString()
+  );
+
+  const allUsers = await getArDriveUsers(start, end);
+  const uniqueUserCount = Object.keys(allUsers.foundUsers).length;
+
+  console.log(`Unique ArDrive Users Found: ${uniqueUserCount}`);
+  return uniqueUserCount;
+}
+
+export function printL1Results(l1Results: L1ResultSet) {
+  const foundAddresses: string[] = [];
+  const totalNonBundledTxsFound =
+    l1Results.driveTxs.length +
+    l1Results.fileDataTxs.length +
+    l1Results.fileTxs.length +
+    l1Results.folderTxs.length +
+    l1Results.tipTxs.length;
+
+  let totalBundleSize = 0;
+  let totalBundleGas = 0;
+  let totalBundleTips = 0;
+
+  l1Results.bundleTxs.forEach((tx) => {
+    totalBundleSize += tx.dataSize;
+    totalBundleGas += tx.fee;
+    totalBundleTips += tx.quantity;
+    foundAddresses.push(tx.owner);
+  });
+
+  let totalNonBundleSize = 0;
+  let totalNonBundleGas = 0;
+  let totalFileDataTips = 0;
+  l1Results.fileDataTxs.forEach((tx) => {
+    totalNonBundleSize += tx.dataSize;
+    totalNonBundleGas += tx.fee;
+    totalFileDataTips += tx.quantity;
+    foundAddresses.push(tx.owner);
+  });
+  l1Results.fileTxs.forEach((tx) => {
+    totalNonBundleSize += tx.dataSize;
+    totalNonBundleGas += tx.fee;
+    foundAddresses.push(tx.owner);
+  });
+  l1Results.folderTxs.forEach((tx) => {
+    totalNonBundleSize += tx.dataSize;
+    totalNonBundleGas += tx.fee;
+    foundAddresses.push(tx.owner);
+  });
+  l1Results.driveTxs.forEach((tx) => {
+    totalNonBundleSize += tx.dataSize;
+    totalNonBundleGas += tx.fee;
+    foundAddresses.push(tx.owner);
+  });
+
+  let totalTipTxTips = 0;
+  l1Results.tipTxs.forEach((tx) => {
+    totalTipTxTips += tx.quantity;
+  });
+
+  const uniqueUserCount = new Set(foundAddresses).size;
+  console.log(`-----------------------------------------`);
+  console.log(`Bundles found: ${l1Results.bundleTxs.length}`);
+  console.log(`Bundle Data Size (Bytes): ${formatBytes(totalBundleSize)}`);
+  console.log(`Bundle Gas Spent (AR): ${totalBundleGas}`);
+  console.log(`Non Bundled Txs found: ${totalNonBundledTxsFound}`);
+  console.log(
+    `Non Bundled Data Size (Bytes): ${formatBytes(totalNonBundleSize)}`
+  );
+  console.log(`Non Bundled Gas Spent (AR): ${totalNonBundleGas}`);
+  console.log(`Bundled Tip Amount (AR): ${totalBundleTips}`);
+  console.log(`Non Bundled Tip Amount (AR): ${totalFileDataTips}`);
+  console.log("Separated Tip Txs Sent: %s", l1Results.tipTxs.length);
+  console.log(`Separated Tip Amount (AR): ${totalTipTxTips}`);
+  console.log(`-----------------------------------------`);
+  console.log(
+    `Total L1 Transactions: ${
+      totalNonBundledTxsFound + l1Results.bundleTxs.length
+    }`
+  );
+  console.log(
+    `Total L1 Size (Bytes): ${formatBytes(
+      totalBundleSize + totalNonBundleSize
+    )}`
+  );
+  console.log(
+    `Total L1 Tip Amount (AR): ${
+      totalBundleTips + totalFileDataTips + totalTipTxTips
+    }`
+  );
+  console.log(`Total Unique Users Found: ${uniqueUserCount}`);
+  console.log(`-----------------------------------------`);
+  console.log("ArFS Stats");
+  console.log(" - FileDataTxs: %s", l1Results.fileDataTxs.length);
+  console.log(" - FileTxs: %s", l1Results.fileTxs.length);
+  console.log(" - FolderTxs: %s", l1Results.folderTxs.length);
+  console.log(" - DriveTxs: %s", l1Results.driveTxs.length);
 }

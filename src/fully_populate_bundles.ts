@@ -3,6 +3,8 @@ import { getBundleTransactions_ASC } from "./gql";
 import { sendBundlesToGraphite } from "./graphite";
 import { BundleTx } from "./types";
 
+const message = "ardrive.apps.l1."; // this is where all of the logs will be stored
+
 async function main() {
   let today = new Date();
   let allBundles: BundleTx[] = [];
@@ -29,7 +31,7 @@ async function main() {
       end.toLocaleString()
     );
     let bundles: BundleTx[] = await getBundleTransactions_ASC(start, end);
-    await sendBundlesToGraphite(bundles, end);
+    await sendBundlesToGraphite(message, bundles, end);
 
     let totalData = bundles
       .map((item) => item.dataSize)

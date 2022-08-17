@@ -217,6 +217,7 @@ export interface ArFSFileDataTx {
   dataItemSize: number;
   private: boolean;
   fee: number;
+  quantity: number;
   contentType: string;
   bundledIn: string;
   id: string;
@@ -242,6 +243,8 @@ export interface BundleTx {
   dataSize: number;
   fee: number;
   quantity: number;
+  owner: string;
+  timeStamp: number;
 }
 
 export interface ResultSet {
@@ -252,4 +255,13 @@ export interface ResultSet {
   driveTxs: ArFSDriveTx[];
   tipTxs: ArFSTipTx[];
   lastBlock: number;
+}
+
+export interface L1ResultSet {
+  bundleTxs: BundleTx[];
+  fileDataTxs: ArFSFileDataTx[];
+  fileTxs: ArFSFileTx[];
+  folderTxs: ArFSFolderTx[];
+  driveTxs: ArFSDriveTx[];
+  tipTxs: ArFSTipTx[];
 }

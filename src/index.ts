@@ -6,13 +6,11 @@ import {
   getMempoolSize,
 } from "./arweave";
 import {
-  appNames,
-  asyncForEach,
   getArDriveCommunityWalletARBalances,
   getArDriveCommunityWalletArDriveBalances,
   getOtherWalletARBalances,
 } from "./common";
-import { getAllAppTransactions_DESC } from "./gql";
+import { getAllAppL1Transactions } from "./gql";
 import {
   sendBundlesToGraphite,
   sendDriveMetadataToGraphite,
@@ -20,7 +18,7 @@ import {
   sendFileMetadataToGraphite,
   sendFolderMetadataToGraphite,
   sendMessageToGraphite,
-  sendv2CommunityTipsToGraphite,
+  sentL1CommunityTipsToGraphite,
 } from "./graphite";
 import { BlockInfo } from "./types";
 
@@ -28,9 +26,9 @@ import { BlockInfo } from "./types";
 const cron = require("node-cron");
 
 export async function hourlyArDriveUsageAnalytics(hours: number) {
-  let bufferHours = 4; // The amount of hours to buffer to ensure items have been indexed.
+  const message = "ardrive.apps.l1."; // this is where all of the logs will be stored
+  let bufferHours = 12; // The amount of hours to buffer to ensure items have been indexed.
   let start = new Date();
-  let results;
   start.setHours(start.getHours() - hours - bufferHours);
   let end = new Date();
   end.setHours(end.getHours() - bufferHours);
@@ -41,46 +39,33 @@ export async function hourlyArDriveUsageAnalytics(hours: number) {
     start.toLocaleString(),
     end.toLocaleString()
   );
-  await asyncForEach(appNames, async (appName: string) => {
-    results = await getAllAppTransactions_DESC(start, end, appName, 1);
-    await sendBundlesToGraphite(results.bundleTxs, end);
-    await sendFileMetadataToGraphite(results.fileTxs, end);
-    await sendFileDataToGraphite(results.fileDataTxs, end);
-    await sendFolderMetadataToGraphite(results.folderTxs, end);
-    await sendDriveMetadataToGraphite(results.driveTxs, end);
-    await sendv2CommunityTipsToGraphite(results.tipTxs, end);
 
-    console.log("Results for %s", appName);
-    console.log(" - BundledTxs: %s", results.bundleTxs.length);
-    console.log(" - FileDataTxs: %s", results.fileDataTxs.length);
-    console.log(" - FileTxs: %s", results.fileTxs.length);
-    console.log(" - FolderTxs: %s", results.folderTxs.length);
-    console.log(" - DriveTxs: %s", results.driveTxs.length);
-    console.log(" - V2 Tips: %s", results.tipTxs.length);
+  const l1Results = await getAllAppL1Transactions(start, end);
+  await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
+  await sendFileMetadataToGraphite(message, l1Results.fileTxs, end);
+  await sendFileDataToGraphite(message, l1Results.fileDataTxs, end);
+  await sendFolderMetadataToGraphite(message, l1Results.folderTxs, end);
+  await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
+  await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
+
+  const foundAddresses: string[] = [];
+  l1Results.bundleTxs.forEach((tx) => {
+    foundAddresses.push(tx.owner);
   });
-
-
-  // Determine how many unique new users in this period by checking for drives created, getting user information, and checking full user list
-  /*const newUsers: string[] = [
-    ...new Set(results.driveTxs.map((item: { owner: string }) => item.owner)),
-  ];
-  const allTimeStart = new Date(2020, 8, 26); // beginning date for ArDrive transactions
-  const allDrives = await getAllDrives_ASC(allTimeStart, start, 1); // We want to get all drive information going up to the most recent period
-  const allUsers: string[] = [
-    ...new Set(allDrives.map((item: { owner: string }) => item.owner)),
-  ]; 
-
-  // need to compare new ardrive users to total ardrive users
-  let newUserCount = 0;
-  newUsers.forEach((user: string) => {
-    newUserCount += allUsers.filter((item) => item === user).length;
+  l1Results.fileDataTxs.forEach((tx) => {
+    foundAddresses.push(tx.owner);
   });
-  await sendMessageToGraphite("ardrive.users.new", newUserCount, end);
-  await sendMessageToGraphite("ardrive.users.total", allUsers.length, end);
-
-
-  console.log("New Users: %s", newUserCount);
-  console.log("All Users: %s", allUsers.length); */
+  l1Results.fileTxs.forEach((tx) => {
+    foundAddresses.push(tx.owner);
+  });
+  l1Results.folderTxs.forEach((tx) => {
+    foundAddresses.push(tx.owner);
+  });
+  l1Results.driveTxs.forEach((tx) => {
+    foundAddresses.push(tx.owner);
+  });
+  const uniqueUsers = new Set(foundAddresses).size;
+  await sendMessageToGraphite(`ardrive.users.l1.uniqueUsers`, uniqueUsers, end);
   console.log("Hourly ArDrive Usage Analytics Completed");
 }
 
@@ -109,7 +94,11 @@ async function networkAnalytics() {
 
   let latestBlock: BlockInfo = await getLatestBlockInfo(height);
   console.log("Transactions Mined: %s", latestBlock.transactionCount);
-  await sendMessageToGraphite( "arweave.transactionsMined", latestBlock.transactionCount, today);
+  await sendMessageToGraphite(
+    "arweave.transactionsMined",
+    latestBlock.transactionCount,
+    today
+  );
   await sendMessageToGraphite(
     "arweave.weaveSize",
     latestBlock.weaveSize,
@@ -130,14 +119,14 @@ async function networkAnalytics() {
   console.log("Arweave Last Block Size: %s", latestBlock.blockSize);
 
   // Include the 15% fee
-  const arweavePriceOf1GB = (await getDataPrice(1073741824));
+  const arweavePriceOf1GB = await getDataPrice(1073741824);
   await sendMessageToGraphite(
     "arweave.price.ar.1gb",
     +arweavePriceOf1GB.toFixed(5),
     today
   );
 
-  const arDrivePriceOf1GB = arweavePriceOf1GB * 1.15
+  const arDrivePriceOf1GB = arweavePriceOf1GB * 1.15;
   await sendMessageToGraphite(
     "ardrive.price.ar.1gb",
     +arDrivePriceOf1GB.toFixed(5),
