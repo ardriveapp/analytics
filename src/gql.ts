@@ -44,6 +44,9 @@ export const gateways = ["http://test.arweave.ardrive.io:3000"];
 // Index of the currently used gateway into gateways.
 let currentGateway: number = 0;
 
+// How many pages to get from a gql query
+let firstPage: number = 10000; // Max size of query for GQL
+
 // Switches to the next gateway in the gateways array
 function switchGateway() {
   currentGateway = (currentGateway + 1) % gateways.length;
@@ -3705,7 +3708,6 @@ export async function getBundleTransactions_ASC(
   end: Date
 ): Promise<BundleTx[]> {
   let bundles: BundleTx[] = [];
-  let firstPage: number = 10000; // Max size of query for GQL
   let cursor: string = "";
   let hasNextPage = true;
   let timeStamp = new Date(end);
@@ -3827,7 +3829,6 @@ export async function getAllAppL1Transactions(
   end: Date,
   appName?: string
 ): Promise<L1ResultSet> {
-  let firstPage: number = 10000; // Max size of query for GQL
   let cursor: string = "";
   let timeStamp = new Date(end);
   let hasNextPage = true;
@@ -3930,7 +3931,12 @@ export async function getAllAppL1Transactions(
               start.getTime() <= timeStamp.getTime() &&
               end.getTime() >= timeStamp.getTime()
             ) {
-              // console.log ("Found Tx in Block: %s at Time: %s", lastBlock, timeStamp.toLocaleString())
+              /*console.log(
+                "Block: %s Tx: %s at Time: %s",
+                lastBlock,
+                node.id,
+                timeStamp.toLocaleString()
+              ); */
               // Prepare our files
               lastBlock = block.height;
               const { tags } = node;
@@ -4118,7 +4124,6 @@ export async function getAllInfernoRewards(
   start: Date,
   end: Date
 ): Promise<AstatineReward[]> {
-  let firstPage: number = 10000; // Max size of query for GQL
   let cursor: string = "";
   let hasNextPage = true;
   let timeStamp = new Date(end);
@@ -4258,7 +4263,7 @@ export async function getArDriveUsers(
   };
 }> {
   let bundleTxs = await getBundleTransactions_ASC(start, end);
-  let firstPage: number = 10000; // Max size of query for GQL
+
   let cursor: string = "";
   let foundTransactions = 0;
   let foundUsers: {
