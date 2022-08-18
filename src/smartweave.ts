@@ -3,9 +3,9 @@ import Arweave from "arweave";
 // import { getWalletBalance } from "./arweave";
 import { ArDriveTokenHolder } from "./types";
 
-const smartweaveGatewayHost = "test.arweave.ardrive.io";
-const port = 3002;
-const protocol = "http";
+const smartweaveGatewayHost = "arweave.net";
+const port = 443;
+const protocol = "https";
 
 export const smartweaveGateway = Arweave.init({
   host: smartweaveGatewayHost, // Arweave Gateway

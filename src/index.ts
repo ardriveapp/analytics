@@ -74,13 +74,13 @@ export async function hourlyArDriveUsageAnalytics(hours: number) {
 async function networkAnalytics() {
   let today = new Date();
 
-  console.log(
-    "%s Network Analytics.  Starting to collect latest block and price info",
-    today
-  );
+  //console.log(
+  //  "%s Network Analytics.  Starting to collect latest block and price info",
+  //  today
+  //);
 
   let pendingTxs = await getMempoolSize();
-  console.log("Mempool size: %s", pendingTxs.length);
+  //console.log("Mempool size: %s", pendingTxs.length);
   await sendMessageToGraphite(
     "arweave.mempool.pendingTxs",
     pendingTxs.length,
@@ -88,12 +88,12 @@ async function networkAnalytics() {
   );
 
   let height = await getCurrentBlockHeight();
-  console.log("Block Height is: %s", height);
+  //console.log("Block Height is: %s", height);
 
   await sendMessageToGraphite("arweave.blockHeight", +height, today);
 
   let latestBlock: BlockInfo = await getLatestBlockInfo(height);
-  console.log("Transactions Mined: %s", latestBlock.transactionCount);
+  //console.log("Transactions Mined: %s", latestBlock.transactionCount);
   await sendMessageToGraphite(
     "arweave.transactionsMined",
     latestBlock.transactionCount,
@@ -104,19 +104,19 @@ async function networkAnalytics() {
     latestBlock.weaveSize,
     today
   );
-  console.log("Weave Size: %s", latestBlock.weaveSize);
+  //console.log("Weave Size: %s", latestBlock.weaveSize);
   await sendMessageToGraphite(
     "arweave.difficulty",
     latestBlock.difficulty,
     today
   );
-  console.log("Arweave Difficulty: %s", latestBlock.difficulty);
+  //console.log("Arweave Difficulty: %s", latestBlock.difficulty);
   await sendMessageToGraphite(
     "arweave.lastBlockSize",
     latestBlock.blockSize,
     today
   );
-  console.log("Arweave Last Block Size: %s", latestBlock.blockSize);
+  //console.log("Arweave Last Block Size: %s", latestBlock.blockSize);
 
   // Include the 15% fee
   const arweavePriceOf1GB = await getDataPrice(1073741824);
@@ -138,7 +138,7 @@ async function networkAnalytics() {
 
   // Get data prices of different data sizes in AR
   if (arUSDPrice !== 0) {
-    console.log("Price of AR is: $%s", arUSDPrice);
+    // console.log("Price of AR is: $%s", arUSDPrice);
 
     await sendMessageToGraphite("arweave.price.usd", arUSDPrice, today);
 
@@ -155,16 +155,11 @@ async function networkAnalytics() {
 
 console.log("Start ArDrive Analytics Cron Jobs");
 console.log("---------------------------------");
-/*cron.schedule('0 17 * * *', function(){
-    console.log('Running ArDrive Daiy Analytics Every 24 hours at 1pm');
-    dailyArDriveUsageAnalytics();
-});*/
 cron.schedule("0 */12 * * *", function () {
   console.log(
     "Running ArDrive Daiy Analytics and ArDrive Community Wallet Balances (ARDRIVE tokens) Every 12 hours"
   );
   hourlyArDriveUsageAnalytics(12);
-  getArDriveCommunityWalletArDriveBalances();
 });
 
 cron.schedule("*/2 * * * *", function () {
