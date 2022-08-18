@@ -159,16 +159,16 @@ async function networkAnalytics() {
 
 console.log("Start ArDrive Analytics Cron Jobs");
 console.log("---------------------------------");
-cron.schedule("0 */12 * * *", function () {
-  hourlyArDriveUsageAnalytics(12);
-  getArDriveCommunityWalletArDriveBalances();
+cron.schedule("0 */12 * * *", async function () {
+  await hourlyArDriveUsageAnalytics(12);
+  await getArDriveCommunityWalletArDriveBalances();
 });
 
-cron.schedule("*/2 * * * *", function () {
-  networkAnalytics();
+cron.schedule("*/2 * * * *", async function () {
+  await networkAnalytics();
 });
 
-cron.schedule("*/60 * * * *", function () {
-  getArDriveCommunityWalletARBalances();
-  getOtherWalletARBalances();
+cron.schedule("*/60 * * * *", async function () {
+  await getArDriveCommunityWalletARBalances();
+  await getOtherWalletARBalances();
 });
