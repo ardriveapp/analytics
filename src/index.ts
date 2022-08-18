@@ -88,7 +88,7 @@ async function networkAnalytics() {
   );
 
   let height = await getCurrentBlockHeight();
-  //console.log("Block Height is: %s", height);
+  console.log("Block Height is: %s", height);
 
   await sendMessageToGraphite("arweave.blockHeight", +height, today);
 
@@ -150,7 +150,11 @@ async function networkAnalytics() {
   }
 
   let finished = new Date();
-  console.log("%s Finished collecting Network Analytics", finished);
+  console.log(
+    "%s - %s Finished collecting Network Analytics",
+    height,
+    finished
+  );
 }
 
 console.log("Start ArDrive Analytics Cron Jobs");
@@ -160,12 +164,10 @@ cron.schedule("0 */12 * * *", function () {
     "Running ArDrive Daiy Analytics and ArDrive Community Wallet Balances (ARDRIVE tokens) Every 12 hours"
   );
   hourlyArDriveUsageAnalytics(12);
+  getArDriveCommunityWalletArDriveBalances();
 });
 
 cron.schedule("*/2 * * * *", function () {
-  console.log(
-    "Running ArDrive Block Info and Price Collection Analytics Every 2 minutes"
-  );
   networkAnalytics();
 });
 
