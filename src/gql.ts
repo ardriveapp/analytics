@@ -39,7 +39,7 @@ const cliAppName = "ArDrive-CLI";
 const syncAppName = "ArDrive-Sync";
 
 // export const gateways = ["http://test.arweave.ardrive.io:3000"];
-export const gateways = ["http://test.arweave.ardrive.io:1984"];
+export const gateways = ["http://test.arweave.ardrive.io:1985"];
 // export const gateways = ["https://arweave.net"];
 
 // Index of the currently used gateway into gateways.
