@@ -1,5 +1,7 @@
 import { getAllArDriveTokenHolders } from "./smartweave";
-import { ArDriveTokenHolder } from "./types";
+import { TokenHolders } from "./types";
+
+const fs = require("fs");
 
 export async function main() {
   const today = new Date().toISOString().slice(0, 10);
@@ -20,15 +22,24 @@ export async function main() {
     ],
   });
 
-  const allArDriveTokenHolders: ArDriveTokenHolder[] =
-    await getAllArDriveTokenHolders();
+  const allTokenHolders: TokenHolders = await getAllArDriveTokenHolders();
+
+  // stringify JSON Object
+  let jsonContent = JSON.stringify(allTokenHolders);
+
+  fs.writeFile("output.json", jsonContent, "utf8", function (err) {
+    if (err) {
+      console.log("An error occured while writing JSON Object to File.");
+      return console.log(err);
+    }
+  });
 
   const end = Date.now();
 
   console.log("Took %s seconds", (end - start) / 1000);
 
-  csvWriter.writeRecords(allArDriveTokenHolders).then(() => {
-    console.log(`Found ${allArDriveTokenHolders.length} token holders`);
+  csvWriter.writeRecords(allTokenHolders).then(() => {
+    console.log(`Found ${allTokenHolders.length} token holders`);
     console.log("Done writing all ArDrive Token Holders");
   });
 }

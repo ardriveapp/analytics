@@ -52,6 +52,7 @@ export const communityWallets: string[] = [
   "vn6Z31Dy8rV8Ion7MTcPjwhLcEJnAIObHIGDHP8oGDI", // unlocked operations
   "Zznp65qgTIm2QBMjjoEaHKOmQrpTu0tfOcdbkm_qoL4", // vested locked warchest
   "2ZaUGqVCPxst5s0XO933HbZmksnLixpXkt6Sh2re0hg", // unlocked community usage mining
+  "cYGJt4EhmR4GAGBv2UStrkYO4zzlW_W9ZZ9Up8F2zj0", // unlocked community ambassador program
   "FAxDUPlFfJrLDl6BvUlPw3EJOEEeg6WQbhiWidU7ueY", // unlocked team and projects
   "pzH5LB20NhsrPMmvZzTrW-ahbAbIE-TeRzWBVYdArpA", // operational vault
 ];

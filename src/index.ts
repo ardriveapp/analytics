@@ -69,6 +69,49 @@ export async function hourlyArDriveUsageAnalytics(hours: number) {
   console.log("Hourly ArDrive Usage Analytics Completed");
 }
 
+export async function dailyArDriveUserAnalytics() {
+  const message = "ardrive.apps.l1."; // this is where all of the logs will be stored
+  let bufferHours = 12; // The amount of hours to buffer to ensure items have been indexed.
+  let start = new Date();
+  start.setHours(start.getHours() - 24 - bufferHours);
+  let end = new Date();
+  end.setHours(end.getHours() - bufferHours);
+
+  console.log(
+    "Daily ArDrive User Analytics.  Getting all ArDrive App Stats from %s to %s",
+    start.toLocaleString(),
+    end.toLocaleString()
+  );
+
+  const l1Results = await getAllAppL1Transactions(start, end);
+  await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
+  await sendFileMetadataToGraphite(message, l1Results.fileTxs, end);
+  await sendFileDataToGraphite(message, l1Results.fileDataTxs, end);
+  await sendFolderMetadataToGraphite(message, l1Results.folderTxs, end);
+  await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
+  await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
+
+  const foundAddresses: string[] = [];
+  l1Results.bundleTxs.forEach((tx) => {
+    foundAddresses.push(tx.owner);
+  });
+  l1Results.fileDataTxs.forEach((tx) => {
+    foundAddresses.push(tx.owner);
+  });
+  l1Results.fileTxs.forEach((tx) => {
+    foundAddresses.push(tx.owner);
+  });
+  l1Results.folderTxs.forEach((tx) => {
+    foundAddresses.push(tx.owner);
+  });
+  l1Results.driveTxs.forEach((tx) => {
+    foundAddresses.push(tx.owner);
+  });
+  const uniqueUsers = new Set(foundAddresses).size;
+  await sendMessageToGraphite(`ardrive.users.l1.uniqueUsers`, uniqueUsers, end);
+  console.log("Hourly ArDrive Usage Analytics Completed");
+}
+
 // Gets non-GQL related data
 // Includes Weave height, size, difficulty and last block size
 async function networkAnalytics() {

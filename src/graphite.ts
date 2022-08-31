@@ -1,3 +1,4 @@
+import { stringToB64Url } from "arweave/node/lib/utils";
 import { asyncForEach, sleep } from "./common";
 import {
   ArDriveCommunityFee,
@@ -7,6 +8,7 @@ import {
   ArFSTipTx,
   BundleTx,
   ContentType,
+  L1ResultSet,
   Results,
 } from "./types";
 
@@ -76,6 +78,209 @@ export async function sendBundlesToGraphite(
     graphiteMessage = message + appName + type + ".bundlers";
     await sendMessageToGraphite(graphiteMessage, appBundlers, end);
   });
+}
+
+export async function sendUsersToGraphite(
+  message: string,
+  results: L1ResultSet,
+  end: Date
+) {
+  console.log("Sending Found Users to Graphite", end);
+
+  let totalAddresses: string[] = [];
+  let bundleAddresses: string[] = [];
+  let webAddresses: string[] = [];
+  let cliAddresses: string[] = [];
+  let mobileAddresses: string[] = [];
+  let coreAddresses: string[] = [];
+  let syncAddresses: string[] = [];
+  let desktopAddresses: string[] = [];
+  let arconnectAddresses: string[] = [];
+
+  results.bundleTxs.forEach((tx) => {
+    totalAddresses.push(tx.owner);
+    bundleAddresses.push(tx.owner);
+    switch (tx.appName) {
+      case "ArDrive-Web":
+        webAddresses.push(tx.owner);
+        break;
+      case "ArDrive-CLI":
+        cliAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Sync":
+        syncAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Mobile":
+        mobileAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Core":
+        coreAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Desktop":
+        desktopAddresses.push(tx.owner);
+        break;
+      case "ArConnect":
+        arconnectAddresses.push(tx.owner);
+        break;
+      default:
+        break;
+    }
+  });
+  results.fileDataTxs.forEach((tx) => {
+    totalAddresses.push(tx.owner);
+    switch (tx.appName) {
+      case "ArDrive-Web":
+        webAddresses.push(tx.owner);
+        break;
+      case "ArDrive-CLI":
+        cliAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Sync":
+        syncAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Mobile":
+        mobileAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Core":
+        coreAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Desktop":
+        desktopAddresses.push(tx.owner);
+        break;
+      case "ArConnect":
+        arconnectAddresses.push(tx.owner);
+        break;
+      default:
+        break;
+    }
+  });
+  results.fileTxs.forEach((tx) => {
+    totalAddresses.push(tx.owner);
+    switch (tx.appName) {
+      case "ArDrive-Web":
+        webAddresses.push(tx.owner);
+        break;
+      case "ArDrive-CLI":
+        cliAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Sync":
+        syncAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Mobile":
+        mobileAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Core":
+        coreAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Desktop":
+        desktopAddresses.push(tx.owner);
+        break;
+      case "ArConnect":
+        arconnectAddresses.push(tx.owner);
+        break;
+      default:
+        break;
+    }
+  });
+  results.folderTxs.forEach((tx) => {
+    totalAddresses.push(tx.owner);
+    switch (tx.appName) {
+      case "ArDrive-Web":
+        webAddresses.push(tx.owner);
+        break;
+      case "ArDrive-CLI":
+        cliAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Sync":
+        syncAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Mobile":
+        mobileAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Core":
+        coreAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Desktop":
+        desktopAddresses.push(tx.owner);
+        break;
+      case "ArConnect":
+        arconnectAddresses.push(tx.owner);
+        break;
+      default:
+        break;
+    }
+  });
+  results.driveTxs.forEach((tx) => {
+    totalAddresses.push(tx.owner);
+    switch (tx.appName) {
+      case "ArDrive-Web":
+        webAddresses.push(tx.owner);
+        break;
+      case "ArDrive-CLI":
+        cliAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Sync":
+        syncAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Mobile":
+        mobileAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Core":
+        coreAddresses.push(tx.owner);
+        break;
+      case "ArDrive-Desktop":
+        desktopAddresses.push(tx.owner);
+        break;
+      case "ArConnect":
+        arconnectAddresses.push(tx.owner);
+        break;
+      default:
+        break;
+    }
+  });
+
+  const totalUniqueUsers = new Set(totalAddresses).size;
+  let graphiteMessage = message + "24hr.totalUsers";
+  await sendMessageToGraphite(graphiteMessage, totalUniqueUsers, end);
+
+  const totalUniqueWebUsers = new Set(webAddresses).size;
+  graphiteMessage = message + "24hr.webUsers";
+  await sendMessageToGraphite(graphiteMessage, totalUniqueWebUsers, end);
+
+  const totalUniqueCLIUsers = new Set(cliAddresses).size;
+  graphiteMessage = message + "24hr.cliUsers";
+  await sendMessageToGraphite(graphiteMessage, totalUniqueWebUsers, end);
+
+  const totalUniqueSyncUsers = new Set(syncAddresses).size;
+  graphiteMessage = message + "24hr.syncUsers";
+  await sendMessageToGraphite(graphiteMessage, totalUniqueSyncUsers, end);
+
+  const totalUniqueCoreUsers = new Set(coreAddresses).size;
+  graphiteMessage = message + "24hr.coreUsers";
+  await sendMessageToGraphite(graphiteMessage, totalUniqueCoreUsers, end);
+
+  const totalUniqueMobileUsers = new Set(mobileAddresses).size;
+  graphiteMessage = message + "24hr.mobileUsers";
+  await sendMessageToGraphite(graphiteMessage, totalUniqueMobileUsers, end);
+
+  const totalUniqueDesktopUsers = new Set(desktopAddresses).size;
+  graphiteMessage = message + "24hr.desktopUsers";
+  await sendMessageToGraphite(graphiteMessage, totalUniqueDesktopUsers, end);
+
+  const totalUniqueArConnectUsers = new Set(arconnectAddresses).size;
+  graphiteMessage = message + "24hr.ArConnectUsers";
+  await sendMessageToGraphite(graphiteMessage, totalUniqueArConnectUsers, end);
+
+  console.log(`Total Unique Users found: ${totalUniqueUsers}`);
+  console.log(`Total Unique Web Users found: ${totalUniqueWebUsers}`);
+  console.log(`Total Unique CLI Users found: ${totalUniqueCLIUsers}`);
+  console.log(`Total Unique Sync Users found: ${totalUniqueSyncUsers}`);
+  console.log(`Total Unique Core Users found: ${totalUniqueCoreUsers}`);
+  console.log(`Total Unique Mobile Users found: ${totalUniqueMobileUsers}`);
+  console.log(`Total Unique Desktop Users found: ${totalUniqueDesktopUsers}`);
+  console.log(
+    `Total Unique ArConnect Users found: ${totalUniqueArConnectUsers}`
+  );
 }
 
 export async function sendFileDataToGraphite(

@@ -131,6 +131,43 @@ export interface ArDriveTokenHolder {
   arweaveTokens: number;
 }
 
+export interface TokenHolders {
+  [address: string]: {
+    unlockedTokens: number;
+    lockedTokens: number;
+    totalTokens: number;
+    voteWeight: number;
+    arweaveTokens: number;
+    vaults?: {
+      [index: string]: [
+        {
+          balance: number; // Positive integer, the amount held in this vault
+          start: number; // At what block the lock starts.
+          end: number; // At what block the lock ends.
+          friendlyEndDate: string;
+        }
+      ];
+    };
+  };
+}
+
+export interface TokenVault {
+  [index: string]: [
+    {
+      balance: number; // Positive integer, the amount held in this vault
+      start: number; // At what block the lock starts.
+      end: number; // At what block the lock ends.
+      friendlyEndDate: string;
+    }
+  ];
+}
+
+export interface Vault {
+  balance: number; // Positive integer, the amount held in this vault
+  start: number; // At what block the lock starts.
+  end: number; // At what block the lock ends.
+}
+
 export interface AstatineReward {
   owner: string;
   target: string;

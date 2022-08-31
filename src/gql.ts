@@ -38,14 +38,15 @@ const coreAppName = "ArDrive-Core";
 const cliAppName = "ArDrive-CLI";
 const syncAppName = "ArDrive-Sync";
 
-export const gateways = ["http://test.arweave.ardrive.io:3000"];
+// export const gateways = ["http://test.arweave.ardrive.io:3000"];
+export const gateways = ["http://test.arweave.ardrive.io:1984"];
 // export const gateways = ["https://arweave.net"];
 
 // Index of the currently used gateway into gateways.
 let currentGateway: number = 0;
 
 // How many pages to get from a gql query
-let firstPage: number = 10000; // Max size of query for GQL
+let firstPage: number = 100; // Max size of query for GQL
 
 // Switches to the next gateway in the gateways array
 function switchGateway() {
@@ -4101,7 +4102,6 @@ export async function getAllAppL1Transactions(
             //);
           }
         });
-        console.log(`Got ${edges.length} with last block ${lastBlock}`);
       }
     } catch (err) {
       console.log(err);

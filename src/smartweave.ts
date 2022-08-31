@@ -1,11 +1,15 @@
 import { LoggerFactory, WarpNodeFactory } from "warp-contracts";
 import Arweave from "arweave";
 // import { getWalletBalance } from "./arweave";
-import { ArDriveTokenHolder } from "./types";
+import { TokenHolders } from "./types";
+import { getCurrentBlockHeight, getWalletBalance } from "./arweave";
 
 const smartweaveGatewayHost = "arweave.net";
 const port = 443;
 const protocol = "https";
+/*const smartweaveGatewayHost = "test.arweave.ardrive.io";
+const port = 1985;
+const protocol = "http";*/
 
 export const smartweaveGateway = Arweave.init({
   host: smartweaveGatewayHost, // Arweave Gateway
@@ -19,7 +23,7 @@ export const smartweaveGateway = Arweave.init({
 const communityTxId = "-8A6RexFkpfWwuyVO98wzSFZh0d6VJuI-buTJvlwOJQ";
 
 // ~~ Initialize 'LoggerFactory' ~~
-LoggerFactory.INST.logLevel("error");
+LoggerFactory.INST.logLevel("trace");
 
 // Initialize SmartWeave
 const smartweave = WarpNodeFactory.memCachedBased(smartweaveGateway)
@@ -129,35 +133,89 @@ export async function getTokenHolderCount(): Promise<number> {
 }
 
 // Gets all ardrive token holders
-export async function getAllArDriveTokenHolders(): Promise<
-  ArDriveTokenHolder[]
-> {
+export async function getAllArDriveTokenHolders(): Promise<TokenHolders> {
   // Read the ArDrive Smart Contract to get the latest state
   console.log(`Getting unlocked and vaulted balances from ${communityTxId}`);
   const state = await getArDriveCommunityState();
   const balances = state.balances;
-  const vault = state.vault;
-  let arDriveTokenHolders: ArDriveTokenHolder[] = [];
+  const vaults = state.vault;
+  let tokenHolders: TokenHolders = {};
   for (const addr of Object.keys(balances)) {
-    let vaultBalance = 0;
-    if (vault[addr] !== undefined) {
-      vaultBalance = vault[addr]
-        .map((a: { balance: number; start: number; end: number }) => a.balance)
-        .reduce((a: number, b: number) => a + b, 0);
-    }
-
-    let arDriveTokenHolder: ArDriveTokenHolder = {
-      address: addr,
-      unlockedArDriveTokens: balances[addr],
-      lockedArDriveTokens: vaultBalance,
-      totalArDriveTokens: balances[addr] + vaultBalance,
+    tokenHolders[addr] = {
+      unlockedTokens: balances[addr],
+      lockedTokens: 0,
+      totalTokens: balances[addr],
       voteWeight: 0,
-      arweaveTokens: 0, // await getWalletBalance(addr),
+      arweaveTokens: await getWalletBalance(addr),
+      vaults: {},
     };
-    //console.log (arDriveTokenHolder);
-    arDriveTokenHolders.push(arDriveTokenHolder);
   }
-  return arDriveTokenHolders;
+
+  for (let key of Object.keys(vaults)) {
+    if (key in tokenHolders) {
+      for (let i = 0; i < vaults[key].length; i++) {
+        const currentBlock = await getCurrentBlockHeight();
+        const blockGap = vaults[key][i].end - currentBlock;
+        let friendlyEndDate = "";
+        if (blockGap <= 0) {
+          friendlyEndDate = "unlocked";
+          tokenHolders[key].unlockedTokens += vaults[key][i].balance;
+        } else {
+          const currentTime = new Date();
+          const estimatedUnlockTime =
+            currentTime.getTime() + blockGap * 120 * 1000; // 120,000 milliseconds per block times
+          const estimatedDate = new Date(estimatedUnlockTime);
+          tokenHolders[key].lockedTokens += vaults[key][i].balance;
+          friendlyEndDate = estimatedDate.toLocaleString();
+        }
+        tokenHolders[key].vaults[i] = [
+          {
+            balance: vaults[key][i].balance,
+            start: vaults[key][i].start,
+            end: vaults[key][i].end,
+            friendlyEndDate,
+          },
+        ];
+
+        tokenHolders[key].totalTokens += vaults[key][i].balance;
+      }
+    } else {
+      tokenHolders[key] = {
+        unlockedTokens: 0,
+        lockedTokens: 0,
+        totalTokens: 0,
+        voteWeight: 0,
+        arweaveTokens: await getWalletBalance(key),
+        vaults: {},
+      };
+      for (let i = 0; i < vaults[key].length; i++) {
+        const currentBlock = await getCurrentBlockHeight();
+        const blockGap = vaults[key][i].end - currentBlock;
+        let friendlyEndDate = "";
+        if (blockGap <= 0) {
+          friendlyEndDate = "unlocked";
+        } else {
+          const currentTime = new Date();
+          const estimatedUnlockTime =
+            currentTime.getTime() + blockGap * 120 * 1000; // 120,000 milliseconds per block times
+          const estimatedDate = new Date(estimatedUnlockTime);
+          friendlyEndDate = estimatedDate.toLocaleString();
+        }
+        tokenHolders[key].vaults[i] = [
+          {
+            balance: vaults[key][i].balance,
+            start: vaults[key][i].start,
+            end: vaults[key][i].end,
+            friendlyEndDate,
+          },
+        ];
+        tokenHolders[key].lockedTokens += vaults[key][i].balance;
+        tokenHolders[key].totalTokens += vaults[key][i].balance;
+      }
+    }
+  }
+
+  return tokenHolders;
 }
 
 // Gets all ardrive token holders
