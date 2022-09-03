@@ -46,7 +46,7 @@ export const gateways = ["http://test.arweave.ardrive.io:1985"];
 let currentGateway: number = 0;
 
 // How many pages to get from a gql query
-let firstPage: number = 10000; // Max size of query for GQL
+let firstPage: number = 1000; // Max size of query for GQL
 
 // Switches to the next gateway in the gateways array
 function switchGateway() {
