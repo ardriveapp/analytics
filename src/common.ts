@@ -63,12 +63,13 @@ export const otherAppWallets: string[] = [
 ];
 
 export const appNames: string[] = [
+  "ArDrive-Web",
   "ArDrive-CLI",
   "ArDrive-Desktop",
   "ArDrive-Mobile",
   "ArDrive-Core",
   "ArDrive-Sync",
-  "ArDrive-Web",
+  "ArDrive-App",
 ];
 
 // Pauses application
@@ -98,7 +99,8 @@ export async function getArDriveCommunityWalletARBalances() {
 // Gets all of the ArDrive Community Wallets and lists all token transfers
 export async function getArDriveTokenTransfers(
   start: Date,
-  end: Date
+  end: Date,
+  wallet?: string
 ): Promise<SmartweaveTx[]> {
   console.log(
     "Starting to collect ArDrive Community Transactions from %s within %s to %s",
@@ -108,11 +110,22 @@ export async function getArDriveTokenTransfers(
   );
   console.log("");
   let results: SmartweaveTx[] = [];
-  await asyncForEach(communityWallets, async (communityWallet: string) => {
+  if (wallet) {
     results = results.concat(
-      await getAllArDriveCommunityTokenTransactions(communityWallet, start, end)
+      await getAllArDriveCommunityTokenTransactions(wallet, start, end)
     );
-  });
+  } else {
+    await asyncForEach(communityWallets, async (communityWallet: string) => {
+      results = results.concat(
+        await getAllArDriveCommunityTokenTransactions(
+          communityWallet,
+          start,
+          end
+        )
+      );
+    });
+  }
+
   // results = await validateSmartweaveTxs(results);
   return results;
 }
@@ -701,7 +714,7 @@ export async function getMinBlock(
   blocksPerHour?: number
 ): Promise<number> {
   if (!blocksPerHour) {
-    blocksPerHour = 28;
+    blocksPerHour = 30;
   }
   let today = new Date();
   let height = await getCurrentBlockHeight();
@@ -870,7 +883,7 @@ export async function getUniqueArDriveUsersInPeriod(
   return uniqueUserCount;
 }
 
-export function printL1Results(l1Results: L1ResultSet) {
+export function printL1Results(l1Results: L1ResultSet, appName: string) {
   const foundAddresses: string[] = [];
   const totalNonBundledTxsFound =
     l1Results.driveTxs.length +
@@ -921,7 +934,7 @@ export function printL1Results(l1Results: L1ResultSet) {
   });
 
   const uniqueUserCount = new Set(foundAddresses).size;
-  console.log(`-----------------------------------------`);
+  console.log(`----------App-Name: ${appName}----------------------`);
   console.log(`Bundles found: ${l1Results.bundleTxs.length}`);
   console.log(`Bundle Data Size (Bytes): ${formatBytes(totalBundleSize)}`);
   console.log(`Bundle Gas Spent (AR): ${totalBundleGas}`);

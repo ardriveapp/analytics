@@ -6,6 +6,8 @@ import {
   getMempoolSize,
 } from "./arweave";
 import {
+  appNames,
+  asyncForEach,
   getArDriveCommunityWalletARBalances,
   getArDriveCommunityWalletArDriveBalances,
   getOtherWalletARBalances,
@@ -27,6 +29,7 @@ const cron = require("node-cron");
 
 export async function hourlyArDriveUsageAnalytics(hours: number) {
   const message = "ardrive.apps.l1."; // this is where all of the logs will be stored
+  const totalAddresses: string[] = [];
   let bufferHours = 12; // The amount of hours to buffer to ensure items have been indexed.
   let start = new Date();
   start.setHours(start.getHours() - hours - bufferHours);
@@ -39,41 +42,57 @@ export async function hourlyArDriveUsageAnalytics(hours: number) {
     start.toLocaleString(),
     end.toLocaleString()
   );
+  await asyncForEach(appNames, async (appName: string) => {
+    console.log(`...${appName}`);
+    const l1Results = await getAllAppL1Transactions(start, end, appName);
+    await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
+    await sendFileMetadataToGraphite(message, l1Results.fileTxs, end);
+    await sendFileDataToGraphite(message, l1Results.fileDataTxs, end);
+    await sendFolderMetadataToGraphite(message, l1Results.folderTxs, end);
+    await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
+    await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
 
-  const l1Results = await getAllAppL1Transactions(start, end);
-  await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
-  await sendFileMetadataToGraphite(message, l1Results.fileTxs, end);
-  await sendFileDataToGraphite(message, l1Results.fileDataTxs, end);
-  await sendFolderMetadataToGraphite(message, l1Results.folderTxs, end);
-  await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
-  await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
+    const appAddresses: string[] = [];
+    l1Results.bundleTxs.forEach((tx) => {
+      totalAddresses.push(tx.owner);
+      appAddresses.push(tx.owner);
+    });
+    l1Results.fileDataTxs.forEach((tx) => {
+      totalAddresses.push(tx.owner);
+      appAddresses.push(tx.owner);
+    });
+    l1Results.fileTxs.forEach((tx) => {
+      totalAddresses.push(tx.owner);
+      appAddresses.push(tx.owner);
+    });
+    l1Results.folderTxs.forEach((tx) => {
+      totalAddresses.push(tx.owner);
+      appAddresses.push(tx.owner);
+    });
+    l1Results.driveTxs.forEach((tx) => {
+      totalAddresses.push(tx.owner);
+      appAddresses.push(tx.owner);
+    });
+    const uniqueAppUsers = new Set(appAddresses).size;
 
-  const foundAddresses: string[] = [];
-  l1Results.bundleTxs.forEach((tx) => {
-    foundAddresses.push(tx.owner);
+    await sendMessageToGraphite(
+      `ardrive.users.l1.` + appName,
+      uniqueAppUsers,
+      end
+    );
   });
-  l1Results.fileDataTxs.forEach((tx) => {
-    foundAddresses.push(tx.owner);
-  });
-  l1Results.fileTxs.forEach((tx) => {
-    foundAddresses.push(tx.owner);
-  });
-  l1Results.folderTxs.forEach((tx) => {
-    foundAddresses.push(tx.owner);
-  });
-  l1Results.driveTxs.forEach((tx) => {
-    foundAddresses.push(tx.owner);
-  });
-  const uniqueUsers = new Set(foundAddresses).size;
-  await sendMessageToGraphite(`ardrive.users.l1.uniqueUsers`, uniqueUsers, end);
+
+  const uniqueTotalUsers = new Set(totalAddresses).size;
+  await sendMessageToGraphite(`ardrive.users.l1.total`, uniqueTotalUsers, end);
   console.log("Hourly ArDrive Usage Analytics Completed");
 }
 
 export async function dailyArDriveUserAnalytics() {
   const message = "ardrive.apps.l1."; // this is where all of the logs will be stored
   let bufferHours = 12; // The amount of hours to buffer to ensure items have been indexed.
+  let captureTime = 12; // The amount of hours to capture per run
   let start = new Date();
-  start.setHours(start.getHours() - 24 - bufferHours);
+  start.setHours(start.getHours() - captureTime - bufferHours);
   let end = new Date();
   end.setHours(end.getHours() - bufferHours);
 
@@ -91,23 +110,23 @@ export async function dailyArDriveUserAnalytics() {
   await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
   await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
 
-  const foundAddresses: string[] = [];
+  const totalAddresses: string[] = [];
   l1Results.bundleTxs.forEach((tx) => {
-    foundAddresses.push(tx.owner);
+    totalAddresses.push(tx.owner);
   });
   l1Results.fileDataTxs.forEach((tx) => {
-    foundAddresses.push(tx.owner);
+    totalAddresses.push(tx.owner);
   });
   l1Results.fileTxs.forEach((tx) => {
-    foundAddresses.push(tx.owner);
+    totalAddresses.push(tx.owner);
   });
   l1Results.folderTxs.forEach((tx) => {
-    foundAddresses.push(tx.owner);
+    totalAddresses.push(tx.owner);
   });
   l1Results.driveTxs.forEach((tx) => {
-    foundAddresses.push(tx.owner);
+    totalAddresses.push(tx.owner);
   });
-  const uniqueUsers = new Set(foundAddresses).size;
+  const uniqueUsers = new Set(totalAddresses).size;
   await sendMessageToGraphite(`ardrive.users.l1.uniqueUsers`, uniqueUsers, end);
   console.log("Hourly ArDrive Usage Analytics Completed");
 }

@@ -199,6 +199,8 @@ export interface ArFSFileTx {
   appName: string;
   appVersion: string;
   arfsVersion: string;
+  appPlatform?: string;
+  appPlatformVersion?: string;
   owner: string;
   dataSize: number;
   dataItemSize: number;
@@ -216,6 +218,8 @@ export interface ArFSFolderTx {
   appName: string;
   appVersion: string;
   arfsVersion: string;
+  appPlatform?: string;
+  appPlatformVersion?: string;
   owner: string;
   dataSize: number;
   dataItemSize: number;
@@ -232,6 +236,8 @@ export interface ArFSFolderTx {
 export interface ArFSDriveTx {
   appName: string;
   appVersion: string;
+  appPlatform?: string;
+  appPlatformVersion?: string;
   arfsVersion: string;
   owner: string;
   dataSize: number;
@@ -249,6 +255,8 @@ export interface ArFSDriveTx {
 export interface ArFSFileDataTx {
   appName: string;
   appVersion: string;
+  appPlatform?: string;
+  appPlatformVersion?: string;
   owner: string;
   dataSize: number;
   dataItemSize: number;
@@ -266,6 +274,8 @@ export interface ArFSFileDataTx {
 export interface ArFSTipTx {
   appName: string;
   appVersion: string;
+  appPlatform?: string;
+  appPlatformVersion?: string;
   owner: string;
   quantity: number;
   id: string;
@@ -277,6 +287,8 @@ export interface ArFSTipTx {
 export interface BundleTx {
   appName: string;
   appVersion: string;
+  appPlatform?: string;
+  appPlatformVersion?: string;
   dataSize: number;
   fee: number;
   quantity: number;

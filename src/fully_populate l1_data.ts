@@ -1,4 +1,9 @@
-import { addHoursToDate, printL1Results } from "./common";
+import {
+  addHoursToDate,
+  appNames,
+  asyncForEach,
+  printL1Results,
+} from "./common";
 import { getAllAppL1Transactions } from "./gql";
 import {
   sendBundlesToGraphite,
@@ -41,38 +46,53 @@ async function main() {
       end.toLocaleString()
     );
 
-    const l1Results = await getAllAppL1Transactions(start, end);
-    await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
-    await sendFileMetadataToGraphite(message, l1Results.fileTxs, end);
-    await sendFileDataToGraphite(message, l1Results.fileDataTxs, end);
-    await sendFolderMetadataToGraphite(message, l1Results.folderTxs, end);
-    await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
-    await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
-
     const foundAddresses: string[] = [];
-    l1Results.bundleTxs.forEach((tx) => {
-      foundAddresses.push(tx.owner);
+
+    await asyncForEach(appNames, async (appName: string) => {
+      console.log(`...${appName}`);
+      const l1Results = await getAllAppL1Transactions(start, end, appName);
+      await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
+      await sendFileMetadataToGraphite(message, l1Results.fileTxs, end);
+      await sendFileDataToGraphite(message, l1Results.fileDataTxs, end);
+      await sendFolderMetadataToGraphite(message, l1Results.folderTxs, end);
+      await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
+      await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
+      const appAddresses: string[] = [];
+      l1Results.bundleTxs.forEach((tx) => {
+        foundAddresses.push(tx.owner);
+        appAddresses.push(tx.owner);
+      });
+      l1Results.fileDataTxs.forEach((tx) => {
+        foundAddresses.push(tx.owner);
+        appAddresses.push(tx.owner);
+      });
+      l1Results.fileTxs.forEach((tx) => {
+        foundAddresses.push(tx.owner);
+        appAddresses.push(tx.owner);
+      });
+      l1Results.folderTxs.forEach((tx) => {
+        foundAddresses.push(tx.owner);
+        appAddresses.push(tx.owner);
+      });
+      l1Results.driveTxs.forEach((tx) => {
+        foundAddresses.push(tx.owner);
+        appAddresses.push(tx.owner);
+      });
+      const uniqueAppUsers = new Set(appAddresses).size;
+      await sendMessageToGraphite(
+        `ardrive.users.l1.` + appName,
+        uniqueAppUsers,
+        end
+      );
     });
-    l1Results.fileDataTxs.forEach((tx) => {
-      foundAddresses.push(tx.owner);
-    });
-    l1Results.fileTxs.forEach((tx) => {
-      foundAddresses.push(tx.owner);
-    });
-    l1Results.folderTxs.forEach((tx) => {
-      foundAddresses.push(tx.owner);
-    });
-    l1Results.driveTxs.forEach((tx) => {
-      foundAddresses.push(tx.owner);
-    });
-    const uniqueUsers = new Set(foundAddresses).size;
+
+    const uniqueTotalUsers = new Set(foundAddresses).size;
     await sendMessageToGraphite(
-      `ardrive.users.l1.uniqueUsers`,
-      uniqueUsers,
+      `ardrive.users.l1.totalUsers`,
+      uniqueTotalUsers,
       end
     );
 
-    printL1Results(l1Results);
     console.log(
       "Completed analytics from %s to %s",
       start.toLocaleString(),

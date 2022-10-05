@@ -1,5 +1,5 @@
 import { appNames, asyncForEach, formatBytes } from "./common";
-import { getAllAppL1Transactions } from "./gql";
+import { getAllAppL1Transactions, getAllAppUserL1Transactions } from "./gql";
 import { L1ResultSet } from "./types";
 
 async function main() {
@@ -9,6 +9,7 @@ async function main() {
   // The start date for the query range
   //let start = new Date(2022, 8, 4);
   let start = new Date(2022, 4, 1);
+  let owner = "zXeBkp2xG6SCSSSGPAuqV3vip0JhXjPAW-Lj7KSuB6E";
 
   console.log(
     "Running analytics from %s to %s",
@@ -30,9 +31,10 @@ async function main() {
   let totalTipTxTips = 0;
   let appPlatformTxs = 0;
   await asyncForEach(appNames, async (appName: string) => {
-    const l1Results: L1ResultSet = await getAllAppL1Transactions(
+    const l1Results: L1ResultSet = await getAllAppUserL1Transactions(
       start,
       end,
+      owner,
       appName
     );
 
@@ -74,7 +76,7 @@ async function main() {
       totalNonBundleSize += tx.dataSize;
       totalNonBundleGas += tx.fee;
       totalFileDataTips += tx.quantity;
-      appNonBundleSize += tx.dataSize;
+      appBundleSize += tx.dataSize;
       appBundleGas += tx.fee;
       appBundleTips += tx.quantity;
       foundAddresses.push(tx.owner);
@@ -123,9 +125,6 @@ async function main() {
         appNonBundledTxsFound + l1Results.bundleTxs.length
       }`
     );
-    console.log(
-      `Total L1 Size (Bytes): ${formatBytes(appBundleSize + appNonBundleSize)}`
-    );
     console.log("ArFS App Stats");
     console.log(" - FileDataTxs: %s", l1Results.fileDataTxs.length);
     console.log(" - FileTxs: %s", l1Results.fileTxs.length);
@@ -133,7 +132,7 @@ async function main() {
     console.log(" - DriveTxs: %s", l1Results.driveTxs.length);
   });
 
-  console.log(`FINAL RESULTS`);
+  console.log(`FINAL RESULTS FOR ${owner}`);
   console.log(`-----------------------------------------`);
   console.log(
     `Non Bundled Data Size (Bytes): ${formatBytes(totalNonBundleSize)}`

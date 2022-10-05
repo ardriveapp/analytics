@@ -4,21 +4,21 @@ import { BlockInfo, BlockDate } from "./types";
 
 const fetch = require("node-fetch");
 
-/*export const arweave = Arweave.init({
+export const arweave = Arweave.init({
   host: "arweave.net", // Arweave Gateway
   port: 443,
   protocol: "https",
   timeout: 600000,
   logging: false,
-});*/
+});
 
-export const arweave = Arweave.init({
+/*export const arweave = Arweave.init({
   host: "test.arweave.ardrive.io", // Arweave Gateway
-  port: 1985,
+  port: 3000,
   protocol: "http",
   timeout: 600000,
   logging: false,
-});
+});*/
 
 // Gets the latest price of Arweave in USD
 export async function getArUSDPrice(): Promise<number> {

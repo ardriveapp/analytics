@@ -37,9 +37,10 @@ const mobileAppName = "ArDrive-Mobile";
 const coreAppName = "ArDrive-Core";
 const cliAppName = "ArDrive-CLI";
 const syncAppName = "ArDrive-Sync";
+const ardriveAppName = "ArDrive-App";
 
-// export const gateways = ["http://test.arweave.ardrive.io:3000"];
-export const gateways = ["http://test.arweave.ardrive.io:1985"];
+export const gateways = ["http://test.arweave.ardrive.io:3000"];
+// export const gateways = ["http://test.arweave.ardrive.io:3002"];
 // export const gateways = ["https://arweave.net"];
 
 // Index of the currently used gateway into gateways.
@@ -3706,58 +3707,68 @@ export async function getAllDrives_ASC(
 // Gets all ANS 104 Bundle Transactions
 export async function getBundleTransactions_ASC(
   start: Date,
-  end: Date
+  end: Date,
+  appName?: string
 ): Promise<BundleTx[]> {
   let bundles: BundleTx[] = [];
   let cursor: string = "";
   let hasNextPage = true;
   let timeStamp = new Date(end);
   let minBlock = await getMinBlock(start);
-  console.log(`Querying for all bundle transactions starting at ${minBlock} `);
+
+  if (appName === undefined) {
+    appName = `${desktopAppName}", "${webAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}, "${ardriveAppName}`;
+  }
+
+  console.log(`Querying for all ${appName} L1 Bundles starting at ${minBlock}`);
+
   try {
     while (hasNextPage) {
       const query = {
         query: `query {
-                transactions(
-                  tags: [
-                    { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}"]}
-                    { name: "Bundle-Format", values: "binary"}
-                  ]
-                  sort: HEIGHT_ASC
-                  block: {min: ${minBlock}}
-                  first: ${firstPage}
-                  after: "${cursor}"
-                ) {
-                  pageInfo {
-                    hasNextPage
+            transactions(
+              tags: [
+                { name: "App-Name", values: ["${appName}"]}
+                { name: "Bundle-Format", values: "binary"}
+              ]
+              sort: HEIGHT_DESC
+              first: ${firstPage}
+              after: "${cursor}"
+            ) {
+              pageInfo {
+                hasNextPage
+              }
+              edges {
+                cursor
+                node {
+                  id
+                  bundledIn {
+                      id
                   }
-                  edges {
-                    cursor
-                    node {
-                      tags {
-                          name
-                          value
-                      }
-                      quantity {
-                        ar
-                      }
-                      owner {
-                        address
-                      }
-                      fee {
-                        ar
-                      }
-                      data {
-                        size
-                      }
-                      block {
-                        height
-                        timestamp
-                      }
-                    }
+                  owner {
+                      address
+                  }
+                  fee {
+                      ar
+                  }
+                  quantity {
+                      ar
+                  }
+                  tags {
+                      name
+                      value
+                  }
+                  data {
+                    size
+                  }
+                  block {
+                    height
+                    timestamp
                   }
                 }
-              }`,
+              }
+            }
+          }`,
       };
       const transactions = await queryGateway(async (url: string) => {
         const response = await arweave.api.post(url + "/graphql", query);
@@ -3766,9 +3777,9 @@ export async function getBundleTransactions_ASC(
         return transactions;
       });
       const { edges } = transactions;
-      console.log(
+      /*console.log(
         `Block: ${edges[0].node.block.height} - ${edges.length} results found`
-      );
+      );*/
       hasNextPage = transactions.pageInfo.hasNextPage;
       edges.forEach((edge: any) => {
         cursor = edge.cursor;
@@ -3796,6 +3807,12 @@ export async function getBundleTransactions_ASC(
                   case "App-Version":
                     bundle.appVersion = value;
                     break;
+                  case "App-Platform":
+                    bundle.appPlatform = value;
+                    break;
+                  case "App-Platform-Version":
+                    bundle.appPlatformVersion = value;
+                    break;
                   default:
                     break;
                 }
@@ -3808,9 +3825,11 @@ export async function getBundleTransactions_ASC(
               bundles.push(bundle);
             }
           } else if (timeStamp.getTime() > end.getTime()) {
+            // HEIGHT_ASC
             //console.log ("Result too early %s", timeStamp)
-            hasNextPage = false;
           } else {
+            // HEIGHT_DESC
+            hasNextPage = false;
             //console.log ("Result too old %s", timeStamp)
           }
         }
@@ -3833,9 +3852,8 @@ export async function getAllAppL1Transactions(
   let cursor: string = "";
   let timeStamp = new Date(end);
   let hasNextPage = true;
-  let missingDataErrors = 0;
   let lastBlock = 1;
-
+  let missingDataErrors = 0;
   let bundleTxs: BundleTx[] = [];
   let fileTxs: ArFSFileTx[] = [];
   let folderTxs: ArFSFolderTx[] = [];
@@ -3846,10 +3864,12 @@ export async function getAllAppL1Transactions(
   let minBlock: number;
   minBlock = await getMinBlock(start);
   if (appName === undefined) {
-    appName = `${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}`;
+    appName = `${desktopAppName}", "${webAppName}", "${ardriveAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}`;
   }
 
-  console.log(`Querying for all L1Transactions starting at ${minBlock}`);
+  console.log(
+    `Querying for all ${appName} L1 Transactions starting at ${minBlock}`
+  );
 
   while (hasNextPage) {
     const query = {
@@ -3898,6 +3918,7 @@ export async function getAllAppL1Transactions(
           }
         }`,
     };
+
     try {
       const transactions = await queryGateway(async (url: string) => {
         const response = await arweave.api.post(url + "/graphql", query);
@@ -3906,7 +3927,7 @@ export async function getAllAppL1Transactions(
           console.log(response.statusText);
           console.log(response);
           console.log(
-            "Get All App Transactions DESC... Undefined data returned from Gateway"
+            "Get All L1 Transactions... Undefined data returned from Gateway"
           );
           missingDataErrors += 1;
           return 0;
@@ -3953,6 +3974,8 @@ export async function getAllAppL1Transactions(
               let contentType = "";
               let appName = "";
               let appVersion = "";
+              let appPlatform;
+              let appPlatformVersion;
               let clientName = "";
               let entityType = "data";
               let arFsVersion = "";
@@ -3975,6 +3998,12 @@ export async function getAllAppL1Transactions(
                     break;
                   case "App-Name":
                     appName = value;
+                    break;
+                  case "App-Platform":
+                    appPlatform = value;
+                    break;
+                  case "App-Platform-Version":
+                    appPlatformVersion = value;
                     break;
                   case "App-Version":
                     appVersion = value;
@@ -4001,91 +4030,101 @@ export async function getAllAppL1Transactions(
               if (clientName.includes("ArConnect")) {
                 appName = "ArConnect";
               }
-
-              if (bundleFormat === "binary") {
-                // this is a bundle
-                bundleTx.appName = appName;
-                bundleTx.appVersion = appVersion;
-                bundleTx.dataSize = +data.size;
-                bundleTx.fee = +fee.ar;
-                bundleTx.quantity = +node.quantity.ar;
-                bundleTx.owner = node.owner.address;
-                bundleTxs.push(bundleTx);
-              } else if (communityTip !== 0) {
-                tipTx.appName = appName;
-                tipTx.appVersion = appVersion;
-                tipTx.owner = node.owner.address;
-                tipTx.quantity = +communityTip;
-                tipTx.id = node.id;
-                tipTx.blockHeight = block.height;
-                tipTx.blockTime = block.timestamp;
-                tipTx.friendlyDate = timeStamp.toLocaleString();
-                tipTxs.push(tipTx);
-              } else if (
-                entityType === "data" &&
-                arFsVersion === "" &&
-                communityTip === 0
-              ) {
-                // This is file data since it has no entity tag
-                fileDataTx.dataSize = +data.size;
-                fileDataTx.appName = appName;
-                fileDataTx.appVersion = appVersion;
-                fileDataTx.owner = node.owner.address;
-                fileDataTx.private = encrypted;
-                fileDataTx.quantity = +node.quantity.ar;
-                fileDataTx.fee = +fee.ar;
-                fileDataTx.contentType = contentType;
-                fileDataTx.bundledIn = bundledIn;
-                fileDataTx.id = node.id;
-                fileDataTx.blockHeight = block.height;
-                fileDataTx.blockTime = block.timestamp;
-                fileDataTx.friendlyDate = timeStamp.toLocaleString();
-                fileDataTxs.push(fileDataTx);
-              } else if (entityType === "file") {
-                fileTx.dataSize = +data.size;
-                fileTx.appName = appName;
-                fileTx.appVersion = appVersion;
-                fileTx.arfsVersion = arFsVersion;
-                fileTx.owner = node.owner.address;
-                fileTx.private = encrypted;
-                fileTx.fee = +fee.ar;
-                fileTx.contentType = contentType;
-                fileTx.bundledIn = bundledIn;
-                fileTx.id = node.id;
-                fileTx.blockHeight = block.height;
-                fileTx.blockTime = block.timestamp;
-                fileTx.friendlyDate = timeStamp.toLocaleString();
-                fileTxs.push(fileTx);
-              } else if (entityType === "folder") {
-                folderTx.dataSize = +data.size;
-                folderTx.appName = appName;
-                folderTx.appVersion = appVersion;
-                folderTx.arfsVersion = arFsVersion;
-                folderTx.owner = node.owner.address;
-                folderTx.private = encrypted;
-                folderTx.fee = +fee.ar;
-                folderTx.contentType = contentType;
-                folderTx.bundledIn = bundledIn;
-                folderTx.id = node.id;
-                folderTx.blockHeight = block.height;
-                folderTx.blockTime = block.timestamp;
-                folderTx.friendlyDate = timeStamp.toLocaleString();
-                folderTxs.push(folderTx);
-              } else if (entityType === "drive") {
-                driveTx.dataSize = +data.size;
-                driveTx.appName = appName;
-                driveTx.appVersion = appVersion;
-                driveTx.arfsVersion = arFsVersion;
-                driveTx.owner = node.owner.address;
-                driveTx.private = encrypted;
-                driveTx.fee = +fee.ar;
-                driveTx.contentType = contentType;
-                driveTx.bundledIn = bundledIn;
-                driveTx.id = node.id;
-                driveTx.blockHeight = block.height;
-                driveTx.blockTime = block.timestamp;
-                driveTx.friendlyDate = timeStamp.toLocaleString();
-                driveTxs.push(driveTx);
+              const isBundled = JSON.stringify(node.bundledIn);
+              if (!node.bundledIn || isBundled === `{"id":""}`) {
+                if (bundleFormat === "binary") {
+                  // this is a bundle
+                  bundleTx.appName = appName;
+                  bundleTx.appVersion = appVersion;
+                  bundleTx.appPlatform = appPlatform;
+                  bundleTx.appPlatformVersion = appPlatformVersion;
+                  bundleTx.dataSize = +data.size;
+                  bundleTx.fee = +fee.ar;
+                  bundleTx.quantity = +node.quantity.ar;
+                  bundleTx.owner = node.owner.address;
+                  bundleTxs.push(bundleTx);
+                } else if (communityTip !== 0 && contentType === "") {
+                  tipTx.appName = appName;
+                  tipTx.appVersion = appVersion;
+                  tipTx.appPlatform = appPlatform;
+                  tipTx.appPlatformVersion = appPlatformVersion;
+                  tipTx.owner = node.owner.address;
+                  tipTx.quantity = +communityTip;
+                  tipTx.id = node.id;
+                  tipTx.blockHeight = block.height;
+                  tipTx.blockTime = block.timestamp;
+                  tipTx.friendlyDate = timeStamp.toLocaleString();
+                  tipTxs.push(tipTx);
+                } else if (entityType === "data" && arFsVersion === "") {
+                  // This is file data since it has no entity tag
+                  fileDataTx.dataSize = +data.size;
+                  fileDataTx.appName = appName;
+                  fileDataTx.appVersion = appVersion;
+                  fileDataTx.appPlatform = appPlatform;
+                  fileDataTx.appPlatformVersion = appPlatformVersion;
+                  fileDataTx.owner = node.owner.address;
+                  fileDataTx.private = encrypted;
+                  fileDataTx.quantity = +node.quantity.ar;
+                  fileDataTx.fee = +fee.ar;
+                  fileDataTx.contentType = contentType;
+                  fileDataTx.bundledIn = bundledIn;
+                  fileDataTx.id = node.id;
+                  fileDataTx.blockHeight = block.height;
+                  fileDataTx.blockTime = block.timestamp;
+                  fileDataTx.friendlyDate = timeStamp.toLocaleString();
+                  fileDataTxs.push(fileDataTx);
+                } else if (entityType === "file") {
+                  fileTx.dataSize = +data.size;
+                  fileTx.appName = appName;
+                  fileTx.appVersion = appVersion;
+                  fileTx.appPlatform = appPlatform;
+                  fileTx.appPlatformVersion = appPlatformVersion;
+                  fileTx.arfsVersion = arFsVersion;
+                  fileTx.owner = node.owner.address;
+                  fileTx.private = encrypted;
+                  fileTx.fee = +fee.ar;
+                  fileTx.contentType = contentType;
+                  fileTx.bundledIn = bundledIn;
+                  fileTx.id = node.id;
+                  fileTx.blockHeight = block.height;
+                  fileTx.blockTime = block.timestamp;
+                  fileTx.friendlyDate = timeStamp.toLocaleString();
+                  fileTxs.push(fileTx);
+                } else if (entityType === "folder") {
+                  folderTx.dataSize = +data.size;
+                  folderTx.appName = appName;
+                  folderTx.appVersion = appVersion;
+                  folderTx.appPlatform = appPlatform;
+                  folderTx.appPlatformVersion = appPlatformVersion;
+                  folderTx.arfsVersion = arFsVersion;
+                  folderTx.owner = node.owner.address;
+                  folderTx.private = encrypted;
+                  folderTx.fee = +fee.ar;
+                  folderTx.contentType = contentType;
+                  folderTx.bundledIn = bundledIn;
+                  folderTx.id = node.id;
+                  folderTx.blockHeight = block.height;
+                  folderTx.blockTime = block.timestamp;
+                  folderTx.friendlyDate = timeStamp.toLocaleString();
+                  folderTxs.push(folderTx);
+                } else if (entityType === "drive") {
+                  driveTx.dataSize = +data.size;
+                  driveTx.appName = appName;
+                  driveTx.appVersion = appVersion;
+                  driveTx.arfsVersion = arFsVersion;
+                  driveTx.appPlatform = appPlatform;
+                  driveTx.appPlatformVersion = appPlatformVersion;
+                  driveTx.owner = node.owner.address;
+                  driveTx.private = encrypted;
+                  driveTx.fee = +fee.ar;
+                  driveTx.contentType = contentType;
+                  driveTx.bundledIn = bundledIn;
+                  driveTx.id = node.id;
+                  driveTx.blockHeight = block.height;
+                  driveTx.blockTime = block.timestamp;
+                  driveTx.friendlyDate = timeStamp.toLocaleString();
+                  driveTxs.push(driveTx);
+                }
               }
             }
           }
@@ -4095,6 +4134,322 @@ export async function getAllAppL1Transactions(
           } else if (timeStamp.getTime() < start.getTime()) {
             // console.log("Result too old %s", timeStamp);
             // hasNextPage = false; // if it is DESC
+          } else {
+            //console.log(
+            //  "Block is null so we skip this transaction %s",
+            //  node.Id
+            //);
+          }
+        });
+      }
+    } catch (err) {
+      console.log(err);
+      console.log("Error getting transactions at Blockheight: %s", lastBlock);
+      hasNextPage = false;
+    }
+  }
+  return {
+    bundleTxs,
+    fileDataTxs,
+    fileTxs,
+    folderTxs,
+    driveTxs,
+    tipTxs,
+  };
+}
+
+// Sums up every data transaction for a start and end period and returns newest results first
+export async function getAllAppUserL1Transactions(
+  start: Date,
+  end: Date,
+  owner: string,
+  appName?: string
+): Promise<L1ResultSet> {
+  let cursor: string = "";
+  let timeStamp = new Date(end);
+  let hasNextPage = true;
+  let lastBlock = 1;
+  let missingDataErrors = 0;
+  let bundleTxs: BundleTx[] = [];
+  let fileTxs: ArFSFileTx[] = [];
+  let folderTxs: ArFSFolderTx[] = [];
+  let driveTxs: ArFSDriveTx[] = [];
+  let fileDataTxs: ArFSFileDataTx[] = [];
+  let tipTxs: ArFSTipTx[] = [];
+
+  let minBlock: number;
+  minBlock = await getMinBlock(start);
+  if (appName === undefined) {
+    appName = `${desktopAppName}", "${webAppName}", "${ardriveAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}`;
+  }
+
+  console.log(
+    `Querying for all ${appName} L1 Transactions starting at ${minBlock} for ${owner}`
+  );
+
+  while (hasNextPage) {
+    const query = {
+      query: `query {
+          transactions(
+            tags: [
+              { name: "App-Name", values: ["${appName}"]}
+            ]
+            owners: ["${owner}"]
+            sort: HEIGHT_DESC
+            first: ${firstPage}
+            after: "${cursor}"
+          ) {
+            pageInfo {
+              hasNextPage
+            }
+            edges {
+              cursor
+              node {
+                id
+                bundledIn {
+                    id
+                }
+                owner {
+                    address
+                }
+                fee {
+                    ar
+                }
+                quantity {
+                    ar
+                }
+                tags {
+                    name
+                    value
+                }
+                data {
+                  size
+                }
+                block {
+                  height
+                  timestamp
+                }
+              }
+            }
+          }
+        }`,
+    };
+
+    try {
+      const transactions = await queryGateway(async (url: string) => {
+        const response = await arweave.api.post(url + "/graphql", query);
+        const { data } = response.data;
+        if (data === undefined) {
+          console.log(response.statusText);
+          console.log(response);
+          console.log(
+            "Get All L1 Transactions... Undefined data returned from Gateway"
+          );
+          missingDataErrors += 1;
+          return 0;
+        } else {
+          const { transactions } = data;
+          return transactions;
+        }
+      });
+      if (transactions === 0) {
+        console.log("%s Gateway returned an empty JSON ", timeStamp);
+        await sleep(1000);
+      } else {
+        hasNextPage = transactions.pageInfo.hasNextPage;
+        const { edges } = transactions;
+        edges.forEach((edge: any) => {
+          cursor = edge.cursor;
+          const { node } = edge;
+          const { block } = node;
+          if (block !== null) {
+            lastBlock = block.height;
+            timeStamp = new Date(block.timestamp * 1000);
+            if (
+              start.getTime() <= timeStamp.getTime() &&
+              end.getTime() >= timeStamp.getTime()
+            ) {
+              /*console.log(
+                "Block: %s Tx: %s at Time: %s",
+                lastBlock,
+                node.id,
+                timeStamp.toLocaleString()
+              ); */
+              // Prepare our files
+              lastBlock = block.height;
+              const { tags } = node;
+              const { data } = node;
+              const { fee } = node;
+              let bundleTx = newBundleTx();
+              let fileTx = newArFSFileTx();
+              let fileDataTx = newArFSFileDataTx();
+              let folderTx = newArFSFolderTx();
+              let driveTx = newArFSDriveTx();
+              let tipTx = newArFSTipTx();
+              let encrypted = false;
+              let contentType = "";
+              let appName = "";
+              let appVersion = "";
+              let appPlatform;
+              let appPlatformVersion;
+              let clientName = "";
+              let entityType = "data";
+              let arFsVersion = "";
+              let bundledIn = "";
+              let bundleFormat = "";
+              let communityTip = 0;
+
+              tags.forEach((tag: any) => {
+                const key = tag.name;
+                const { value } = tag;
+                switch (key) {
+                  case "Cipher-IV":
+                    encrypted = true;
+                    break;
+                  case "Entity-Type":
+                    entityType = value;
+                    break;
+                  case "Content-Type":
+                    contentType = value;
+                    break;
+                  case "App-Name":
+                    appName = value;
+                    break;
+                  case "App-Platform":
+                    appPlatform = value;
+                    break;
+                  case "App-Platform-Version":
+                    appPlatformVersion = value;
+                    break;
+                  case "App-Version":
+                    appVersion = value;
+                    break;
+                  case "ArFS":
+                    arFsVersion = value;
+                    break;
+                  case "Bundle-Format":
+                    bundleFormat = value;
+                    break;
+                  case "ArDrive-Client":
+                    clientName = value;
+                    break;
+                  case "Tip-Type":
+                    if (value === "data upload") {
+                      communityTip = +node.quantity.ar;
+                    }
+                    break;
+                  default:
+                    break;
+                }
+              });
+
+              if (clientName.includes("ArConnect")) {
+                appName = "ArConnect";
+              }
+              const isBundled = JSON.stringify(node.bundledIn);
+              if (!node.bundledIn || isBundled === `{"id":""}`) {
+                if (bundleFormat === "binary") {
+                  // this is a bundle
+                  bundleTx.appName = appName;
+                  bundleTx.appVersion = appVersion;
+                  bundleTx.appPlatform = appPlatform;
+                  bundleTx.appPlatformVersion = appPlatformVersion;
+                  bundleTx.dataSize = +data.size;
+                  bundleTx.fee = +fee.ar;
+                  bundleTx.quantity = +node.quantity.ar;
+                  bundleTx.owner = node.owner.address;
+                  bundleTxs.push(bundleTx);
+                } else if (communityTip !== 0 && contentType === "") {
+                  tipTx.appName = appName;
+                  tipTx.appVersion = appVersion;
+                  tipTx.appPlatform = appPlatform;
+                  tipTx.appPlatformVersion = appPlatformVersion;
+                  tipTx.owner = node.owner.address;
+                  tipTx.quantity = +communityTip;
+                  tipTx.id = node.id;
+                  tipTx.blockHeight = block.height;
+                  tipTx.blockTime = block.timestamp;
+                  tipTx.friendlyDate = timeStamp.toLocaleString();
+                  tipTxs.push(tipTx);
+                } else if (entityType === "data" && arFsVersion === "") {
+                  // This is file data since it has no entity tag
+                  fileDataTx.dataSize = +data.size;
+                  fileDataTx.appName = appName;
+                  fileDataTx.appVersion = appVersion;
+                  fileDataTx.appPlatform = appPlatform;
+                  fileDataTx.appPlatformVersion = appPlatformVersion;
+                  fileDataTx.owner = node.owner.address;
+                  fileDataTx.private = encrypted;
+                  fileDataTx.quantity = +node.quantity.ar;
+                  fileDataTx.fee = +fee.ar;
+                  fileDataTx.contentType = contentType;
+                  fileDataTx.bundledIn = bundledIn;
+                  fileDataTx.id = node.id;
+                  fileDataTx.blockHeight = block.height;
+                  fileDataTx.blockTime = block.timestamp;
+                  fileDataTx.friendlyDate = timeStamp.toLocaleString();
+                  fileDataTxs.push(fileDataTx);
+                } else if (entityType === "file") {
+                  fileTx.dataSize = +data.size;
+                  fileTx.appName = appName;
+                  fileTx.appVersion = appVersion;
+                  fileTx.appPlatform = appPlatform;
+                  fileTx.appPlatformVersion = appPlatformVersion;
+                  fileTx.arfsVersion = arFsVersion;
+                  fileTx.owner = node.owner.address;
+                  fileTx.private = encrypted;
+                  fileTx.fee = +fee.ar;
+                  fileTx.contentType = contentType;
+                  fileTx.bundledIn = bundledIn;
+                  fileTx.id = node.id;
+                  fileTx.blockHeight = block.height;
+                  fileTx.blockTime = block.timestamp;
+                  fileTx.friendlyDate = timeStamp.toLocaleString();
+                  fileTxs.push(fileTx);
+                } else if (entityType === "folder") {
+                  folderTx.dataSize = +data.size;
+                  folderTx.appName = appName;
+                  folderTx.appVersion = appVersion;
+                  folderTx.appPlatform = appPlatform;
+                  folderTx.appPlatformVersion = appPlatformVersion;
+                  folderTx.arfsVersion = arFsVersion;
+                  folderTx.owner = node.owner.address;
+                  folderTx.private = encrypted;
+                  folderTx.fee = +fee.ar;
+                  folderTx.contentType = contentType;
+                  folderTx.bundledIn = bundledIn;
+                  folderTx.id = node.id;
+                  folderTx.blockHeight = block.height;
+                  folderTx.blockTime = block.timestamp;
+                  folderTx.friendlyDate = timeStamp.toLocaleString();
+                  folderTxs.push(folderTx);
+                } else if (entityType === "drive") {
+                  driveTx.dataSize = +data.size;
+                  driveTx.appName = appName;
+                  driveTx.appVersion = appVersion;
+                  driveTx.arfsVersion = arFsVersion;
+                  driveTx.appPlatform = appPlatform;
+                  driveTx.appPlatformVersion = appPlatformVersion;
+                  driveTx.owner = node.owner.address;
+                  driveTx.private = encrypted;
+                  driveTx.fee = +fee.ar;
+                  driveTx.contentType = contentType;
+                  driveTx.bundledIn = bundledIn;
+                  driveTx.id = node.id;
+                  driveTx.blockHeight = block.height;
+                  driveTx.blockTime = block.timestamp;
+                  driveTx.friendlyDate = timeStamp.toLocaleString();
+                  driveTxs.push(driveTx);
+                }
+              }
+            }
+          }
+          if (timeStamp.getTime() > end.getTime()) {
+            // console.log("Result too early %s", timeStamp);
+            // hasNextPage = false; // if it is ASC
+          } else if (timeStamp.getTime() < start.getTime()) {
+            // console.log("Result too old %s", timeStamp);
+            hasNextPage = false; // if it is DESC
           } else {
             //console.log(
             //  "Block is null so we skip this transaction %s",
@@ -4280,7 +4635,7 @@ export async function getArDriveUsers(
         query: `query {
                 transactions(
                     tags: [
-                      { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}"]}
+                      { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${ardriveAppName}"]}
                       { name: "Entity-Type", values: "drive" }
                     ]
                     bundledIn: ""
