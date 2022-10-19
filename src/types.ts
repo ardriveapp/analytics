@@ -313,4 +313,5 @@ export interface L1ResultSet {
   folderTxs: ArFSFolderTx[];
   driveTxs: ArFSDriveTx[];
   tipTxs: ArFSTipTx[];
+  foundUsers: string[];
 }

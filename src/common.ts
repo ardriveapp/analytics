@@ -60,6 +60,7 @@ export const communityWallets: string[] = [
 export const otherAppWallets: string[] = [
   "OXcT1sVRSA5eGwt2k6Yuz8-3e3g9WJi5uSE99CWqsBs", // bundler node wallet
   "zuPbEeWn8R9d4p-fU5eZjuizPX5WM-5c-7etrjk3U7Q", // akord wallet
+  "8jNb-iG3a3XByFuZnZ_MWMQSZE0zvxPMaMMBNMYegY4", // upload service 1
 ];
 
 export const appNames: string[] = [
@@ -69,7 +70,9 @@ export const appNames: string[] = [
   "ArDrive-Mobile",
   "ArDrive-Core",
   "ArDrive-Sync",
-  "ArDrive-App",
+  "ArDrive-App-Web",
+  "ArDrive-App-Android",
+  "ArDrive-App-iOS",
 ];
 
 // Pauses application
@@ -871,14 +874,21 @@ export async function getUniqueArDriveUsersInPeriod(
   end: Date
 ): Promise<number> {
   console.log(
-    "Getting all unique users from from app %s from %s to %s",
+    "Getting all unique users from %s to %s",
     start.toLocaleString(),
     end.toLocaleString()
   );
 
-  const allUsers = await getArDriveUsers(start, end);
-  const uniqueUserCount = Object.keys(allUsers.foundUsers).length;
+  let allWallets: string[] = [];
+  await asyncForEach(appNames, async (appName: string) => {
+    const appUsers = await getArDriveUsers(start, end, appName);
+    console.log(
+      `${appUsers.uniqueUsers.size} users found for ${appName} across ${appUsers.foundTransactions} transactions`
+    );
+    allWallets.push(...appUsers.uniqueUsers);
+  });
 
+  const uniqueUserCount = new Set(allWallets).size;
   console.log(`Unique ArDrive Users Found: ${uniqueUserCount}`);
   return uniqueUserCount;
 }

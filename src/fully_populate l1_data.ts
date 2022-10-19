@@ -20,10 +20,11 @@ const message = "ardrive.apps.l1."; // this is where all of the logs will be sto
 async function main() {
   // The date to start looking for data
   let start = new Date(2020, 8, 26); // the beginning history of ardrive
-  //let start = new Date(2022, 1, 15);
+  // let start = new Date(2022, 9, 10);
 
-  // The dat ato finish looking for data
+  // The date to finish looking for data
   let end = new Date();
+  end.setHours(0, 0, 0, 0);
 
   // The amount of hours to search for in the period i.e. 12, 24 or other range
   let hoursToQuery: number = 12;

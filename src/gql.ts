@@ -3720,7 +3720,9 @@ export async function getBundleTransactions_ASC(
     appName = `${desktopAppName}", "${webAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}, "${ardriveAppName}`;
   }
 
-  console.log(`Querying for all ${appName} L1 Bundles starting at ${minBlock}`);
+  console.log(
+    `   ...Querying for all ${appName} L1 Bundles starting at ${minBlock}`
+  );
 
   try {
     while (hasNextPage) {
@@ -3847,7 +3849,7 @@ export async function getBundleTransactions_ASC(
 export async function getAllAppL1Transactions(
   start: Date,
   end: Date,
-  appName?: string
+  appName: string
 ): Promise<L1ResultSet> {
   let cursor: string = "";
   let timeStamp = new Date(end);
@@ -3860,24 +3862,51 @@ export async function getAllAppL1Transactions(
   let driveTxs: ArFSDriveTx[] = [];
   let fileDataTxs: ArFSFileDataTx[] = [];
   let tipTxs: ArFSTipTx[] = [];
+  let foundUsers: string[] = [];
 
   let minBlock: number;
   minBlock = await getMinBlock(start);
-  if (appName === undefined) {
-    appName = `${desktopAppName}", "${webAppName}", "${ardriveAppName}", "${coreAppName}", "${cliAppName}", "${syncAppName}`;
-  }
+
+  let appPlatformQuery = "";
+  let appNameQuery;
 
   console.log(
-    `Querying for all ${appName} L1 Transactions starting at ${minBlock}`
+    `   ...Querying for all ${appName} L1 Transactions starting at ${minBlock}`
   );
 
   while (hasNextPage) {
+    let tags: string;
+    if (appName === "ArDrive-App-Web") {
+      appNameQuery = "ArDrive-App";
+      appPlatformQuery = "Web";
+      tags = `[
+        { name: "App-Name", values: ["${appNameQuery}"]}
+        { name: "App-Platform", values: ["${appPlatformQuery}"]}
+      ]`;
+    } else if (appName === "ArDrive-App-Android") {
+      appNameQuery = "ArDrive-App";
+      appPlatformQuery = "Android";
+      tags = `[
+        { name: "App-Name", values: ["${appNameQuery}"]}
+        { name: "App-Platform", values: ["${appPlatformQuery}"]}
+      ]`;
+    } else if (appName === "ArDrive-App-iOS") {
+      appNameQuery = "ArDrive-App";
+      appPlatformQuery = "iOS";
+      tags = `[
+        { name: "App-Name", values: ["${appNameQuery}"]}
+        { name: "App-Platform", values: ["${appPlatformQuery}"]}
+      ]`;
+    } else {
+      tags = `[
+        { name: "App-Name", values: ["${appName}"]}
+      ]`;
+    }
+
     const query = {
       query: `query {
           transactions(
-            tags: [
-              { name: "App-Name", values: ["${appName}"]}
-            ]
+            tags: ${tags}
             sort: HEIGHT_ASC
             block: {min: ${minBlock}}
             first: ${firstPage}
@@ -3972,7 +4001,6 @@ export async function getAllAppL1Transactions(
               let tipTx = newArFSTipTx();
               let encrypted = false;
               let contentType = "";
-              let appName = "";
               let appVersion = "";
               let appPlatform;
               let appPlatformVersion;
@@ -3995,9 +4023,6 @@ export async function getAllAppL1Transactions(
                     break;
                   case "Content-Type":
                     contentType = value;
-                    break;
-                  case "App-Name":
-                    appName = value;
                     break;
                   case "App-Platform":
                     appPlatform = value;
@@ -4126,6 +4151,7 @@ export async function getAllAppL1Transactions(
                   driveTxs.push(driveTx);
                 }
               }
+              foundUsers.push(node.owner.address);
             }
           }
           if (timeStamp.getTime() > end.getTime()) {
@@ -4148,6 +4174,7 @@ export async function getAllAppL1Transactions(
       hasNextPage = false;
     }
   }
+
   return {
     bundleTxs,
     fileDataTxs,
@@ -4155,6 +4182,7 @@ export async function getAllAppL1Transactions(
     folderTxs,
     driveTxs,
     tipTxs,
+    foundUsers,
   };
 }
 
@@ -4176,6 +4204,7 @@ export async function getAllAppUserL1Transactions(
   let driveTxs: ArFSDriveTx[] = [];
   let fileDataTxs: ArFSFileDataTx[] = [];
   let tipTxs: ArFSTipTx[] = [];
+  let foundUsers: string[] = [];
 
   let minBlock: number;
   minBlock = await getMinBlock(start);
@@ -4184,7 +4213,7 @@ export async function getAllAppUserL1Transactions(
   }
 
   console.log(
-    `Querying for all ${appName} L1 Transactions starting at ${minBlock} for ${owner}`
+    `   ...Querying for all ${appName} L1 Transactions starting at ${minBlock} for ${owner}`
   );
 
   while (hasNextPage) {
@@ -4442,6 +4471,7 @@ export async function getAllAppUserL1Transactions(
                   driveTxs.push(driveTx);
                 }
               }
+              foundUsers.push(node.owner.address);
             }
           }
           if (timeStamp.getTime() > end.getTime()) {
@@ -4471,6 +4501,7 @@ export async function getAllAppUserL1Transactions(
     folderTxs,
     driveTxs,
     tipTxs,
+    foundUsers,
   };
 }
 
@@ -4610,20 +4641,17 @@ export async function getAllInfernoRewards(
 // Gets ArDrive information from a start and and date
 export async function getArDriveUsers(
   start: Date,
-  end: Date
+  end: Date,
+  appName
 ): Promise<{
   foundTransactions: number;
-  foundUsers: {
-    [wallet: string]: number;
-  };
+  uniqueUsers: Set<string>;
 }> {
-  let bundleTxs = await getBundleTransactions_ASC(start, end);
-
+  let bundleTxs = await getBundleTransactions_ASC(start, end, appName);
   let cursor: string = "";
   let foundTransactions = 0;
-  let foundUsers: {
-    [wallet: string]: number;
-  } = {};
+  let uniqueUsers: Set<string>;
+  let foundUsers: string[] = [];
   let hasNextPage = true;
 
   // To calculate the no. of days between two dates
@@ -4635,12 +4663,11 @@ export async function getArDriveUsers(
         query: `query {
                 transactions(
                     tags: [
-                      { name: "App-Name", values: ["${desktopAppName}", "${webAppName}", "${mobileAppName}", "${coreAppName}", "${cliAppName}", "${ardriveAppName}"]}
+                      { name: "App-Name", values: ["${appName}"]}
                       { name: "Entity-Type", values: "drive" }
                     ]
                     bundledIn: ""
-                    sort: HEIGHT_ASC
-                    block: {min: ${minBlock}}
+                    sort: HEIGHT_DESC
                     first: ${firstPage}
                     after: "${cursor}"
                 ) {
@@ -4690,9 +4717,9 @@ export async function getArDriveUsers(
         await sleep(1000);
       } else {
         const { edges } = transactions;
-        console.log(
+        /*console.log(
           `Block: ${edges[0].node.block.height} - ${edges.length} results found`
-        );
+        );*/
         hasNextPage = transactions.pageInfo.hasNextPage;
         edges.forEach((edge: any) => {
           cursor = edge.cursor;
@@ -4709,12 +4736,12 @@ export async function getArDriveUsers(
             ) {
               //console.log ("Matching ardrive transaction: ", timeStamp)
               foundTransactions += 1;
-              foundUsers[`${owner.address}`] = timeStamp.getTime();
+              foundUsers.push(owner.address);
             } else if (timeStamp.getTime() > end.getTime()) {
               //console.log("Result too early");
               // hasNextPage = false;
             } else {
-              console.log("Result too old");
+              //console.log("Result too old");
               hasNextPage = false;
             }
           }
@@ -4723,16 +4750,16 @@ export async function getArDriveUsers(
     }
     // Merge results
     bundleTxs.forEach((bundleTx) => {
-      if (!foundUsers[bundleTx.owner]) {
-        foundUsers[bundleTx.owner] = bundleTx.timeStamp;
-      } else if (foundUsers[bundleTx.owner] < bundleTx.timeStamp) {
-        foundUsers[bundleTx.owner] = bundleTx.timeStamp;
-      }
+      foundUsers.push(bundleTx.owner);
+      foundTransactions += 1;
     });
-    return { foundTransactions, foundUsers };
+
+    uniqueUsers = new Set(foundUsers);
+
+    return { foundTransactions, uniqueUsers };
   } catch (err) {
     console.log(err);
     console.log("Error collecting total number of ArDrive Users");
-    return { foundTransactions, foundUsers };
+    return { foundTransactions, uniqueUsers };
   }
 }

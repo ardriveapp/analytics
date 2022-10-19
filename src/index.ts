@@ -88,47 +88,83 @@ export async function hourlyArDriveUsageAnalytics(hours: number) {
 }
 
 export async function dailyArDriveUserAnalytics() {
-  const message = "ardrive.apps.l1."; // this is where all of the logs will be stored
-  let bufferHours = 12; // The amount of hours to buffer to ensure items have been indexed.
-  let captureTime = 12; // The amount of hours to capture per run
-  let start = new Date();
-  start.setHours(start.getHours() - captureTime - bufferHours);
+  const message = "ardrive.users.l1."; // this is where all of the logs will be stored
+
+  // collect unique users that have uploaded data in the previous 24 hours
+  let bufferHours = 24; // The amount of hours to buffer to ensure items have been fully indexed.
+  let hoursToQuery = 24; // The amount of hours to search for in the period i.e. 12, 24 or other range
+  let daysToQuery = hoursToQuery / 24; // users to name this graphite message
+
+  let start = new Date(); // Set to today
+  start.setHours(start.getHours() - bufferHours);
   let end = new Date();
-  end.setHours(end.getHours() - bufferHours);
+  end.setHours(end.getHours() - hoursToQuery - bufferHours);
 
   console.log(
-    "Daily ArDrive User Analytics.  Getting all ArDrive App Stats from %s to %s",
+    "Collecting unique daily ArDrive users from %s to %s",
     start.toLocaleString(),
     end.toLocaleString()
   );
 
-  const l1Results = await getAllAppL1Transactions(start, end);
-  await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
-  await sendFileMetadataToGraphite(message, l1Results.fileTxs, end);
-  await sendFileDataToGraphite(message, l1Results.fileDataTxs, end);
-  await sendFolderMetadataToGraphite(message, l1Results.folderTxs, end);
-  await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
-  await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
+  let dailyWallets: string[] = [];
+  await asyncForEach(appNames, async (appName: string) => {
+    const l1Results = await getAllAppL1Transactions(start, end, appName);
 
-  const totalAddresses: string[] = [];
-  l1Results.bundleTxs.forEach((tx) => {
-    totalAddresses.push(tx.owner);
+    dailyWallets.push(...l1Results.foundUsers);
+    const appUniqueUsers = new Set(l1Results.foundUsers).size;
+    console.log(`${appUniqueUsers} users found for ${appName}`);
+    let graphiteMessage = message + appName + "." + daysToQuery;
+    await sendMessageToGraphite(graphiteMessage, appUniqueUsers, end);
   });
-  l1Results.fileDataTxs.forEach((tx) => {
-    totalAddresses.push(tx.owner);
+
+  const uniqueDailyUserCount = new Set(dailyWallets).size;
+  let graphiteMessage = message + daysToQuery;
+  await sendMessageToGraphite(graphiteMessage, uniqueDailyUserCount, end);
+  console.log(`Unique daily ArDrive users found: ${uniqueDailyUserCount}`);
+
+  console.log(
+    "Completed unique daily user analytics from %s to %s",
+    start.toLocaleString(),
+    end.toLocaleString()
+  );
+
+  // collect unique users that have uploaded data in the previous 30 days
+  bufferHours = 24; // The amount of hours to buffer to ensure items have been fully indexed.
+  hoursToQuery = 24 * 30; // The amount of hours to search for in the period i.e. 12, 24 or other range
+  daysToQuery = hoursToQuery / 24; // users to name this graphite message
+
+  start = new Date(); // Set to today
+  start.setHours(start.getHours() - bufferHours);
+  end = new Date();
+  end.setHours(end.getHours() - hoursToQuery - bufferHours);
+
+  console.log(
+    "Collecting unique 30 day ArDrive users from %s to %s",
+    start.toLocaleString(),
+    end.toLocaleString()
+  );
+
+  let thirtyDayWallets: string[] = [];
+  await asyncForEach(appNames, async (appName: string) => {
+    const l1Results = await getAllAppL1Transactions(start, end, appName);
+
+    thirtyDayWallets.push(...l1Results.foundUsers);
+    const appUniqueUsers = new Set(l1Results.foundUsers).size;
+    console.log(`${appUniqueUsers} users found for ${appName}`);
+    let graphiteMessage = message + appName + "." + daysToQuery;
+    await sendMessageToGraphite(graphiteMessage, appUniqueUsers, end);
   });
-  l1Results.fileTxs.forEach((tx) => {
-    totalAddresses.push(tx.owner);
-  });
-  l1Results.folderTxs.forEach((tx) => {
-    totalAddresses.push(tx.owner);
-  });
-  l1Results.driveTxs.forEach((tx) => {
-    totalAddresses.push(tx.owner);
-  });
-  const uniqueUsers = new Set(totalAddresses).size;
-  await sendMessageToGraphite(`ardrive.users.l1.uniqueUsers`, uniqueUsers, end);
-  console.log("Hourly ArDrive Usage Analytics Completed");
+
+  const unique30DayUserCount = new Set(thirtyDayWallets).size;
+  graphiteMessage = message + daysToQuery;
+  await sendMessageToGraphite(graphiteMessage, unique30DayUserCount, end);
+  console.log(`Unique 30 day ArDrive users found: ${unique30DayUserCount}`);
+
+  console.log(
+    "Completed 30 day unique user analytics from %s to %s",
+    start.toLocaleString(),
+    end.toLocaleString()
+  );
 }
 
 // Gets non-GQL related data
@@ -223,7 +259,10 @@ console.log("Start ArDrive Analytics Cron Jobs");
 console.log("---------------------------------");
 cron.schedule("0 */12 * * *", async function () {
   await hourlyArDriveUsageAnalytics(12);
-  await getArDriveCommunityWalletArDriveBalances();
+});
+
+cron.schedule("0 */24 * * *", async function () {
+  await dailyArDriveUserAnalytics();
 });
 
 cron.schedule("*/2 * * * *", async function () {
