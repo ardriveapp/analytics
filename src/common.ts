@@ -61,6 +61,7 @@ export const otherAppWallets: string[] = [
   "OXcT1sVRSA5eGwt2k6Yuz8-3e3g9WJi5uSE99CWqsBs", // bundler node wallet
   "zuPbEeWn8R9d4p-fU5eZjuizPX5WM-5c-7etrjk3U7Q", // akord wallet
   "8jNb-iG3a3XByFuZnZ_MWMQSZE0zvxPMaMMBNMYegY4", // upload service 1
+  "yCxjLRyXjzHJ4gMZK8HFYiW146dykI9QgP6CSsVXFwk", // upload service 2
 ];
 
 export const appNames: string[] = [
