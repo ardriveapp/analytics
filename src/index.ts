@@ -96,9 +96,9 @@ export async function dailyArDriveUserAnalytics() {
   let daysToQuery = hoursToQuery / 24; // users to name this graphite message
 
   let start = new Date(); // Set to today
-  start.setHours(start.getHours() - bufferHours);
+  start.setHours(start.getHours() - hoursToQuery - bufferHours);
   let end = new Date();
-  end.setHours(end.getHours() - hoursToQuery - bufferHours);
+  end.setHours(end.getHours() - bufferHours);
 
   console.log(
     "Collecting unique daily ArDrive users from %s to %s",
@@ -134,9 +134,9 @@ export async function dailyArDriveUserAnalytics() {
   daysToQuery = hoursToQuery / 24; // users to name this graphite message
 
   start = new Date(); // Set to today
-  start.setHours(start.getHours() - bufferHours);
+  start.setHours(start.getHours() - hoursToQuery - bufferHours);
   end = new Date();
-  end.setHours(end.getHours() - hoursToQuery - bufferHours);
+  end.setHours(end.getHours() - bufferHours);
 
   console.log(
     "Collecting unique 30 day ArDrive users from %s to %s",
