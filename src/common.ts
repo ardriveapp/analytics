@@ -75,6 +75,7 @@ export const appNames: string[] = [
   "ArDrive-App-Web",
   "ArDrive-App-Android",
   "ArDrive-App-iOS",
+  "ar-io.com Bundler M",
 ];
 
 // Pauses application
