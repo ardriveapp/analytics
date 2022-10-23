@@ -3,6 +3,7 @@ import {
   appNames,
   asyncForEach,
   printL1Results,
+  uploaders,
 } from "./common";
 import { getAllAppL1Transactions } from "./gql";
 import {
@@ -49,7 +50,7 @@ async function main() {
 
     const foundAddresses: string[] = [];
 
-    await asyncForEach(appNames, async (appName: string) => {
+    await asyncForEach(uploaders, async (appName: string) => {
       console.log(`...${appName}`);
       const l1Results = await getAllAppL1Transactions(start, end, appName);
       await sendBundlesToGraphite(message, l1Results.bundleTxs, end);

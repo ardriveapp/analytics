@@ -11,6 +11,7 @@ import {
   getArDriveCommunityWalletARBalances,
   getArDriveCommunityWalletArDriveBalances,
   getOtherWalletARBalances,
+  uploaders,
 } from "./common";
 import { getAllAppL1Transactions } from "./gql";
 import {
@@ -85,6 +86,45 @@ export async function hourlyArDriveUsageAnalytics(hours: number) {
   const uniqueTotalUsers = new Set(totalAddresses).size;
   await sendMessageToGraphite(`ardrive.users.l1.total`, uniqueTotalUsers, end);
   console.log("Hourly ArDrive Usage Analytics Completed");
+}
+
+export async function hourlyUploaderUsageAnalytics() {
+  const message = "uploader.l1."; // this is where all of the logs will be stored
+  const totalAddresses: string[] = [];
+  let bufferHours = 24; // The amount of hours to buffer to ensure items have been indexed.
+  let start = new Date();
+  start.setHours(start.getHours() - 1 - bufferHours);
+  let end = new Date();
+  end.setHours(end.getHours() - bufferHours);
+
+  console.log(
+    "Hourly Uploader Usage Analytics.  Getting all ArDrive App Stats from %s to %s",
+    start.toLocaleString(),
+    end.toLocaleString()
+  );
+  await asyncForEach(uploaders, async (uploader: string) => {
+    console.log(`...${uploader}`);
+    const l1Results = await getAllAppL1Transactions(start, end, uploader);
+    await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
+
+    const appAddresses: string[] = [];
+    l1Results.bundleTxs.forEach((tx) => {
+      totalAddresses.push(tx.owner);
+      appAddresses.push(tx.owner);
+    });
+
+    const uniqueAppUsers = new Set(appAddresses).size;
+
+    await sendMessageToGraphite(
+      `uploader.l1.users.` + uploader, // FIX THE NAME
+      uniqueAppUsers,
+      end
+    );
+  });
+
+  const uniqueTotalUsers = new Set(totalAddresses).size;
+  await sendMessageToGraphite(`uploader.l1.users.total`, uniqueTotalUsers, end);
+  console.log("Hourly Uploader Usage Analytics Completed");
 }
 
 export async function dailyArDriveUserAnalytics() {
@@ -272,4 +312,5 @@ cron.schedule("*/2 * * * *", async function () {
 cron.schedule("*/60 * * * *", async function () {
   await getArDriveCommunityWalletARBalances();
   await getOtherWalletARBalances();
+  await hourlyUploaderUsageAnalytics();
 });

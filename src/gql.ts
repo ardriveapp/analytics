@@ -3897,6 +3897,11 @@ export async function getAllAppL1Transactions(
         { name: "App-Name", values: ["${appNameQuery}"]}
         { name: "App-Platform", values: ["${appPlatformQuery}"]}
       ]`;
+    } else if (appName === "uploader-m") {
+      appNameQuery = "ar-io.com Bundler M";
+      tags = `[
+        { name: "App-Name", values: ["${appNameQuery}"]}
+      ]`;
     } else {
       tags = `[
         { name: "App-Name", values: ["${appName}"]}

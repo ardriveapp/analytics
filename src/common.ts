@@ -75,8 +75,9 @@ export const appNames: string[] = [
   "ArDrive-App-Web",
   "ArDrive-App-Android",
   "ArDrive-App-iOS",
-  "ar-io.com Bundler M",
 ];
+
+export const uploaders: string[] = ["uploader-m"];
 
 // Pauses application
 export async function sleep(ms: number): Promise<number> {
