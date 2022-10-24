@@ -11,7 +11,7 @@ async function main() {
 
   // The date to finish looking for data
   let end = new Date();
-  // end.setHours(0, 0, 0, 0);
+  end.setHours(end.getHours() - 1); // end 1 hour in the past.
 
   // The amount of hours to search for in the period i.e. 12, 24 or other range
   let hoursToQuery: number = 1;
