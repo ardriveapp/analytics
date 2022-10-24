@@ -6,12 +6,12 @@ const message = "uploader.l1."; // this is where all of the logs will be stored
 
 async function main() {
   // The date to start looking for data
-  let start = new Date(2022, 9, 15); // the beginning history of ardrive
+  let start = new Date(2022, 9, 1); // the beginning history of ardrive
   // let start = new Date(2022, 9, 10);
 
   // The date to finish looking for data
   let end = new Date();
-  end.setHours(0, 0, 0, 0);
+  // end.setHours(0, 0, 0, 0);
 
   // The amount of hours to search for in the period i.e. 12, 24 or other range
   let hoursToQuery: number = 1;
@@ -49,7 +49,7 @@ async function main() {
 
       const uniqueAppUsers = new Set(appAddresses).size;
       await sendMessageToGraphite(
-        `uploader.l1.user.` + uploader,
+        `uploader.l1.users.` + uploader,
         uniqueAppUsers,
         end
       );

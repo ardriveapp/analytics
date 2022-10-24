@@ -91,9 +91,9 @@ export async function hourlyArDriveUsageAnalytics(hours: number) {
 export async function hourlyUploaderUsageAnalytics() {
   const message = "uploader.l1."; // this is where all of the logs will be stored
   const totalAddresses: string[] = [];
-  let bufferHours = 24; // The amount of hours to buffer to ensure items have been indexed.
+  let bufferHours = 1; // The amount of hours to buffer to ensure items have been indexed.
   let start = new Date();
-  start.setHours(start.getHours() - 1 - bufferHours);
+  start.setHours(start.getHours() - 1 - bufferHours); // we will only scan for 1 hour of data
   let end = new Date();
   end.setHours(end.getHours() - bufferHours);
 
