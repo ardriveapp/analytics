@@ -312,5 +312,8 @@ cron.schedule("*/2 * * * *", async function () {
 cron.schedule("*/15 * * * *", async function () {
   await getArDriveCommunityWalletARBalances();
   await getOtherWalletARBalances();
+});
+
+cron.schedule("*/60 * * * *", async function () {
   await hourlyUploaderUsageAnalytics();
 });
