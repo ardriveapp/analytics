@@ -309,7 +309,7 @@ cron.schedule("*/2 * * * *", async function () {
   await networkAnalytics();
 });
 
-cron.schedule("*/60 * * * *", async function () {
+cron.schedule("*/15 * * * *", async function () {
   await getArDriveCommunityWalletARBalances();
   await getOtherWalletARBalances();
   await hourlyUploaderUsageAnalytics();
