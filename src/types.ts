@@ -293,7 +293,7 @@ export interface BundleTx {
   fee: number;
   quantity: number;
   owner: string;
-  timeStamp: number;
+  timeStamp: number | string;
 }
 
 export interface ResultSet {

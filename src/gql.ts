@@ -4768,3 +4768,131 @@ export async function getArDriveUsers(
     return { foundTransactions, uniqueUsers };
   }
 }
+
+// Gets all AR transactions sent to a specific recipient
+export async function getIncomingARTransactions(
+  start: Date,
+  end: Date,
+  recipient: string
+): Promise<BundleTx[]> {
+  let txs: BundleTx[] = [];
+  let cursor: string = "";
+  let hasNextPage = true;
+  let timeStamp = new Date(end);
+  let minBlock = await getMinBlock(start);
+
+  console.log(
+    `   ...Querying for all inbound AR token transactions starting at ${minBlock}`
+  );
+
+  try {
+    while (hasNextPage) {
+      const query = {
+        query: `query {
+            transactions(
+              recipients: "${recipient}"
+              first: ${firstPage}
+              after: "${cursor}"
+            ) {
+              pageInfo {
+                hasNextPage
+              }
+              edges {
+                cursor
+                node {
+                  id
+                  owner {
+                      address
+                  }
+                  fee {
+                      ar
+                  }
+                  quantity {
+                      ar
+                  }
+                  tags {
+                      name
+                      value
+                  }
+                  data {
+                    size
+                  }
+                  block {
+                    height
+                    timestamp
+                  }
+                }
+              }
+            }
+          }`,
+      };
+
+      const transactions = await queryGateway(async (url: string) => {
+        const response = await arweave.api.post(url + "/graphql", query);
+        const { data } = response.data;
+        const { transactions } = data;
+        return transactions;
+      });
+      const { edges } = transactions;
+      /*console.log(
+        `Block: ${edges[0].node.block.height} - ${edges.length} results found`
+      );*/
+      hasNextPage = transactions.pageInfo.hasNextPage;
+      edges.forEach((edge: any) => {
+        cursor = edge.cursor;
+        const { node } = edge;
+        const { data } = node;
+        const { block } = node;
+        const { tags } = node;
+        if (block !== null) {
+          timeStamp = new Date(block.timestamp * 1000);
+          if (
+            start.getTime() <= timeStamp.getTime() &&
+            end.getTime() >= timeStamp.getTime()
+          ) {
+            let tx = newBundleTx();
+            //console.log ("Matching recipient data transaction: ", timeStamp)
+            tags.forEach((tag: any) => {
+              const key = tag.name;
+              const { value } = tag;
+              switch (key) {
+                case "App-Name":
+                  tx.appName = value;
+                  break;
+                case "App-Version":
+                  tx.appVersion = value;
+                  break;
+                case "App-Platform":
+                  tx.appPlatform = value;
+                  break;
+                case "App-Platform-Version":
+                  tx.appPlatformVersion = value;
+                  break;
+                default:
+                  break;
+              }
+            });
+            tx.owner = node.owner.address;
+            tx.dataSize = +data.size;
+            tx.quantity = +node.quantity.ar;
+            tx.fee = +node.fee.ar;
+            tx.timeStamp = timeStamp.toLocaleString();
+            txs.push(tx);
+          } else if (timeStamp.getTime() > end.getTime()) {
+            // HEIGHT_ASC
+            //console.log ("Result too early %s", timeStamp)
+          } else {
+            // HEIGHT_DESC
+            hasNextPage = false;
+            //console.log ("Result too old %s", timeStamp)
+          }
+        }
+      });
+    }
+    return txs;
+  } catch (err) {
+    console.log(err);
+    console.log("Error collecting all ar token transfers");
+    return txs;
+  }
+}
