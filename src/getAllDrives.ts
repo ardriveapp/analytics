@@ -4,8 +4,11 @@ import { ArDriveStat } from "./types";
 
 export async function main() {
   const today = new Date().toISOString().slice(0, 10);
-  const start = new Date(2020, 8, 26); // the beginning history of ardrive
-  const end = new Date();
+  // The date to start looking for data
+  let start = new Date(2020, 8, 26); // the beginning history of ardrive
+  // The date to finish looking for data
+  let end = new Date();
+
   const name = "ArDrive_All_Drives_Report_" + today + ".csv";
   const createCsvWriter = require("csv-writer").createObjectCsvWriter;
 
@@ -15,6 +18,8 @@ export async function main() {
       { id: "address", title: "ADDRESS" },
       { id: "privacy", title: "PRIVACY" },
       { id: "appName", title: "APPNAME" },
+      { id: "appPlatform", title: "APPPLATFORM" },
+      { id: "appVersion", title: "APPVERSION" },
       { id: "driveId", title: "DRIVEID" },
       { id: "tx", title: "TX" },
       { id: "data", title: "DATA" },

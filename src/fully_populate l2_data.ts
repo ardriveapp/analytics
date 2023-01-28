@@ -1,11 +1,5 @@
-import {
-  addHoursToDate,
-  appNames,
-  asyncForEach,
-  printL1Results,
-  uploaders,
-} from "./common";
-import { getAllAppL1Transactions } from "./gql";
+import { addHoursToDate, appNames, asyncForEach, uploaders } from "./common";
+import { getAllAppL2Transactions } from "./gql";
 import {
   sendBundlesToGraphite,
   sendFileMetadataToGraphite,
@@ -16,12 +10,12 @@ import {
   sendMessageToGraphite,
 } from "./graphite";
 
-const message = "ardrive.apps.l1."; // this is where all of the logs will be stored
+const message = "ardrive.apps.l2."; // this is where all of the logs will be stored
 
 async function main() {
   // The date to start looking for data
   let start = new Date(2020, 8, 26); // the beginning history of ardrive
-  // let start = new Date(2022, 9, 10);
+  // let start = new Date(2021, 1, 1);
 
   // The date to finish looking for data
   let end = new Date();
@@ -40,6 +34,8 @@ async function main() {
     "--------------------------------------------------------------------------------"
   );
 
+  let blockHeight = 0;
+  let nextBlockHeight = 0;
   while (start < end) {
     const end = new Date(addHoursToDate(start, hoursToQuery));
     console.log(
@@ -52,45 +48,54 @@ async function main() {
 
     await asyncForEach(appNames, async (appName: string) => {
       console.log(`...${appName}`);
-      const l1Results = await getAllAppL1Transactions(start, end, appName);
-      await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
-      await sendFileMetadataToGraphite(message, l1Results.fileTxs, end);
-      await sendFileDataToGraphite(message, l1Results.fileDataTxs, end);
-      await sendFolderMetadataToGraphite(message, l1Results.folderTxs, end);
-      await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
-      await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
+      const l2Results = await getAllAppL2Transactions(
+        start,
+        end,
+        appName,
+        blockHeight
+      );
+      await sendBundlesToGraphite(message, l2Results.bundleTxs, end);
+      await sendFileMetadataToGraphite(message, l2Results.fileTxs, end);
+      await sendFileDataToGraphite(message, l2Results.fileDataTxs, end);
+      await sendFolderMetadataToGraphite(message, l2Results.folderTxs, end);
+      await sendDriveMetadataToGraphite(message, l2Results.driveTxs, end);
+      await sentL1CommunityTipsToGraphite(message, l2Results.tipTxs, end);
+      if (l2Results.lastBlock > blockHeight) {
+        nextBlockHeight = l2Results.lastBlock;
+      }
       const appAddresses: string[] = [];
-      l1Results.bundleTxs.forEach((tx) => {
+      l2Results.bundleTxs.forEach((tx) => {
         foundAddresses.push(tx.owner);
         appAddresses.push(tx.owner);
       });
-      l1Results.fileDataTxs.forEach((tx) => {
+      l2Results.fileDataTxs.forEach((tx) => {
         foundAddresses.push(tx.owner);
         appAddresses.push(tx.owner);
       });
-      l1Results.fileTxs.forEach((tx) => {
+      l2Results.fileTxs.forEach((tx) => {
         foundAddresses.push(tx.owner);
         appAddresses.push(tx.owner);
       });
-      l1Results.folderTxs.forEach((tx) => {
+      l2Results.folderTxs.forEach((tx) => {
         foundAddresses.push(tx.owner);
         appAddresses.push(tx.owner);
       });
-      l1Results.driveTxs.forEach((tx) => {
+      l2Results.driveTxs.forEach((tx) => {
         foundAddresses.push(tx.owner);
         appAddresses.push(tx.owner);
       });
       const uniqueAppUsers = new Set(appAddresses).size;
       await sendMessageToGraphite(
-        `ardrive.users.l1.` + appName,
+        `ardrive.users.l2.` + appName,
         uniqueAppUsers,
         end
       );
     });
 
+    blockHeight = nextBlockHeight;
     const uniqueTotalUsers = new Set(foundAddresses).size;
     await sendMessageToGraphite(
-      `ardrive.users.l1.totalUsers`,
+      `ardrive.users.l2.totalUsers`,
       uniqueTotalUsers,
       end
     );

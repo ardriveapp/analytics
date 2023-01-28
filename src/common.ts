@@ -60,7 +60,8 @@ export const communityWallets: string[] = [
 export const otherAppWallets: string[] = [
   "OXcT1sVRSA5eGwt2k6Yuz8-3e3g9WJi5uSE99CWqsBs", // bundler node wallet
   "zuPbEeWn8R9d4p-fU5eZjuizPX5WM-5c-7etrjk3U7Q", // akord wallet
-  "8jNb-iG3a3XByFuZnZ_MWMQSZE0zvxPMaMMBNMYegY4", // upload service 1
+  "8jNb-iG3a3XByFuZnZ_MWMQSZE0zvxPMaMMBNMYegY4", // ardrive turbo dev
+  "JNC6vBhjHY1EPwV3pEeNmrsgFMxH5d38_LHsZ7jful8", // ardrive upload service turbo prod
   "yCxjLRyXjzHJ4gMZK8HFYiW146dykI9QgP6CSsVXFwk", // hot wallet
   "FJJtx7JSjoylZCfo_ic63v20ggh08op1ohwzKDJZw2g", // cold wallet
 ];
@@ -75,6 +76,7 @@ export const appNames: string[] = [
   "ArDrive-App-Web",
   "ArDrive-App-Android",
   "ArDrive-App-iOS",
+  "ArDrive Upload Service",
 ];
 
 export const uploaders: string[] = ["uploader-m"];
@@ -720,8 +722,8 @@ export async function getMinBlock(
   start: Date,
   blocksPerHour?: number
 ): Promise<number> {
-  if (!blocksPerHour) {
-    blocksPerHour = 30;
+  if (blocksPerHour === undefined) {
+    blocksPerHour = 28;
   }
   let today = new Date();
   let height = await getCurrentBlockHeight();
@@ -733,9 +735,24 @@ export async function getMinBlock(
     minBlock = height - blocksPerHour * startHoursDiff;
   }
 
-  let timeStamp = await getBlockTimestamp(minBlock);
-  if (start < timeStamp) {
-    return await getMinBlock(start, blocksPerHour + 1);
+  let blockTimeStamp = await getBlockTimestamp(minBlock);
+  /* let blockTimeStampDiff = start.getTime() - blockTimeStamp.getTime();
+  const blockTimeStampHoursDiff = Math.floor(
+    blockTimeStampDiff / (1000 * 3600)
+  );
+  if (blockTimeStampHoursDiff > 72) {
+    blocksPerHour -= 1;
+    console.log(
+      "adjusting blocks per hour %s %s %s",
+      blockTimeStampDiff,
+      blockTimeStampHoursDiff,
+      blocksPerHour
+    );
+
+    return await getMinBlock(start, blocksPerHour);
+  } else */ if (start < blockTimeStamp) {
+    blocksPerHour += 1;
+    return await getMinBlock(start, blocksPerHour);
   } else {
     return minBlock;
   }

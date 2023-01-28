@@ -81,10 +81,13 @@ export interface ArDriveStat {
   address: string;
   privacy: string;
   appName: string;
+  appVersion: string;
+  appPlatform: string;
   driveId: string;
   tx: string;
   data: number;
   blockTimeStamp: Date;
+  blockHeight: number;
 }
 
 export interface FileInfo {
@@ -314,4 +317,5 @@ export interface L1ResultSet {
   driveTxs: ArFSDriveTx[];
   tipTxs: ArFSTipTx[];
   foundUsers: string[];
+  lastBlock?: number;
 }

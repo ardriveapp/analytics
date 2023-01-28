@@ -18,7 +18,7 @@ export async function sendBundlesToGraphite(
   end: Date
 ) {
   const type = ".bundles";
-  console.log("Sending Bundle Txs to Graphite", end);
+  // console.log("Sending Bundle Txs to Graphite", end);
   const appNames: string[] = [...new Set(bundles.map((item) => item.appName))];
   await asyncForEach(appNames, async (appName: string) => {
     const appBundles = bundles.filter(
@@ -85,7 +85,7 @@ export async function sendUsersToGraphite(
   results: L1ResultSet,
   end: Date
 ) {
-  console.log("Sending Found Users to Graphite", end);
+  // console.log("Sending Found Users to Graphite", end);
 
   let totalAddresses: string[] = [];
   let bundleAddresses: string[] = [];
@@ -289,7 +289,7 @@ export async function sendFileDataToGraphite(
   end: Date
 ) {
   const type = ".fileData";
-  console.log("Sending File Data Txs to Graphite", end);
+  // console.log("Sending File Data Txs to Graphite", end);
   const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
 
   await asyncForEach(appNames, async (appName: string) => {
@@ -453,7 +453,7 @@ export async function sendFileDataSizeOnlyToGraphite(
   txs: ArFSFileDataTx[],
   end: Date
 ) {
-  console.log("Sending File Data Txs to Graphite", end);
+  // console.log("Sending File Data Txs to Graphite", end);
   const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
   const type = ".fileData2";
 
@@ -560,7 +560,7 @@ export async function sendFileMetadataToGraphite(
   txs: ArFSFileTx[],
   end: Date
 ) {
-  console.log("Sending File Metadata Txs to Graphite", end);
+  // console.log("Sending File Metadata Txs to Graphite", end);
   const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
   const type = ".fileMetaData";
   await asyncForEach(appNames, async (appName: string) => {
@@ -687,7 +687,7 @@ export async function sendFolderMetadataToGraphite(
   txs: ArFSFolderTx[],
   end: Date
 ) {
-  console.log("Sending Folder Metadata Txs to Graphite", end);
+  //console.log("Sending Folder Metadata Txs to Graphite", end);
   const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
   const type = ".folderMetaData";
   await asyncForEach(appNames, async (appName: string) => {
@@ -814,7 +814,7 @@ export async function sendDriveMetadataToGraphite(
   txs: ArFSFolderTx[],
   end: Date
 ) {
-  console.log("Sending Drive Metadata Txs to Graphite", end);
+  // console.log("Sending Drive Metadata Txs to Graphite", end);
   const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
   const type = ".driveMetaData";
   await asyncForEach(appNames, async (appName: string) => {
@@ -941,7 +941,7 @@ export async function sentL1CommunityTipsToGraphite(
   txs: ArFSTipTx[],
   end: Date
 ) {
-  console.log("Sending Tip Txs to Graphite", end);
+  // console.log("Sending Tip Txs to Graphite", end);
   const appNames: string[] = [...new Set(txs.map((item) => item.appName))];
   await asyncForEach(appNames, async (appName: string) => {
     const appTipTxs = txs.filter((item) => item.appName === appName).length;

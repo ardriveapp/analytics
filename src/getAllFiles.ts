@@ -2,8 +2,9 @@ import { getAllFiles } from "./gql";
 
 export async function main() {
   const today = new Date().toISOString().slice(0, 10);
-  const start = new Date(2020, 8, 26); // the beginning history of ardrive
-  const end = new Date();
+  const start = new Date(2021, 0, 1); // the beginning history of ardrive
+  //const end = new Date();
+  const end = new Date(2022, 0, 1); // the beginning history of ardrive
   const name = "ArDrive_All_Files_Report_" + today + ".csv";
   const createCsvWriter = require("csv-writer").createObjectCsvWriter;
 
