@@ -4,22 +4,15 @@ import {
   getAllBlockDates,
   getBlockTimestamp,
   getCurrentBlockHeight,
-  getLatestBlockInfo,
   getWalletBalance,
   /*get_24_hour_ardrive_transactions*/
 } from "./arweave";
 import {
   getAllCommunityFees,
-  getAllDrives,
-  getAllTransactions_WithBlocks,
-  getMyCommunityFees,
-  getUserSize,
-  getAllTransactions,
-  getSumOfAllCommunityFees,
   getAllArDriveCommunityTokenTransactions,
-  gateways,
-  getArDriveUsers,
-} from "./gql";
+  L1gateways,
+  getMyCommunityFees,
+} from "./gql_L1";
 import {
   sendArDriveCommunityFinancesToGraphite,
   sendMessageToGraphite,
@@ -29,11 +22,8 @@ import {
   getTotalTokenCount,
   getWalletArDriveLockedBalance,
   getWalletArDriveUnlockedBalance,
-  getTokenHolderCount,
 } from "./smartweave";
 import {
-  Results,
-  BlockInfo,
   ArDriveCommunityFee,
   BlockDate,
   SmartweaveTx,
@@ -43,7 +33,8 @@ import {
   ArFSFolderTx,
   ArFSFileDataTx,
   ArFSTipTx,
-  L1ResultSet,
+  ResultSet,
+  ArFSSnapshotTx,
 } from "./types";
 
 export const communityWallets: string[] = [
@@ -113,7 +104,7 @@ export async function getArDriveTokenTransfers(
 ): Promise<SmartweaveTx[]> {
   console.log(
     "Starting to collect ArDrive Community Transactions from %s within %s to %s",
-    gateways[0],
+    L1gateways[0],
     start,
     end
   );
@@ -406,223 +397,6 @@ export async function getBlockDates() {
   });
 }
 
-// Gets a set of metrics for a period of days or hours
-// Can optionally use blockEstimate as "true" to use a block height estimator to refine the query further
-export async function getAllMetrics(
-  start: Date,
-  end: Date,
-  days?: number,
-  hours?: number,
-  estimate?: boolean
-): Promise<Results> {
-  const today = new Date();
-  // If our end date is in the future, we set it to the current time to ensure valid results.
-  if (end > today) {
-    end.setTime(today.getTime());
-  }
-  console.log(
-    "Pulling metrics from %s EST to %s EST",
-    start.toLocaleString(),
-    end.toLocaleString()
-  );
-
-  let totalPrivateDrives = 0;
-  let totalPublicDrives = 0;
-  console.log("- Getting all data transactions");
-  let totalData: any;
-  if (estimate === true) {
-    totalData = await getAllTransactions_WithBlocks(start, end);
-  } else {
-    totalData = await getAllTransactions(start, end);
-  }
-
-  const totalDataSize = totalData.publicDataSize + totalData.privateDataSize;
-  const totalFiles = totalData.publicFiles + totalData.privateFiles;
-  totalData.contentTypes?.sort(contentTypeCountCompare);
-
-  console.log("- Getting ArDrive Community fees");
-  const totalCommunityFees = await getSumOfAllCommunityFees(start, end);
-  const totalMiningFees = totalData.publicArFee + totalData.privateArFee;
-
-  console.log("- Getting all drives");
-  const allNewArDrives = await getAllDrives(start, end);
-  allNewArDrives.forEach((drive: any) => {
-    if (drive.privacy === "private") {
-      totalPrivateDrives += 1;
-    } else {
-      totalPublicDrives += 1;
-    }
-  });
-
-  // Determine how many drives in this period
-  const distinctNewArDriveUsers = [
-    ...new Set(allNewArDrives.map((x) => x.address)),
-  ];
-
-  // Determine amount of total users
-  console.log("- Getting total amount of ArDrive users");
-  let allTimeStart = new Date();
-  allTimeStart.setDate(end.getDate() - 365);
-  const allArDrives = await getAllDrives(allTimeStart, end);
-  const distinctArDriveUsers = [...new Set(allArDrives.map((x) => x.address))];
-
-  // filter out low drive sizes
-  console.log("- Getting total drive sizes");
-  let allOwnerStats: any[] = [];
-  await asyncForEach(distinctNewArDriveUsers, async (owner: string) => {
-    // Get Drive Size
-    let ownerStat = await getUserSize(owner, start, end);
-    allOwnerStats.push(ownerStat);
-    // else drive is too small and we do not count it
-  });
-  allOwnerStats.sort(userSizeCompare);
-
-  // Get total number of ArDrive token holders
-  console.log("- Getting token holder count");
-  const tokenHolders = await getTokenHolderCount();
-
-  console.log("COMPLETED!");
-
-  console.log("  ---------------------------");
-  console.log("Total Unique Users Found: ", distinctArDriveUsers.length);
-  console.log("Total Token Holders Found:", tokenHolders);
-  if (days) {
-    console.log("  %s Day(s) -", days);
-  } else if (hours) {
-    console.log("  %s Hour(s) -", hours);
-  }
-  console.log("      Total Users:        ", distinctNewArDriveUsers.length);
-  console.log("          Real Users      ", Object.keys(allOwnerStats).length);
-  console.log("      Total Drives:       ", Object.keys(allNewArDrives).length);
-  console.log("          Public:         ", totalPublicDrives);
-  console.log("          Private:        ", totalPrivateDrives);
-  console.log("      Total Data:         ", formatBytes(totalDataSize));
-  console.log(
-    "          Public:         ",
-    formatBytes(totalData.publicDataSize)
-  );
-  console.log(
-    "          Private:        ",
-    formatBytes(totalData.privateDataSize)
-  );
-  console.log("      Total Files:        ", totalFiles);
-  console.log("          Web:            ", totalData.webAppFiles);
-  console.log("          Desktop:        ", totalData.desktopAppFiles);
-  console.log("          Mobile:         ", totalData.mobileAppFiles);
-  console.log("          CLI:            ", totalData.cliAppFiles);
-  console.log("          Sync:            ", totalData.syncAppFiles);
-  console.log("          Core:           ", totalData.coreAppFiles);
-  console.log("          Public:         ", totalData.publicFiles);
-  console.log("          Private:        ", totalData.privateFiles);
-  console.log("      Total Mining Fees:  ", totalMiningFees.toFixed(5));
-  console.log(
-    "      Total ArDrive Fees: ",
-    totalCommunityFees.totalFees.toFixed(5)
-  );
-  console.log(
-    "          Desktop:        ",
-    totalCommunityFees.desktopAppFees.toFixed(5)
-  );
-  console.log(
-    "          Web:            ",
-    totalCommunityFees.webAppFees.toFixed(5)
-  );
-  console.log(
-    "          Mobile:         ",
-    totalCommunityFees.mobileAppFees.toFixed(5)
-  );
-  console.log(
-    "          CLI:            ",
-    totalCommunityFees.cliAppFees.toFixed(5)
-  );
-  console.log(
-    "          Core:           ",
-    totalCommunityFees.coreAppFees.toFixed(5)
-  );
-  console.log("  ---------------------------");
-
-  console.log("Content Types Found %s", totalData.contentTypes?.length);
-  console.log(totalData.contentTypes);
-  console.log("  ---------------------------");
-
-  let averageUserSize = 0;
-  let averageUserFiles = 0;
-  allOwnerStats.forEach((ownerStat: any) => {
-    averageUserSize += ownerStat.totalDriveSize;
-    averageUserFiles += ownerStat.totalDriveTransactions;
-  });
-  averageUserSize = +averageUserSize / allOwnerStats.length;
-  averageUserFiles = +averageUserFiles / allOwnerStats.length;
-
-  console.log("Average User Size %s", formatBytes(averageUserSize));
-  console.log("Average User Files Amount %s", averageUserFiles);
-  console.log("  ---------------------------");
-  console.log("Top 10 Uploaders This Period");
-  console.log("Starting: %s", end.toLocaleString());
-  console.log("Ending: %s", start.toLocaleString());
-  allOwnerStats = allOwnerStats.slice(0, 20);
-  allOwnerStats.forEach((ownerStat: any) => {
-    console.log("Owner: %s", ownerStat.owner);
-    console.log(
-      "Size: %s Files: %s",
-      formatBytes(ownerStat.totalDriveSize),
-      ownerStat.totalDriveTransactions
-    );
-  });
-
-  // Get latest block details
-  let latestBlock: BlockInfo = await getLatestBlockInfo(totalData.lastBlock);
-
-  console.log("Latest block is: %s", totalData.lastBlock);
-  console.log("Weave size is: %s", latestBlock.weaveSize);
-  console.log("Last block size is: %s", latestBlock.blockSize);
-  console.log("Difficulty is: %s", latestBlock.difficulty);
-  console.log("  ---------------------------");
-
-  const metrics: Results = {
-    startDate: start,
-    endDate: end,
-    totalArDriveUsers: distinctArDriveUsers.length,
-    newArDriveUsers: distinctNewArDriveUsers.length,
-    drivesFound: allNewArDrives.length,
-    publicDrives: totalPublicDrives,
-    privateDrives: totalPrivateDrives,
-    totalDataSize,
-    privateData: totalData.privateDataSize,
-    publicData: totalData.publicDataSize,
-    totalFiles,
-    webAppFiles: totalData.webAppFiles,
-    desktopAppFiles: totalData.desktopAppFiles,
-    mobileAppFiles: totalData.mobileAppFiles,
-    coreAppFiles: totalData.coreAppFiles,
-    arConnectFiles: totalData.arConnectFiles,
-    cliAppFiles: totalData.cliAppFiles,
-    syncAppFiles: totalData.syncAppFiles,
-    privateFiles: totalData.privateFiles,
-    publicFiles: totalData.publicFiles,
-    totalCommunityFees: +totalCommunityFees.totalFees.toFixed(8),
-    totalMiningFees: +totalMiningFees.toFixed(8),
-    desktopAppFees: +totalCommunityFees.desktopAppFees.toFixed(8),
-    webAppFees: +totalCommunityFees.webAppFees.toFixed(8),
-    mobileAppFees: +totalCommunityFees.mobileAppFees.toFixed(8),
-    coreAppFees: +totalCommunityFees.coreAppFees.toFixed(8),
-    arConnectFees: +totalCommunityFees.arConnectFees.toFixed(8),
-    cliAppFees: +totalCommunityFees.cliAppFees.toFixed(8),
-    publicArFees: +totalData.publicArFee.toFixed(8),
-    privateArFees: +totalData.privateArFee.toFixed(8),
-    contentTypes: totalData.contentTypes,
-    averageUserSize,
-    averageUserFiles,
-    blockHeight: totalData.lastBlock,
-    weaveSize: latestBlock.weaveSize,
-    blockSize: latestBlock.blockSize,
-    difficulty: latestBlock.difficulty,
-    tokenHolders,
-  };
-
-  return metrics;
-}
-
 // Asyncronous ForEach function
 export const asyncForEach = async (array: any[], callback: any) => {
   for (let index = 0; index < array.length; index += 1) {
@@ -859,6 +633,26 @@ export function newArFSDriveTx(): ArFSDriveTx {
   return arFSDriveTx;
 }
 
+export function newArFSSnapshotTx(): ArFSSnapshotTx {
+  let arFSSnapshotTx: ArFSSnapshotTx = {
+    appName: "",
+    appVersion: "",
+    arfsVersion: "",
+    owner: "",
+    dataSize: 0,
+    dataItemSize: 0,
+    private: false,
+    fee: 0,
+    blockStart: 0,
+    bundledIn: "",
+    id: "",
+    blockHeight: 0,
+    blockTime: 0,
+    friendlyDate: "",
+  };
+  return arFSSnapshotTx;
+}
+
 export function newArFSTipTx(): ArFSTipTx {
   let arFSTipTx: ArFSTipTx = {
     appName: "",
@@ -890,31 +684,7 @@ export async function retryFetch(reqURL: string): Promise<AxiosResponse<any>> {
   });
 }
 
-export async function getUniqueArDriveUsersInPeriod(
-  start: Date,
-  end: Date
-): Promise<number> {
-  console.log(
-    "Getting all unique users from %s to %s",
-    start.toLocaleString(),
-    end.toLocaleString()
-  );
-
-  let allWallets: string[] = [];
-  await asyncForEach(appNames, async (appName: string) => {
-    const appUsers = await getArDriveUsers(start, end, appName);
-    console.log(
-      `${appUsers.uniqueUsers.size} users found for ${appName} across ${appUsers.foundTransactions} transactions`
-    );
-    allWallets.push(...appUsers.uniqueUsers);
-  });
-
-  const uniqueUserCount = new Set(allWallets).size;
-  console.log(`Unique ArDrive Users Found: ${uniqueUserCount}`);
-  return uniqueUserCount;
-}
-
-export function printL1Results(l1Results: L1ResultSet, appName: string) {
+export function printL1Results(l1Results: ResultSet, appName: string) {
   const foundAddresses: string[] = [];
   const totalNonBundledTxsFound =
     l1Results.driveTxs.length +

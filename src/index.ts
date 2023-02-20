@@ -9,11 +9,11 @@ import {
   appNames,
   asyncForEach,
   getArDriveCommunityWalletARBalances,
-  getArDriveCommunityWalletArDriveBalances,
   getOtherWalletARBalances,
   uploaders,
 } from "./common";
-import { getAllAppL1Transactions } from "./gql";
+import { getAllAppL1Transactions } from "./gql_L1";
+import { getAllAppL2Transactions } from "./gql_L2";
 import {
   sendBundlesToGraphite,
   sendDriveMetadataToGraphite,
@@ -21,6 +21,7 @@ import {
   sendFileMetadataToGraphite,
   sendFolderMetadataToGraphite,
   sendMessageToGraphite,
+  sendSnapshotMetadataToGraphite,
   sentL1CommunityTipsToGraphite,
 } from "./graphite";
 import { BlockInfo } from "./types";
@@ -28,7 +29,7 @@ import { BlockInfo } from "./types";
 // Used for scheduling the jobs
 const cron = require("node-cron");
 
-export async function hourlyArDriveUsageAnalytics(hours: number) {
+export async function hourlyArDriveUsageAnalyticsL1(hours: number) {
   const message = "ardrive.apps.l1."; // this is where all of the logs will be stored
   const totalAddresses: string[] = [];
   let bufferHours = 12; // The amount of hours to buffer to ensure items have been indexed.
@@ -127,7 +128,7 @@ export async function hourlyUploaderUsageAnalytics() {
   console.log("Hourly Uploader Usage Analytics Completed");
 }
 
-export async function dailyArDriveUserAnalytics() {
+export async function dailyArDriveUserAnalyticsL1() {
   const message = "ardrive.users.l1."; // this is where all of the logs will be stored
 
   // collect unique users that have uploaded data in the previous 24 hours
@@ -205,6 +206,67 @@ export async function dailyArDriveUserAnalytics() {
     start.toLocaleString(),
     end.toLocaleString()
   );
+}
+
+export async function hourlyArDriveUsageAnalyticsL2(hours: number) {
+  const message = "ardrive.apps.l2."; // this is where all of the logs will be stored
+  const totalAddresses: string[] = [];
+  let bufferHours = 12; // The amount of hours to buffer to ensure items have been indexed.
+  let start = new Date();
+  start.setHours(start.getHours() - hours - bufferHours);
+  let end = new Date();
+  end.setHours(end.getHours() - bufferHours);
+
+  console.log(
+    "Hourly %s ArDrive Usage Analytics.  Getting all ArDrive App Stats from %s to %s",
+    hours,
+    start.toLocaleString(),
+    end.toLocaleString()
+  );
+  await asyncForEach(appNames, async (appName: string) => {
+    console.log(`...${appName}`);
+    const l2Results = await getAllAppL2Transactions(start, end, appName);
+    await sendBundlesToGraphite(message, l2Results.bundleTxs, end);
+    await sendFileMetadataToGraphite(message, l2Results.fileTxs, end);
+    await sendFileDataToGraphite(message, l2Results.fileDataTxs, end);
+    await sendFolderMetadataToGraphite(message, l2Results.folderTxs, end);
+    await sendDriveMetadataToGraphite(message, l2Results.driveTxs, end);
+    await sendSnapshotMetadataToGraphite(message, l2Results.snapshotTxs, end);
+    await sentL1CommunityTipsToGraphite(message, l2Results.tipTxs, end);
+
+    const appAddresses: string[] = [];
+    l2Results.bundleTxs.forEach((tx) => {
+      totalAddresses.push(tx.owner);
+      appAddresses.push(tx.owner);
+    });
+    l2Results.fileDataTxs.forEach((tx) => {
+      totalAddresses.push(tx.owner);
+      appAddresses.push(tx.owner);
+    });
+    l2Results.fileTxs.forEach((tx) => {
+      totalAddresses.push(tx.owner);
+      appAddresses.push(tx.owner);
+    });
+    l2Results.folderTxs.forEach((tx) => {
+      totalAddresses.push(tx.owner);
+      appAddresses.push(tx.owner);
+    });
+    l2Results.driveTxs.forEach((tx) => {
+      totalAddresses.push(tx.owner);
+      appAddresses.push(tx.owner);
+    });
+    const uniqueAppUsers = new Set(appAddresses).size;
+
+    await sendMessageToGraphite(
+      `ardrive.users.l2.` + appName,
+      uniqueAppUsers,
+      end
+    );
+  });
+
+  const uniqueTotalUsers = new Set(totalAddresses).size;
+  await sendMessageToGraphite(`ardrive.users.l2.total`, uniqueTotalUsers, end);
+  console.log("Hourly ArDrive Usage Analytics Completed");
 }
 
 // Gets non-GQL related data
@@ -298,11 +360,12 @@ async function networkAnalytics() {
 console.log("Start ArDrive Analytics Cron Jobs");
 console.log("---------------------------------");
 cron.schedule("0 */12 * * *", async function () {
-  await hourlyArDriveUsageAnalytics(12);
+  await hourlyArDriveUsageAnalyticsL1(12);
+  await hourlyArDriveUsageAnalyticsL2(12);
 });
 
 cron.schedule("0 */24 * * *", async function () {
-  await dailyArDriveUserAnalytics();
+  await dailyArDriveUserAnalyticsL1();
 });
 
 cron.schedule("*/2 * * * *", async function () {

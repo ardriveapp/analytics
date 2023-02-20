@@ -1,7 +1,14 @@
-import { addHoursToDate } from "./common";
-import { getAllDrives } from "./gql";
-import { sendMessageToGraphite } from "./graphite";
-import { ArDriveStat } from "./types";
+import { addHoursToDate, appNames, asyncForEach } from "./common";
+import { getAllAppL2Transactions } from "./gql_L2";
+import {
+  sendBundlesToGraphite,
+  sendDriveMetadataToGraphite,
+  sendFileDataToGraphite,
+  sendFileMetadataToGraphite,
+  sendFolderMetadataToGraphite,
+  sendMessageToGraphite,
+  sentL1CommunityTipsToGraphite,
+} from "./graphite";
 
 const message = "ardrive.users.l2."; // this is where all of the logs will be stored
 
@@ -27,51 +34,79 @@ async function main() {
     "--------------------------------------------------------------------------------"
   );
 
-  let allWallets: string[] = [];
   let blockHeight = 0;
+  let nextBlockHeight = 0;
 
   while (start < end) {
     const end = new Date(addHoursToDate(start, hoursToQuery));
     console.log(
-      "Collecting unique users from %s to %s starting at blockheight %s",
+      "Collecting stats from %s to %s",
       start.toLocaleString(),
-      end.toLocaleString(),
-      blockHeight
+      end.toLocaleString()
     );
 
-    let wallets: string[] = [];
-    let currentUserAmount = allWallets.length;
-    const allDrives: ArDriveStat[] = await getAllDrives(
-      start,
-      end,
-      blockHeight
-    );
-    allDrives.forEach((drive) => {
-      allWallets.push(drive.address);
-      wallets.push(drive.address);
+    const foundAddresses: string[] = [];
+
+    await asyncForEach(appNames, async (appName: string) => {
+      console.log(`...${appName}`);
+      const l2Results = await getAllAppL2Transactions(
+        start,
+        end,
+        appName,
+        blockHeight
+      );
+      await sendBundlesToGraphite(message, l2Results.bundleTxs, end);
+      await sendFileMetadataToGraphite(message, l2Results.fileTxs, end);
+      await sendFileDataToGraphite(message, l2Results.fileDataTxs, end);
+      await sendFolderMetadataToGraphite(message, l2Results.folderTxs, end);
+      await sendDriveMetadataToGraphite(message, l2Results.driveTxs, end);
+      await sentL1CommunityTipsToGraphite(message, l2Results.tipTxs, end);
+      if (l2Results.lastBlock > blockHeight) {
+        nextBlockHeight = l2Results.lastBlock;
+      }
+      const appAddresses: string[] = [];
+      l2Results.bundleTxs.forEach((tx) => {
+        foundAddresses.push(tx.owner);
+        appAddresses.push(tx.owner);
+      });
+      l2Results.fileDataTxs.forEach((tx) => {
+        foundAddresses.push(tx.owner);
+        appAddresses.push(tx.owner);
+      });
+      l2Results.fileTxs.forEach((tx) => {
+        foundAddresses.push(tx.owner);
+        appAddresses.push(tx.owner);
+      });
+      l2Results.folderTxs.forEach((tx) => {
+        foundAddresses.push(tx.owner);
+        appAddresses.push(tx.owner);
+      });
+      l2Results.driveTxs.forEach((tx) => {
+        foundAddresses.push(tx.owner);
+        appAddresses.push(tx.owner);
+      });
+      const uniqueAppUsers = new Set(appAddresses).size;
+      await sendMessageToGraphite(
+        `ardrive.users.l2.` + appName,
+        uniqueAppUsers,
+        end
+      );
     });
-    allWallets = [...new Set(allWallets)];
-    wallets = [...new Set(wallets)];
 
-    const totalUniqueUserCount = allWallets.length;
-    const dailyGrowth = totalUniqueUserCount - currentUserAmount;
-    let graphiteMessage = message + "allUsers";
-    await sendMessageToGraphite(graphiteMessage, totalUniqueUserCount, end);
-    console.log(`Unique ArDrive Users Found: ${totalUniqueUserCount}`);
-
-    graphiteMessage = message + "dailyGrowth";
-    await sendMessageToGraphite(graphiteMessage, dailyGrowth, end);
-    console.log(`Unique ArDrive Users Found: ${dailyGrowth}`);
+    blockHeight = nextBlockHeight;
+    const uniqueTotalUsers = new Set(foundAddresses).size;
+    await sendMessageToGraphite(
+      `ardrive.users.l2.totalUsers`,
+      uniqueTotalUsers,
+      end
+    );
 
     console.log(
       "Completed analytics from %s to %s",
       start.toLocaleString(),
       end.toLocaleString()
     );
-    start = addHoursToDate(start, hoursToAdd);
-    if (allDrives.length !== 0) {
-      blockHeight = allDrives[allDrives.length - 1].blockHeight;
-    }
+    start = addHoursToDate(start, hoursToQuery);
   }
 }
 

@@ -1,4 +1,4 @@
-import { getAllAstatineRewards, getAllInfernoRewards } from "./gql";
+import { getAllInfernoRewards } from "./gql_L1";
 import { AstatineReward } from "./types";
 
 export async function main() {

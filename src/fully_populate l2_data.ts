@@ -1,5 +1,5 @@
-import { addHoursToDate, appNames, asyncForEach, uploaders } from "./common";
-import { getAllAppL2Transactions } from "./gql";
+import { addHoursToDate, appNames, asyncForEach } from "./common";
+import { getAllAppL2Transactions } from "./gql_L2";
 import {
   sendBundlesToGraphite,
   sendFileMetadataToGraphite,
@@ -14,8 +14,8 @@ const message = "ardrive.apps.l2."; // this is where all of the logs will be sto
 
 async function main() {
   // The date to start looking for data
-  let start = new Date(2020, 8, 26); // the beginning history of ardrive
-  // let start = new Date(2021, 1, 1);
+  // let start = new Date(2020, 8, 26); // the beginning history of ardrive
+  let start = new Date(2023, 0, 26);
 
   // The date to finish looking for data
   let end = new Date();

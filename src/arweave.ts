@@ -12,14 +12,6 @@ export const arweave = Arweave.init({
   logging: false,
 });
 
-/*export const arweave = Arweave.init({
-  host: "test.arweave.ardrive.io", // Arweave Gateway
-  port: 3000,
-  protocol: "http",
-  timeout: 600000,
-  logging: false,
-});*/
-
 // Gets the latest price of Arweave in USD
 export async function getArUSDPrice(): Promise<number> {
   let usdPrice = 0;

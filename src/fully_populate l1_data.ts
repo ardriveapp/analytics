@@ -1,11 +1,5 @@
-import {
-  addHoursToDate,
-  appNames,
-  asyncForEach,
-  printL1Results,
-  uploaders,
-} from "./common";
-import { getAllAppL1Transactions } from "./gql";
+import { addHoursToDate, appNames, asyncForEach } from "./common";
+import { getAllAppL1Transactions } from "./gql_L1";
 import {
   sendBundlesToGraphite,
   sendFileMetadataToGraphite,
