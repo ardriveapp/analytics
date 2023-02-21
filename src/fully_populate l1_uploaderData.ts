@@ -1,5 +1,5 @@
 import { addHoursToDate, asyncForEach, uploaders } from "./common";
-import { getAllAppL1Transactions } from "./gql";
+import { getAllAppL1Transactions } from "./gql_L1";
 import { sendBundlesToGraphite, sendMessageToGraphite } from "./graphite";
 
 const message = "uploader.l1."; // this is where all of the logs will be stored

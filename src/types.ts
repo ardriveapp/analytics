@@ -236,6 +236,25 @@ export interface ArFSFolderTx {
   friendlyDate: string;
 }
 
+export interface ArFSSnapshotTx {
+  appName: string;
+  appVersion: string;
+  arfsVersion: string;
+  appPlatform?: string;
+  appPlatformVersion?: string;
+  owner: string;
+  dataSize: number;
+  dataItemSize: number;
+  private: boolean;
+  fee: number;
+  bundledIn: string;
+  blockStart: number;
+  id: string;
+  blockHeight: number;
+  blockTime: number;
+  friendlyDate: string;
+}
+
 export interface ArFSDriveTx {
   appName: string;
   appVersion: string;
@@ -305,16 +324,7 @@ export interface ResultSet {
   fileTxs: ArFSFileTx[];
   folderTxs: ArFSFolderTx[];
   driveTxs: ArFSDriveTx[];
-  tipTxs: ArFSTipTx[];
-  lastBlock: number;
-}
-
-export interface L1ResultSet {
-  bundleTxs: BundleTx[];
-  fileDataTxs: ArFSFileDataTx[];
-  fileTxs: ArFSFileTx[];
-  folderTxs: ArFSFolderTx[];
-  driveTxs: ArFSDriveTx[];
+  snapshotTxs: ArFSSnapshotTx[];
   tipTxs: ArFSTipTx[];
   foundUsers: string[];
   lastBlock?: number;

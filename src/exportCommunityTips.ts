@@ -1,4 +1,4 @@
-import { getAllCommunityFees } from "./gql";
+import { getAllCommunityFees } from "./gql_L1";
 import { ArDriveCommunityFee } from "./types";
 
 export async function main() {

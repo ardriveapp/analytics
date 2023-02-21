@@ -1,5 +1,5 @@
 import { addHoursToDate, appNames, asyncForEach } from "./common";
-import { getAllAppL1Transactions } from "./gql";
+import { getAllAppL1Transactions } from "./gql_L1";
 import { sendMessageToGraphite } from "./graphite";
 
 const message = "ardrive.users.l1."; // this is where all of the logs will be stored
