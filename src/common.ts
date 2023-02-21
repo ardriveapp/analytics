@@ -70,6 +70,7 @@ export const appNames: string[] = [
   "ArDrive Upload Service",
 ];
 
+export const blocksPerHourDefault = 28;
 export const uploaders: string[] = ["uploader-m"];
 
 // Pauses application
@@ -497,7 +498,7 @@ export async function getMinBlock(
   blocksPerHour?: number
 ): Promise<number> {
   if (blocksPerHour === undefined) {
-    blocksPerHour = 28;
+    blocksPerHour = blocksPerHourDefault;
   }
   let today = new Date();
   let height = await getCurrentBlockHeight();
@@ -510,21 +511,7 @@ export async function getMinBlock(
   }
 
   let blockTimeStamp = await getBlockTimestamp(minBlock);
-  /* let blockTimeStampDiff = start.getTime() - blockTimeStamp.getTime();
-  const blockTimeStampHoursDiff = Math.floor(
-    blockTimeStampDiff / (1000 * 3600)
-  );
-  if (blockTimeStampHoursDiff > 72) {
-    blocksPerHour -= 1;
-    console.log(
-      "adjusting blocks per hour %s %s %s",
-      blockTimeStampDiff,
-      blockTimeStampHoursDiff,
-      blocksPerHour
-    );
-
-    return await getMinBlock(start, blocksPerHour);
-  } else */ if (start < blockTimeStamp) {
+  if (start < blockTimeStamp) {
     blocksPerHour += 1;
     return await getMinBlock(start, blocksPerHour);
   } else {

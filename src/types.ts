@@ -34,6 +34,7 @@ export interface BlockInfo {
   difficulty: number;
   blockSize: number;
   transactionCount: number;
+  timestamp: number;
 }
 
 export interface Results {

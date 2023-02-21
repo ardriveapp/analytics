@@ -1,4 +1,10 @@
-import { addHoursToDate, appNames, asyncForEach } from "./common";
+import {
+  addHoursToDate,
+  appNames,
+  asyncForEach,
+  blocksPerHourDefault,
+  getMinBlock,
+} from "./common";
 import { getAllAppL1Transactions } from "./gql_L1";
 import {
   sendBundlesToGraphite,
@@ -15,7 +21,7 @@ const message = "ardrive.apps.l1."; // this is where all of the logs will be sto
 
 async function main() {
   // The date to start looking for data
-  let start = new Date(2020, 8, 26); // the beginning history of ardrive
+  let start = new Date(2020, 8, 20); // the beginning history of ardrive
   // let start = new Date(2022, 9, 10);
 
   // The date to finish looking for data
@@ -35,10 +41,10 @@ async function main() {
     "--------------------------------------------------------------------------------"
   );
 
-  let blockHeight = 0;
-  let nextBlockHeight = 0;
+  let minBlock = await getMinBlock(start);
   while (start < end) {
     const end = new Date(addHoursToDate(start, hoursToQuery));
+
     console.log(
       "Collecting stats from %s to %s",
       start.toLocaleString(),
@@ -53,7 +59,7 @@ async function main() {
         start,
         end,
         appName,
-        blockHeight
+        minBlock
       );
       await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
       await sendFileMetadataToGraphite(message, l1Results.fileTxs, end);
@@ -62,9 +68,7 @@ async function main() {
       await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
       await sendSnapshotMetadataToGraphite(message, l1Results.snapshotTxs, end);
       await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
-      if (l1Results.lastBlock > blockHeight) {
-        nextBlockHeight = l1Results.lastBlock;
-      }
+
       const appAddresses: string[] = [];
       l1Results.bundleTxs.forEach((tx) => {
         foundAddresses.push(tx.owner);
@@ -97,7 +101,6 @@ async function main() {
         end
       );
     });
-    blockHeight = nextBlockHeight;
     const uniqueTotalUsers = new Set(foundAddresses).size;
     await sendMessageToGraphite(
       `ardrive.users.l1.totalUsers`,
@@ -111,6 +114,7 @@ async function main() {
       end.toLocaleString()
     );
     start = addHoursToDate(start, hoursToQuery);
+    minBlock += blocksPerHourDefault * hoursToQuery;
   }
 }
 

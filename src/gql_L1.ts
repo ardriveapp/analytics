@@ -209,9 +209,9 @@ export async function getAllAppL1Transactions(
       } else {
         hasNextPage = transactions.pageInfo.hasNextPage;
         const { edges } = transactions;
-        edges.forEach((edge: any) => {
-          cursor = edge.cursor;
-          const { node } = edge;
+        for (let i = 0; i < edges.length; i += 1) {
+          cursor = edges[i].cursor;
+          const { node } = edges[i];
           const { block } = node;
           if (block !== null) {
             lastBlock = block.height;
@@ -414,8 +414,9 @@ export async function getAllAppL1Transactions(
               foundUsers.push(node.owner.address);
             }
           } else if (timeStamp.getTime() > end.getTime()) {
-            // console.log("Result too early %s", timeStamp);
+            //console.log("Result too early %s", timeStamp);
             hasNextPage = false; // if it is ASC
+            i = edges.length;
           } else if (timeStamp.getTime() < start.getTime()) {
             // console.log("Result too old %s", timeStamp);
             // hasNextPage = false; // if it is DESC
@@ -425,7 +426,7 @@ export async function getAllAppL1Transactions(
             //  node.Id
             //);
           }
-        });
+        }
       }
     } catch (err) {
       console.log(err);
@@ -443,6 +444,7 @@ export async function getAllAppL1Transactions(
     snapshotTxs,
     tipTxs,
     foundUsers,
+    lastBlock,
   };
 }
 
