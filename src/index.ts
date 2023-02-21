@@ -52,6 +52,7 @@ export async function hourlyArDriveUsageAnalyticsL1(hours: number) {
     await sendFileDataToGraphite(message, l1Results.fileDataTxs, end);
     await sendFolderMetadataToGraphite(message, l1Results.folderTxs, end);
     await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
+    await sendSnapshotMetadataToGraphite(message, l1Results.snapshotTxs, end);
     await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
 
     const appAddresses: string[] = [];

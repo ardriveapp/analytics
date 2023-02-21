@@ -8,6 +8,7 @@ import {
   sendDriveMetadataToGraphite,
   sentL1CommunityTipsToGraphite,
   sendMessageToGraphite,
+  sendSnapshotMetadataToGraphite,
 } from "./graphite";
 
 const message = "ardrive.apps.l1."; // this is where all of the logs will be stored
@@ -34,6 +35,8 @@ async function main() {
     "--------------------------------------------------------------------------------"
   );
 
+  let blockHeight = 0;
+  let nextBlockHeight = 0;
   while (start < end) {
     const end = new Date(addHoursToDate(start, hoursToQuery));
     console.log(
@@ -46,13 +49,22 @@ async function main() {
 
     await asyncForEach(appNames, async (appName: string) => {
       console.log(`...${appName}`);
-      const l1Results = await getAllAppL1Transactions(start, end, appName);
+      const l1Results = await getAllAppL1Transactions(
+        start,
+        end,
+        appName,
+        blockHeight
+      );
       await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
       await sendFileMetadataToGraphite(message, l1Results.fileTxs, end);
       await sendFileDataToGraphite(message, l1Results.fileDataTxs, end);
       await sendFolderMetadataToGraphite(message, l1Results.folderTxs, end);
       await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
+      await sendSnapshotMetadataToGraphite(message, l1Results.snapshotTxs, end);
       await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
+      if (l1Results.lastBlock > blockHeight) {
+        nextBlockHeight = l1Results.lastBlock;
+      }
       const appAddresses: string[] = [];
       l1Results.bundleTxs.forEach((tx) => {
         foundAddresses.push(tx.owner);
@@ -74,6 +86,10 @@ async function main() {
         foundAddresses.push(tx.owner);
         appAddresses.push(tx.owner);
       });
+      l1Results.snapshotTxs.forEach((tx) => {
+        foundAddresses.push(tx.owner);
+        appAddresses.push(tx.owner);
+      });
       const uniqueAppUsers = new Set(appAddresses).size;
       await sendMessageToGraphite(
         `ardrive.users.l1.` + appName,
@@ -81,7 +97,7 @@ async function main() {
         end
       );
     });
-
+    blockHeight = nextBlockHeight;
     const uniqueTotalUsers = new Set(foundAddresses).size;
     await sendMessageToGraphite(
       `ardrive.users.l1.totalUsers`,

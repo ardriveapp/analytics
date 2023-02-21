@@ -8,6 +8,7 @@ import {
   sendDriveMetadataToGraphite,
   sentL1CommunityTipsToGraphite,
   sendMessageToGraphite,
+  sendSnapshotMetadataToGraphite,
 } from "./graphite";
 
 const message = "ardrive.apps.l2."; // this is where all of the logs will be stored
@@ -15,7 +16,7 @@ const message = "ardrive.apps.l2."; // this is where all of the logs will be sto
 async function main() {
   // The date to start looking for data
   // let start = new Date(2020, 8, 26); // the beginning history of ardrive
-  let start = new Date(2023, 0, 26);
+  let start = new Date(2023, 1, 2);
 
   // The date to finish looking for data
   let end = new Date();
@@ -59,6 +60,7 @@ async function main() {
       await sendFileDataToGraphite(message, l2Results.fileDataTxs, end);
       await sendFolderMetadataToGraphite(message, l2Results.folderTxs, end);
       await sendDriveMetadataToGraphite(message, l2Results.driveTxs, end);
+      await sendSnapshotMetadataToGraphite(message, l2Results.snapshotTxs, end);
       await sentL1CommunityTipsToGraphite(message, l2Results.tipTxs, end);
       if (l2Results.lastBlock > blockHeight) {
         nextBlockHeight = l2Results.lastBlock;
@@ -81,6 +83,10 @@ async function main() {
         appAddresses.push(tx.owner);
       });
       l2Results.driveTxs.forEach((tx) => {
+        foundAddresses.push(tx.owner);
+        appAddresses.push(tx.owner);
+      });
+      l2Results.snapshotTxs.forEach((tx) => {
         foundAddresses.push(tx.owner);
         appAddresses.push(tx.owner);
       });

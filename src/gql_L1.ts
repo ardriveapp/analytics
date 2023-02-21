@@ -81,7 +81,8 @@ export async function queryGateway(
 export async function getAllAppL1Transactions(
   start: Date,
   end: Date,
-  appName: string
+  appName: string,
+  minBlock?: number
 ): Promise<ResultSet> {
   let cursor: string = "";
   let timeStamp = new Date(end);
@@ -96,8 +97,9 @@ export async function getAllAppL1Transactions(
   let tipTxs: ArFSTipTx[] = [];
   let foundUsers: string[] = [];
 
-  let minBlock: number;
-  minBlock = await getMinBlock(start);
+  if (minBlock === undefined || minBlock === 0) {
+    minBlock = await getMinBlock(start);
+  }
 
   let appPlatformQuery = "";
   let appNameQuery;
