@@ -10,7 +10,7 @@ import {
   asyncForEach,
   getArDriveCommunityWalletARBalances,
   getOtherWalletARBalances,
-  uploaders,
+  uploaderAppNames,
 } from "./common";
 import { getAllAppL1Transactions } from "./gql_L1";
 import { getAllAppL2Transactions } from "./gql_L2";
@@ -104,7 +104,7 @@ export async function hourlyUploaderUsageAnalytics() {
     start.toLocaleString(),
     end.toLocaleString()
   );
-  await asyncForEach(uploaders, async (uploader: string) => {
+  await asyncForEach(uploaderAppNames, async (uploader: string) => {
     console.log(`...${uploader}`);
     const l1Results = await getAllAppL1Transactions(start, end, uploader);
     await sendBundlesToGraphite(message, l1Results.bundleTxs, end);

@@ -1,17 +1,22 @@
-import { addHoursToDate, asyncForEach, uploaders } from "./common";
+import {
+  addHoursToDate,
+  asyncForEach,
+  getMinBlock,
+  uploaderAppNames,
+} from "./common";
 import { getAllAppL1Transactions } from "./gql_L1";
-import { sendBundlesToGraphite, sendMessageToGraphite } from "./graphite";
+import { sendBundlesToGraphite } from "./graphite";
 
 const message = "uploader.l1."; // this is where all of the logs will be stored
 
 async function main() {
   // The date to start looking for data
-  let start = new Date(2022, 9, 1); // the beginning history of ardrive
-  // let start = new Date(2022, 9, 10);
+  let start = new Date(2022, 9, 15);
+  // let start = new Date(2023, 1, 20);
 
   // The date to finish looking for data
   let end = new Date();
-  end.setHours(end.getHours() - 1); // end 1 hour in the past.
+  end.setHours(0, 0, 0, 0);
 
   // The amount of hours to search for in the period i.e. 12, 24 or other range
   let hoursToQuery: number = 1;
@@ -26,6 +31,7 @@ async function main() {
     "--------------------------------------------------------------------------------"
   );
 
+  let minBlock = await getMinBlock(start);
   while (start < end) {
     const end = new Date(addHoursToDate(start, hoursToQuery));
     console.log(
@@ -34,25 +40,16 @@ async function main() {
       end.toLocaleString()
     );
 
-    const foundAddresses: string[] = [];
-
-    await asyncForEach(uploaders, async (uploader: string) => {
+    await asyncForEach(uploaderAppNames, async (uploader: string) => {
       console.log(`...${uploader}`);
-      const l1Results = await getAllAppL1Transactions(start, end, uploader);
-      await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
-
-      const appAddresses: string[] = [];
-      l1Results.bundleTxs.forEach((tx) => {
-        foundAddresses.push(tx.owner);
-        appAddresses.push(tx.owner);
-      });
-
-      const uniqueAppUsers = new Set(appAddresses).size;
-      await sendMessageToGraphite(
-        `uploader.l1.users.` + uploader,
-        uniqueAppUsers,
-        end
+      const l1Results = await getAllAppL1Transactions(
+        start,
+        end,
+        uploader,
+        minBlock
       );
+
+      await sendBundlesToGraphite(message, l1Results.bundleTxs, end);
     });
 
     console.log(
@@ -61,6 +58,7 @@ async function main() {
       end.toLocaleString()
     );
     start = addHoursToDate(start, hoursToQuery);
+    minBlock = await getMinBlock(start);
   }
 }
 

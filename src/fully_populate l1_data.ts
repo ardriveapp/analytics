@@ -1,10 +1,4 @@
-import {
-  addHoursToDate,
-  appNames,
-  asyncForEach,
-  blocksPerHourDefault,
-  getMinBlock,
-} from "./common";
+import { addHoursToDate, appNames, asyncForEach, getMinBlock } from "./common";
 import { getAllAppL1Transactions } from "./gql_L1";
 import {
   sendBundlesToGraphite,
@@ -22,7 +16,7 @@ const message = "ardrive.apps.l1."; // this is where all of the logs will be sto
 async function main() {
   // The date to start looking for data
   let start = new Date(2020, 8, 20); // the beginning history of ardrive
-  // let start = new Date(2022, 9, 10);
+  // let start = new Date(2021, 5, 10);
 
   // The date to finish looking for data
   let end = new Date();
@@ -114,7 +108,7 @@ async function main() {
       end.toLocaleString()
     );
     start = addHoursToDate(start, hoursToQuery);
-    minBlock += blocksPerHourDefault * hoursToQuery;
+    minBlock = await getMinBlock(start);
   }
 }
 

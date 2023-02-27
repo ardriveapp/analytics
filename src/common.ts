@@ -35,6 +35,7 @@ import {
   ArFSTipTx,
   ResultSet,
   ArFSSnapshotTx,
+  Uploader,
 } from "./types";
 
 export const communityWallets: string[] = [
@@ -67,11 +68,18 @@ export const appNames: string[] = [
   "ArDrive-App-Web",
   "ArDrive-App-Android",
   "ArDrive-App-iOS",
-  "ArDrive Upload Service",
 ];
 
 export const blocksPerHourDefault = 28;
-export const uploaders: string[] = ["uploader-m"];
+export const uploaderAppNames: string[] = [
+  "uploader-m",
+  "ArDrive Upload Service",
+  "ArDrive Turbo",
+];
+export const uploaderWallets = [
+  { "turbo-dev": "8jNb-iG3a3XByFuZnZ_MWMQSZE0zvxPMaMMBNMYegY4" },
+  { "turbo-prod": "JNC6vBhjHY1EPwV3pEeNmrsgFMxH5d38_LHsZ7jful8" },
+];
 
 // Pauses application
 export async function sleep(ms: number): Promise<number> {

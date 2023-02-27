@@ -55,6 +55,7 @@ export async function sendBundlesToGraphite(
       appFees
     );
 
+    appName = appName.replaceAll(" ", "-"); // removes any spaces in app name
     let graphiteMessage = message + appName + type + ".totalTxs";
     await sendMessageToGraphite(graphiteMessage, appBundles, end);
 

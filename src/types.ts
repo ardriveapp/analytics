@@ -330,3 +330,8 @@ export interface ResultSet {
   foundUsers: string[];
   lastBlock?: number;
 }
+
+export interface Uploader {
+  uploaderName: string;
+  uploaderWallet: string;
+}
