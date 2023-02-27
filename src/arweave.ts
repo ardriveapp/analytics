@@ -1,5 +1,5 @@
 import Arweave from "arweave";
-import { asyncForEach, retryFetch } from "./common";
+import { asyncForEach, retryFetch, sleep } from "./common";
 import { BlockInfo, BlockDate } from "./types";
 
 const fetch = require("node-fetch");
@@ -48,8 +48,12 @@ export async function getCurrentBlockHeight() {
     const response = await retryFetch(`https://arweave.net/height`);
     height = await response.data;
     return height;
-  } catch (err) {}
-  return height;
+  } catch (err) {
+    console.log(err);
+    console.log("Error getting block height");
+    await sleep(60000);
+    return await getCurrentBlockHeight();
+  }
 }
 
 // Gets the latest block height
@@ -95,12 +99,19 @@ export async function getAvgPerByteFee(memPool: string[]) {
 
 // Gets the the time stamp from a given block
 export async function getBlockTimestamp(height: number) {
-  const response = await retryFetch(
-    `https://arweave.net/block/height/${height}`
-  );
-  const blockInfo = JSON.parse(await response.data);
-  let timeStamp = new Date(+blockInfo["timestamp"] * 1000);
-  return timeStamp;
+  try {
+    const response = await retryFetch(
+      `https://arweave.net/block/height/${height}`
+    );
+    const blockInfo = JSON.parse(await response.data);
+    let timeStamp = new Date(+blockInfo["timestamp"] * 1000);
+    return timeStamp;
+  } catch (err) {
+    console.log(err);
+    console.log("Error getting block timestamp");
+    await sleep(60000);
+    return await getBlockTimestamp(height);
+  }
 }
 
 // Gets the total weave size from the latest block
@@ -110,6 +121,7 @@ export async function getLatestBlockInfo(height: number) {
     difficulty: 0,
     blockSize: 0,
     transactionCount: 0,
+    timestamp: 0,
   };
   try {
     let transactions: string[] = [];
@@ -120,6 +132,7 @@ export async function getLatestBlockInfo(height: number) {
     latestBlock.weaveSize = blockInfo["weave_size"];
     latestBlock.difficulty = blockInfo["diff"];
     latestBlock.blockSize = blockInfo["block_size"];
+    latestBlock.blockSize = blockInfo["timestamp"];
     transactions = blockInfo["txs"];
     latestBlock.transactionCount = transactions.length;
     return latestBlock;

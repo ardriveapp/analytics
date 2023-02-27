@@ -35,6 +35,7 @@ import {
   ArFSTipTx,
   ResultSet,
   ArFSSnapshotTx,
+  Uploader,
 } from "./types";
 
 export const communityWallets: string[] = [
@@ -67,10 +68,18 @@ export const appNames: string[] = [
   "ArDrive-App-Web",
   "ArDrive-App-Android",
   "ArDrive-App-iOS",
-  "ArDrive Upload Service",
 ];
 
-export const uploaders: string[] = ["uploader-m"];
+export const blocksPerHourDefault = 28;
+export const uploaderAppNames: string[] = [
+  "uploader-m",
+  "ArDrive Upload Service",
+  "ArDrive Turbo",
+];
+export const uploaderWallets = [
+  { "turbo-dev": "8jNb-iG3a3XByFuZnZ_MWMQSZE0zvxPMaMMBNMYegY4" },
+  { "turbo-prod": "JNC6vBhjHY1EPwV3pEeNmrsgFMxH5d38_LHsZ7jful8" },
+];
 
 // Pauses application
 export async function sleep(ms: number): Promise<number> {
@@ -497,7 +506,7 @@ export async function getMinBlock(
   blocksPerHour?: number
 ): Promise<number> {
   if (blocksPerHour === undefined) {
-    blocksPerHour = 28;
+    blocksPerHour = blocksPerHourDefault;
   }
   let today = new Date();
   let height = await getCurrentBlockHeight();
@@ -510,21 +519,7 @@ export async function getMinBlock(
   }
 
   let blockTimeStamp = await getBlockTimestamp(minBlock);
-  /* let blockTimeStampDiff = start.getTime() - blockTimeStamp.getTime();
-  const blockTimeStampHoursDiff = Math.floor(
-    blockTimeStampDiff / (1000 * 3600)
-  );
-  if (blockTimeStampHoursDiff > 72) {
-    blocksPerHour -= 1;
-    console.log(
-      "adjusting blocks per hour %s %s %s",
-      blockTimeStampDiff,
-      blockTimeStampHoursDiff,
-      blocksPerHour
-    );
-
-    return await getMinBlock(start, blocksPerHour);
-  } else */ if (start < blockTimeStamp) {
+  if (start < blockTimeStamp) {
     blocksPerHour += 1;
     return await getMinBlock(start, blocksPerHour);
   } else {

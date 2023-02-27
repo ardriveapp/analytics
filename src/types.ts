@@ -34,6 +34,7 @@ export interface BlockInfo {
   difficulty: number;
   blockSize: number;
   transactionCount: number;
+  timestamp: number;
 }
 
 export interface Results {
@@ -328,4 +329,9 @@ export interface ResultSet {
   tipTxs: ArFSTipTx[];
   foundUsers: string[];
   lastBlock?: number;
+}
+
+export interface Uploader {
+  uploaderName: string;
+  uploaderWallet: string;
 }

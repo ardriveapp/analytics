@@ -40,7 +40,7 @@ export const L1gateways = ["http://vilenarios.com:3001"];
 let currentGateway: number = 0;
 
 // How many pages to get from a gql query
-let firstPage: number = 10000; // Max size of query for GQL
+let firstPage: number = 2500; // Max size of query for GQL
 
 // Switches to the next gateway in the L1gateways array
 function switchGateway() {
@@ -96,6 +96,7 @@ export async function getAllAppL1Transactions(
   let fileDataTxs: ArFSFileDataTx[] = [];
   let tipTxs: ArFSTipTx[] = [];
   let foundUsers: string[] = [];
+  let foundTxs: number = 0;
 
   if (minBlock === undefined || minBlock === 0) {
     minBlock = await getMinBlock(start);
@@ -209,23 +210,23 @@ export async function getAllAppL1Transactions(
       } else {
         hasNextPage = transactions.pageInfo.hasNextPage;
         const { edges } = transactions;
-        edges.forEach((edge: any) => {
-          cursor = edge.cursor;
-          const { node } = edge;
+        console.log("Edges found %s", edges.length);
+        for (let i = 0; i < edges.length; i += 1) {
+          cursor = edges[i].cursor;
+          const { node } = edges[i];
           const { block } = node;
           if (block !== null) {
-            lastBlock = block.height;
             timeStamp = new Date(block.timestamp * 1000);
             if (
               start.getTime() <= timeStamp.getTime() &&
               end.getTime() >= timeStamp.getTime()
             ) {
-              /*console.log(
+              console.log(
                 "Block: %s Tx: %s at Time: %s",
                 lastBlock,
                 node.id,
                 timeStamp.toLocaleString()
-              ); */
+              );
               // Prepare our files
               lastBlock = block.height;
               const { tags } = node;
@@ -298,134 +299,133 @@ export async function getAllAppL1Transactions(
               if (clientName.includes("ArConnect")) {
                 appName = "ArConnect";
               }
-              const isBundled = JSON.stringify(node.bundledIn);
-              if (!node.bundledIn || isBundled === `{"id":""}`) {
-                if (bundleFormat === "binary") {
-                  // this is a bundle
-                  bundleTx.appName = appName;
-                  bundleTx.appVersion = appVersion;
-                  bundleTx.appPlatform = appPlatform;
-                  bundleTx.appPlatformVersion = appPlatformVersion;
-                  bundleTx.dataSize = +data.size;
-                  bundleTx.fee = +fee.ar;
-                  bundleTx.quantity = +node.quantity.ar;
-                  bundleTx.owner = node.owner.address;
-                  bundleTxs.push(bundleTx);
-                } else if (communityTip !== 0 && contentType === "") {
-                  tipTx.appName = appName;
-                  tipTx.appVersion = appVersion;
-                  tipTx.appPlatform = appPlatform;
-                  tipTx.appPlatformVersion = appPlatformVersion;
-                  tipTx.owner = node.owner.address;
-                  tipTx.quantity = +communityTip;
-                  tipTx.id = node.id;
-                  tipTx.blockHeight = block.height;
-                  tipTx.blockTime = block.timestamp;
-                  tipTx.friendlyDate = timeStamp.toLocaleString();
-                  tipTxs.push(tipTx);
-                } else if (entityType === "data" && arFsVersion === "") {
-                  // This is file data since it has no entity tag
-                  fileDataTx.dataSize = +data.size;
-                  fileDataTx.appName = appName;
-                  fileDataTx.appVersion = appVersion;
-                  fileDataTx.appPlatform = appPlatform;
-                  fileDataTx.appPlatformVersion = appPlatformVersion;
-                  fileDataTx.owner = node.owner.address;
-                  fileDataTx.private = encrypted;
-                  fileDataTx.quantity = +node.quantity.ar;
-                  fileDataTx.fee = +fee.ar;
-                  fileDataTx.contentType = contentType;
-                  fileDataTx.bundledIn = bundledIn;
-                  fileDataTx.id = node.id;
-                  fileDataTx.blockHeight = block.height;
-                  fileDataTx.blockTime = block.timestamp;
-                  fileDataTx.friendlyDate = timeStamp.toLocaleString();
-                  fileDataTxs.push(fileDataTx);
-                } else if (entityType === "file") {
-                  fileTx.dataSize = +data.size;
-                  fileTx.appName = appName;
-                  fileTx.appVersion = appVersion;
-                  fileTx.appPlatform = appPlatform;
-                  fileTx.appPlatformVersion = appPlatformVersion;
-                  fileTx.arfsVersion = arFsVersion;
-                  fileTx.owner = node.owner.address;
-                  fileTx.private = encrypted;
-                  fileTx.fee = +fee.ar;
-                  fileTx.contentType = contentType;
-                  fileTx.bundledIn = bundledIn;
-                  fileTx.id = node.id;
-                  fileTx.blockHeight = block.height;
-                  fileTx.blockTime = block.timestamp;
-                  fileTx.friendlyDate = timeStamp.toLocaleString();
-                  fileTxs.push(fileTx);
-                } else if (entityType === "folder") {
-                  folderTx.dataSize = +data.size;
-                  folderTx.appName = appName;
-                  folderTx.appVersion = appVersion;
-                  folderTx.appPlatform = appPlatform;
-                  folderTx.appPlatformVersion = appPlatformVersion;
-                  folderTx.arfsVersion = arFsVersion;
-                  folderTx.owner = node.owner.address;
-                  folderTx.private = encrypted;
-                  folderTx.fee = +fee.ar;
-                  folderTx.contentType = contentType;
-                  folderTx.bundledIn = bundledIn;
-                  folderTx.id = node.id;
-                  folderTx.blockHeight = block.height;
-                  folderTx.blockTime = block.timestamp;
-                  folderTx.friendlyDate = timeStamp.toLocaleString();
-                  folderTxs.push(folderTx);
-                } else if (entityType === "drive") {
-                  driveTx.dataSize = +data.size;
-                  driveTx.appName = appName;
-                  driveTx.appVersion = appVersion;
-                  driveTx.arfsVersion = arFsVersion;
-                  driveTx.appPlatform = appPlatform;
-                  driveTx.appPlatformVersion = appPlatformVersion;
-                  driveTx.owner = node.owner.address;
-                  driveTx.private = encrypted;
-                  driveTx.fee = +fee.ar;
-                  driveTx.contentType = contentType;
-                  driveTx.bundledIn = bundledIn;
-                  driveTx.id = node.id;
-                  driveTx.blockHeight = block.height;
-                  driveTx.blockTime = block.timestamp;
-                  driveTx.friendlyDate = timeStamp.toLocaleString();
-                  driveTxs.push(driveTx);
-                } else if (entityType === "snapshot") {
-                  snapshotTx.dataSize = +data.size;
-                  snapshotTx.appName = appName;
-                  snapshotTx.appVersion = appVersion;
-                  snapshotTx.arfsVersion = arFsVersion;
-                  snapshotTx.appPlatform = appPlatform;
-                  snapshotTx.appPlatformVersion = appPlatformVersion;
-                  snapshotTx.owner = node.owner.address;
-                  snapshotTx.private = encrypted;
-                  snapshotTx.fee = +fee.ar;
-                  snapshotTx.blockStart = blockStart;
-                  snapshotTx.bundledIn = bundledIn;
-                  snapshotTx.id = node.id;
-                  snapshotTx.blockHeight = block.height;
-                  snapshotTx.blockTime = block.timestamp;
-                  snapshotTx.friendlyDate = timeStamp.toLocaleString();
-                  snapshotTxs.push(snapshotTx);
-                }
+              if (bundleFormat === "binary") {
+                // this is a bundle
+                bundleTx.appName = appName;
+                bundleTx.appVersion = appVersion;
+                bundleTx.appPlatform = appPlatform;
+                bundleTx.appPlatformVersion = appPlatformVersion;
+                bundleTx.dataSize = +data.size;
+                bundleTx.fee = +fee.ar;
+                bundleTx.quantity = +node.quantity.ar;
+                bundleTx.owner = node.owner.address;
+                bundleTxs.push(bundleTx);
+              } else if (communityTip !== 0 && contentType === "") {
+                tipTx.appName = appName;
+                tipTx.appVersion = appVersion;
+                tipTx.appPlatform = appPlatform;
+                tipTx.appPlatformVersion = appPlatformVersion;
+                tipTx.owner = node.owner.address;
+                tipTx.quantity = +communityTip;
+                tipTx.id = node.id;
+                tipTx.blockHeight = block.height;
+                tipTx.blockTime = block.timestamp;
+                tipTx.friendlyDate = timeStamp.toLocaleString();
+                tipTxs.push(tipTx);
+              } else if (entityType === "data" && arFsVersion === "") {
+                // This is file data since it has no entity tag
+                fileDataTx.dataSize = +data.size;
+                fileDataTx.appName = appName;
+                fileDataTx.appVersion = appVersion;
+                fileDataTx.appPlatform = appPlatform;
+                fileDataTx.appPlatformVersion = appPlatformVersion;
+                fileDataTx.owner = node.owner.address;
+                fileDataTx.private = encrypted;
+                fileDataTx.quantity = +node.quantity.ar;
+                fileDataTx.fee = +fee.ar;
+                fileDataTx.contentType = contentType;
+                fileDataTx.bundledIn = bundledIn;
+                fileDataTx.id = node.id;
+                fileDataTx.blockHeight = block.height;
+                fileDataTx.blockTime = block.timestamp;
+                fileDataTx.friendlyDate = timeStamp.toLocaleString();
+                fileDataTxs.push(fileDataTx);
+              } else if (entityType === "file") {
+                fileTx.dataSize = +data.size;
+                fileTx.appName = appName;
+                fileTx.appVersion = appVersion;
+                fileTx.appPlatform = appPlatform;
+                fileTx.appPlatformVersion = appPlatformVersion;
+                fileTx.arfsVersion = arFsVersion;
+                fileTx.owner = node.owner.address;
+                fileTx.private = encrypted;
+                fileTx.fee = +fee.ar;
+                fileTx.contentType = contentType;
+                fileTx.bundledIn = bundledIn;
+                fileTx.id = node.id;
+                fileTx.blockHeight = block.height;
+                fileTx.blockTime = block.timestamp;
+                fileTx.friendlyDate = timeStamp.toLocaleString();
+                fileTxs.push(fileTx);
+              } else if (entityType === "folder") {
+                folderTx.dataSize = +data.size;
+                folderTx.appName = appName;
+                folderTx.appVersion = appVersion;
+                folderTx.appPlatform = appPlatform;
+                folderTx.appPlatformVersion = appPlatformVersion;
+                folderTx.arfsVersion = arFsVersion;
+                folderTx.owner = node.owner.address;
+                folderTx.private = encrypted;
+                folderTx.fee = +fee.ar;
+                folderTx.contentType = contentType;
+                folderTx.bundledIn = bundledIn;
+                folderTx.id = node.id;
+                folderTx.blockHeight = block.height;
+                folderTx.blockTime = block.timestamp;
+                folderTx.friendlyDate = timeStamp.toLocaleString();
+                folderTxs.push(folderTx);
+              } else if (entityType === "drive") {
+                driveTx.dataSize = +data.size;
+                driveTx.appName = appName;
+                driveTx.appVersion = appVersion;
+                driveTx.arfsVersion = arFsVersion;
+                driveTx.appPlatform = appPlatform;
+                driveTx.appPlatformVersion = appPlatformVersion;
+                driveTx.owner = node.owner.address;
+                driveTx.private = encrypted;
+                driveTx.fee = +fee.ar;
+                driveTx.contentType = contentType;
+                driveTx.bundledIn = bundledIn;
+                driveTx.id = node.id;
+                driveTx.blockHeight = block.height;
+                driveTx.blockTime = block.timestamp;
+                driveTx.friendlyDate = timeStamp.toLocaleString();
+                driveTxs.push(driveTx);
+              } else if (entityType === "snapshot") {
+                snapshotTx.dataSize = +data.size;
+                snapshotTx.appName = appName;
+                snapshotTx.appVersion = appVersion;
+                snapshotTx.arfsVersion = arFsVersion;
+                snapshotTx.appPlatform = appPlatform;
+                snapshotTx.appPlatformVersion = appPlatformVersion;
+                snapshotTx.owner = node.owner.address;
+                snapshotTx.private = encrypted;
+                snapshotTx.fee = +fee.ar;
+                snapshotTx.blockStart = blockStart;
+                snapshotTx.bundledIn = bundledIn;
+                snapshotTx.id = node.id;
+                snapshotTx.blockHeight = block.height;
+                snapshotTx.blockTime = block.timestamp;
+                snapshotTx.friendlyDate = timeStamp.toLocaleString();
+                snapshotTxs.push(snapshotTx);
               }
               foundUsers.push(node.owner.address);
+              foundTxs += 1;
+            } else if (timeStamp.getTime() > end.getTime()) {
+              console.log("Result too early %s", timeStamp);
+              hasNextPage = false; // if it is ASC
+              i = edges.length;
+            } else if (timeStamp.getTime() < start.getTime()) {
+              // console.log("Result too old %s", timeStamp);
+              // hasNextPage = false; // if it is DESC
+            } else {
+              // console.log(
+              //  "Block is null so we skip this transaction %s",
+              //  node.Id
+              // );
             }
-          } else if (timeStamp.getTime() > end.getTime()) {
-            // console.log("Result too early %s", timeStamp);
-            hasNextPage = false; // if it is ASC
-          } else if (timeStamp.getTime() < start.getTime()) {
-            // console.log("Result too old %s", timeStamp);
-            // hasNextPage = false; // if it is DESC
-          } else {
-            //console.log(
-            //  "Block is null so we skip this transaction %s",
-            //  node.Id
-            //);
           }
-        });
+        }
       }
     } catch (err) {
       console.log(err);
@@ -433,7 +433,7 @@ export async function getAllAppL1Transactions(
       hasNextPage = false;
     }
   }
-
+  console.log("Found Txs %s", foundTxs);
   return {
     bundleTxs,
     fileDataTxs,
@@ -443,6 +443,7 @@ export async function getAllAppL1Transactions(
     snapshotTxs,
     tipTxs,
     foundUsers,
+    lastBlock,
   };
 }
 
