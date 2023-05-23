@@ -210,7 +210,7 @@ export async function getAllAppL1Transactions(
       } else {
         hasNextPage = transactions.pageInfo.hasNextPage;
         const { edges } = transactions;
-        console.log("Edges found %s", edges.length);
+        // console.log("Edges found %s", edges.length);
         for (let i = 0; i < edges.length; i += 1) {
           cursor = edges[i].cursor;
           const { node } = edges[i];
@@ -221,12 +221,12 @@ export async function getAllAppL1Transactions(
               start.getTime() <= timeStamp.getTime() &&
               end.getTime() >= timeStamp.getTime()
             ) {
-              console.log(
+              /*console.log(
                 "Block: %s Tx: %s at Time: %s",
                 lastBlock,
                 node.id,
                 timeStamp.toLocaleString()
-              );
+              );*/
               // Prepare our files
               lastBlock = block.height;
               const { tags } = node;

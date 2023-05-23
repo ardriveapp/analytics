@@ -332,6 +332,5 @@ export interface ResultSet {
 }
 
 export interface Uploader {
-  uploaderName: string;
-  uploaderWallet: string;
+  [uploaderName: string]: number;
 }

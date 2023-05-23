@@ -70,7 +70,7 @@ export const appNames: string[] = [
   "ArDrive-App-iOS",
 ];
 
-export const blocksPerHourDefault = 28;
+export const blocksPerHourDefault = 30;
 export const uploaderAppNames: string[] = [
   "uploader-m",
   "ArDrive Upload Service",
@@ -518,13 +518,7 @@ export async function getMinBlock(
     minBlock = height - blocksPerHour * startHoursDiff;
   }
 
-  let blockTimeStamp = await getBlockTimestamp(minBlock);
-  if (start < blockTimeStamp) {
-    blocksPerHour += 1;
-    return await getMinBlock(start, blocksPerHour);
-  } else {
-    return minBlock;
-  }
+  return minBlock;
 }
 
 // Adds an amount of hours to a date
