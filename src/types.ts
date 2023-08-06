@@ -308,6 +308,7 @@ export interface ArFSTipTx {
 }
 
 export interface BundleTx {
+  txId?: string;
   appName: string;
   appVersion: string;
   appPlatform?: string;
@@ -317,6 +318,8 @@ export interface BundleTx {
   quantity: number;
   owner: string;
   timeStamp: number | string;
+  bundledInTxId?: string;
+  blockHeight?: number;
 }
 
 export interface ResultSet {
