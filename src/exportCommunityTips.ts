@@ -1,6 +1,8 @@
 import { getAllCommunityFees } from "./gql_L1";
 import { ArDriveCommunityFee } from "./types";
 
+const fs = require("fs");
+
 export async function main() {
   const today = new Date().toISOString().slice(0, 10);
   const name = "ArDrive_All_Community_Tips_" + today + ".csv";
