@@ -679,3 +679,187 @@ export async function getAllAppL2Manifests(
   console.log("Found Txs %s", foundTxs);
   return fileDataTxs;
 }
+
+// Sums up every data transaction for a start and end period and returns newest results first
+export async function getAllBundlesByOwner(
+  start: Date,
+  end: Date,
+  owner: string,
+  minBlock?: number
+): Promise<BundleTx[]> {
+  let cursor: string = "";
+  let timeStamp = new Date(end);
+  let hasNextPage = true;
+  let lastBlock = 0;
+  let missingDataErrors = 0;
+  let bundleTxs: BundleTx[] = [];
+  let foundTxs: number = 0;
+
+  if (minBlock === undefined || minBlock === 0) {
+    minBlock = await getMinBlock(start);
+  }
+
+  console.log(
+    `   ...Querying for all bundles uploaded by ${owner} starting at ${minBlock}`
+  );
+
+  while (hasNextPage) {
+    let tags: string;
+    tags = `[
+      {
+        name: "Bundle-Version",
+        values: ["2.0.0"]
+      }
+      {
+        name: "Bundle-Format",
+        values: ["binary"]
+      }
+    ]`;
+
+    const query = {
+      query: `query {
+          transactions(
+            owners: "${owner}"
+            tags: ${tags}
+            sort: HEIGHT_ASC
+            block: {min: ${minBlock}}
+            first: ${firstPage}
+            after: "${cursor}"
+          ) {
+            pageInfo {
+              hasNextPage
+            }
+            edges {
+              cursor
+              node {
+                id
+                bundledIn {
+                    id
+                }
+                owner {
+                    address
+                }
+                fee {
+                    ar
+                }
+                quantity {
+                    ar
+                }
+                tags {
+                    name
+                    value
+                }
+                data {
+                  size
+                }
+                block {
+                  height
+                  timestamp
+                }
+              }
+            }
+          }
+        }`,
+    };
+
+    try {
+      const transactions = await queryGateway(async (url: string) => {
+        const response = await arweave.api.post(url + "/graphql", query);
+        const { data } = response.data;
+        if (data === undefined) {
+          console.log(response.statusText);
+          console.log(response);
+          console.log(
+            "Get All Bundled Transactions... Undefined data returned from Gateway"
+          );
+          missingDataErrors += 1;
+          return 0;
+        } else {
+          const { transactions } = data;
+          return transactions;
+        }
+      });
+      if (transactions === 0) {
+        console.log("%s Gateway returned an empty JSON ", timeStamp);
+        await sleep(1000);
+      } else {
+        hasNextPage = transactions.pageInfo.hasNextPage;
+        const { edges } = transactions;
+        // console.log("Edges found %s", edges.length);
+        for (let i = 0; i < edges.length; i += 1) {
+          cursor = edges[i].cursor;
+          const { node } = edges[i];
+          const { block } = node;
+          if (block !== null) {
+            timeStamp = new Date(block.timestamp * 1000);
+            if (
+              start.getTime() <= timeStamp.getTime() &&
+              end.getTime() >= timeStamp.getTime()
+            ) {
+              /*console.log(
+                "Block: %s Tx: %s at Time: %s",
+                lastBlock,
+                node.id,
+                timeStamp.toLocaleString()
+              ); */
+              // Prepare our files
+              lastBlock = block.height;
+              const { tags } = node;
+              const { data } = node;
+              const { fee } = node;
+              let bundleTx = newBundleTx();
+              let appVersion = "";
+              let appName = "";
+              tags.forEach((tag: any) => {
+                const key = tag.name;
+                const { value } = tag;
+                switch (key) {
+                  case "App-Name":
+                    appName = value;
+                    break;
+                  case "App-Version":
+                    appVersion = value;
+                    break;
+                  default:
+                    break;
+                }
+              });
+              bundleTx.txId = node.id;
+                bundleTx.appName = appName;
+                bundleTx.appVersion = appVersion;
+                bundleTx.dataSize = +data.size;
+                bundleTx.fee = +fee.ar;
+                bundleTx.quantity = +node.quantity.ar;
+                bundleTx.owner = node.owner.address;
+                if (node.bundledIn) {
+                  bundleTx.bundledInTxId = node.bundledIn.id;
+                }
+                bundleTx.blockHeight = +block.height;
+                bundleTxs.push(bundleTx);
+                foundTxs+=1;
+            } else if (timeStamp.getTime() > end.getTime()) {
+              //console.log("Result too early %s", timeStamp);
+              hasNextPage = false; // if it is ASC
+              i = edges.length;
+            } else if (timeStamp.getTime() < start.getTime()) {
+              // console.log("Result too old %s", timeStamp);
+              // hasNextPage = false; // if it is DESC
+            } else {
+              //console.log(
+              //  "Block is null so we skip this transaction %s",
+              //  node.Id
+              //);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.log(err);
+      console.log("Error getting transactions at Blockheight: %s", lastBlock);
+      hasNextPage = false;
+    }
+  }
+
+  console.log("Found Txs %s", foundTxs);
+  return bundleTxs;
+}
