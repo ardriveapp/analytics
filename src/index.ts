@@ -9,11 +9,12 @@ import {
   appNames,
   asyncForEach,
   getArDriveCommunityWalletARBalances,
+  getMinBlock,
   getOtherWalletARBalances,
   uploaderAppNames,
 } from "./common";
 import { getAllAppL1Transactions } from "./gql_L1";
-import { getAllAppL2Transactions } from "./gql_L2";
+import { getAllAppL2Transactions, getAllObservationReports } from "./gql_L2";
 import {
   sendBundlesToGraphite,
   sendDriveMetadataToGraphite,
@@ -65,6 +66,47 @@ export async function hourlyUploaderUsageAnalytics() {
 
   const uniqueTotalUsers = new Set(totalAddresses).size;
   await sendMessageToGraphite(`uploader.l1.users.total`, uniqueTotalUsers, end);
+  console.log("Hourly Uploader Usage Analytics Completed");
+}
+
+export async function hourlyObservationReportAnalytics() {
+  const appName = 'AR-IO Observer'
+  const message = "observer.l2."; // this is where all of the logs will be stored
+  const totalAddresses: string[] = [];
+  let bufferHours = 1; // The amount of hours to buffer to ensure items have been indexed.
+  let start = new Date();
+  start.setHours(start.getHours() - 1 - bufferHours); // we will only scan for 1 hour of data
+  let end = new Date();
+  end.setHours(end.getHours() - bufferHours);
+
+  console.log(
+    "Hourly Observation Report Analytics.  Getting all AR-IO Observer Stats from %s to %s",
+    start.toLocaleString(),
+    end.toLocaleString()
+  );
+
+  let minBlock = await getMinBlock(start);
+  const l2Results = await getAllObservationReports(
+    start,
+    end,
+    appName,
+    minBlock
+  );
+  
+  await sendFileDataToGraphite(message, l2Results.fileDataTxs, end)
+  const appAddresses: string[] = [];
+  l2Results.fileDataTxs.forEach((tx) => {
+    totalAddresses.push(tx.owner);
+  });
+
+  const uniqueAppUsers = new Set(appAddresses).size;
+
+  await sendMessageToGraphite(
+    `observer.l2.users`,
+    uniqueAppUsers,
+    end
+  );
+
   console.log("Hourly Uploader Usage Analytics Completed");
 }
 
@@ -461,4 +503,5 @@ cron.schedule("*/15 * * * *", async function () {
 
 cron.schedule("*/60 * * * *", async function () {
   await hourlyUploaderUsageAnalytics();
+  await hourlyObservationReportAnalytics();
 });

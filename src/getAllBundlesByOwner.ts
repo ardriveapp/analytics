@@ -2,7 +2,7 @@ import { getAllBundlesByOwner } from "./gql_L2";
 
 const fs = require("fs");
 export async function main() {
-  let owner = ""; // add public wallet address here
+  let owner = "iKryOeZQMONi2965nKz528htMMN_sBcjlhc-VncoRjA"; // add public wallet address
   const fileName = owner + '_l1+l2_bundles.txt'
   // The date to start looking for bundles
   let start = new Date(2020, 10, 1);

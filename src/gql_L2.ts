@@ -1173,3 +1173,191 @@ export async function getAllBundlesByOwner(
   console.log("Found Txs %s", foundTxs);
   return bundleTxs;
 }
+
+// Gets all posted reports by AR.IO Observers
+export async function getAllObservationReports(
+  start: Date,
+  end: Date,
+  appName: string,
+  minBlock?: number
+): Promise<{fileDataTxs: ArFSFileDataTx[], foundUsers: string[], lastBlock: number}> 
+{
+  let cursor: string = "";
+  let timeStamp = new Date(end);
+  let hasNextPage = true;
+  let lastBlock = 0;
+  let missingDataErrors = 0;
+  let fileDataTxs: ArFSFileDataTx[] = [];
+  let foundUsers: string[] = [];
+  let foundTxs: number = 0;
+
+  if (minBlock === undefined || minBlock === 0) {
+    minBlock = await getMinBlock(start);
+  }
+
+  console.log(
+    `   ...Querying for all ${appName} L2 Transactions starting at ${minBlock}`
+  );
+
+  while (hasNextPage) {
+    let tags = `[
+      { name: "App-Name", values: ["${appName}"]}
+    ]`;
+
+    const query = {
+      query: `query {
+          transactions(
+            tags: ${tags}
+            sort: HEIGHT_ASC
+            block: {min: ${minBlock}}
+            first: ${firstPage}
+            after: "${cursor}"
+          ) {
+            pageInfo {
+              hasNextPage
+            }
+            edges {
+              cursor
+              node {
+                id
+                bundledIn {
+                    id
+                }
+                owner {
+                    address
+                }
+                fee {
+                    ar
+                }
+                quantity {
+                    ar
+                }
+                tags {
+                    name
+                    value
+                }
+                data {
+                  size
+                }
+                block {
+                  height
+                  timestamp
+                }
+              }
+            }
+          }
+        }`,
+    };
+
+    try {
+      const transactions = await queryGateway(async (url: string) => {
+        const response = await arweave.api.post(url + "/graphql", query);
+        const { data } = response.data;
+        if (data === undefined) {
+          console.log(response.statusText);
+          console.log(response);
+          console.log(
+            "Get All L2 Transactions... Undefined data returned from Gateway"
+          );
+          missingDataErrors += 1;
+          return 0;
+        } else {
+          const { transactions } = data;
+          return transactions;
+        }
+      });
+      if (transactions === 0) {
+        console.log("%s Gateway returned an empty JSON ", timeStamp);
+        await sleep(1000);
+      } else {
+        hasNextPage = transactions.pageInfo.hasNextPage;
+        const { edges } = transactions;
+        // console.log("Edges found %s", edges.length);
+        for (let i = 0; i < edges.length; i += 1) {
+          cursor = edges[i].cursor;
+          const { node } = edges[i];
+          const { block } = node;
+          if (block !== null) {
+            timeStamp = new Date(block.timestamp * 1000);
+            if (
+              start.getTime() <= timeStamp.getTime() &&
+              end.getTime() >= timeStamp.getTime()
+            ) {
+              /*console.log(
+                "Block: %s Tx: %s at Time: %s",
+                lastBlock,
+                node.id,
+                timeStamp.toLocaleString()
+              ); */
+              // Prepare our files
+              lastBlock = block.height;
+              const { tags } = node;
+              const { data } = node;
+              const { fee } = node;
+              const { bundledIn } = node;
+              let fileDataTx = newArFSFileDataTx();
+              let contentType = "";
+              let appVersion = "";
+
+              tags.forEach((tag: any) => {
+                const key = tag.name;
+                const { value } = tag;
+                switch (key) {
+                  case "Content-Type":
+                    contentType = value;
+                    break;
+                  case "App-Version":
+                    appVersion = value;
+                    break;
+                  default:
+                    break;
+                }
+              });
+
+              // This is file data since it has no entity tag
+              fileDataTx.dataSize = +data.size;
+              fileDataTx.appName = appName;
+              fileDataTx.appVersion = appVersion;
+              fileDataTx.owner = node.owner.address;
+              fileDataTx.quantity = +node.quantity.ar;
+              fileDataTx.fee = +fee.ar;
+              fileDataTx.contentType = contentType;
+              fileDataTx.bundledIn = bundledIn.id || '';
+              fileDataTx.id = node.id;
+              fileDataTx.blockHeight = block.height;
+              fileDataTx.blockTime = block.timestamp;
+              fileDataTx.friendlyDate = timeStamp.toLocaleString();
+              fileDataTxs.push(fileDataTx);
+
+              foundUsers.push(node.owner.address);
+              foundTxs += 1;
+            } else if (timeStamp.getTime() > end.getTime()) {
+              //console.log("Result too early %s", timeStamp);
+              hasNextPage = false; // if it is ASC
+              i = edges.length;
+            } else if (timeStamp.getTime() < start.getTime()) {
+              // console.log("Result too old %s", timeStamp);
+              // hasNextPage = false; // if it is DESC
+            } else {
+              //console.log(
+              //  "Block is null so we skip this transaction %s",
+              //  node.Id
+              //);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.log(err);
+      console.log("Error getting transactions at Blockheight: %s", lastBlock);
+      hasNextPage = false;
+    }
+  }
+
+  console.log("Found Txs %s", foundTxs);
+  return {
+    fileDataTxs,
+    foundUsers,
+    lastBlock,
+  };
+}
