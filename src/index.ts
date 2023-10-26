@@ -70,8 +70,7 @@ export async function hourlyUploaderUsageAnalytics() {
 }
 
 export async function hourlyObservationReportAnalytics() {
-  const appName = 'AR-IO Observer'
-  const message = "observer.l2."; // this is where all of the logs will be stored
+  const appName = "AR-IO Observer";
   const totalAddresses: string[] = [];
   let bufferHours = 1; // The amount of hours to buffer to ensure items have been indexed.
   let start = new Date();
@@ -92,22 +91,22 @@ export async function hourlyObservationReportAnalytics() {
     appName,
     minBlock
   );
-  
-  await sendFileDataToGraphite(message, l2Results.fileDataTxs, end)
-  const appAddresses: string[] = [];
+
+  await sendMessageToGraphite(
+    `observer.l2.reports`,
+    l2Results.fileDataTxs.length,
+    end
+  );
+
   l2Results.fileDataTxs.forEach((tx) => {
     totalAddresses.push(tx.owner);
   });
 
-  const uniqueAppUsers = new Set(appAddresses).size;
+  const uniqueAppUsers = new Set(totalAddresses).size;
 
-  await sendMessageToGraphite(
-    `observer.l2.users`,
-    uniqueAppUsers,
-    end
-  );
+  await sendMessageToGraphite(`observer.l2.users`, uniqueAppUsers, end);
 
-  console.log("Hourly Uploader Usage Analytics Completed");
+  console.log("Hourly Observation Reports Analytics Completed");
 }
 
 export async function hourlyArDriveUsageAnalyticsL1(hours: number) {
