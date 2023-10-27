@@ -104,7 +104,7 @@ export async function hourlyObservationReportAnalytics() {
 
   const uniqueAppUsers = new Set(totalAddresses).size;
 
-  await sendMessageToGraphite(`observer.l2.users`, uniqueAppUsers, end);
+  await sendMessageToGraphite(`observer.l2.uniqueUsers`, uniqueAppUsers, end);
 
   console.log("Hourly Observation Reports Analytics Completed");
 }
