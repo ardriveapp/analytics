@@ -498,6 +498,10 @@ export async function getAllAppL2Manifests(
         { name: "App-Platform", values: ["${appPlatformQuery}"]}
         { name: "Content-Type", values: ["application/x.arweave-manifest+json"]}
       ]`;
+    } else if (appName === "N/A") {
+      tags = `[
+          { name: "Content-Type", values: ["application/x.arweave-manifest+json"]}
+        ]`;
     } else {
       tags = `[
         { name: "App-Name", values: ["${appName}"]}
@@ -594,6 +598,7 @@ export async function getAllAppL2Manifests(
               const { tags } = node;
               const { data } = node;
               const { fee } = node;
+              const { bundledIn } = node;
               let fileDataTx = newArFSFileDataTx();
               let encrypted = false;
               let contentType = "";
@@ -601,7 +606,10 @@ export async function getAllAppL2Manifests(
               let appPlatform;
               let appPlatformVersion;
               let clientName = "";
-              let bundledIn = "";
+              let bundleTxId = "";
+              if (bundledIn && bundledIn.id !== null) {
+                bundleTxId = bundledIn.id;
+              }
 
               tags.forEach((tag: any) => {
                 const key = tag.name;
@@ -644,7 +652,7 @@ export async function getAllAppL2Manifests(
               fileDataTx.quantity = +node.quantity.ar;
               fileDataTx.fee = +fee.ar;
               fileDataTx.contentType = contentType;
-              fileDataTx.bundledIn = bundledIn;
+              fileDataTx.bundledIn = bundleTxId;
               fileDataTx.id = node.id;
               fileDataTx.blockHeight = block.height;
               fileDataTx.blockTime = block.timestamp;

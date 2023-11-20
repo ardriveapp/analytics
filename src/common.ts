@@ -761,3 +761,14 @@ export function printL1Results(l1Results: ResultSet, appName: string) {
   console.log(" - FolderTxs: %s", l1Results.folderTxs.length);
   console.log(" - DriveTxs: %s", l1Results.driveTxs.length);
 }
+
+export function formatObserverHealthCheckUrl(gateway: any): string {
+  const observerHealthCheckUrl =
+    formatGatewayUrl(gateway) + `/ar-io/observer/healthcheck`;
+  return observerHealthCheckUrl;
+}
+
+export function formatGatewayUrl(gateway: any): string {
+  const gatewayUrl = `${gateway.settings.protocol}://${gateway.settings.fqdn}:${gateway.settings.port}`;
+  return gatewayUrl;
+}
