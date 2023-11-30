@@ -3,14 +3,12 @@ import {
   appNames,
   asyncForEach,
   getMinBlock,
-  loadLatestJsonFile,
-  saveDataToJsonFile,
 } from "./utilities";
 import { getAllAppL2Drives } from "./gql_L2";
 import { sendMessageToGraphite } from "./graphite";
 const fs = require("fs");
-const message = "ardrive.users.l2"; // this is where all of the logs will be stored
-let filePath = "unique_ardrive_users.json";
+const message = "ardrive.users.l1"; // this is where all of the logs will be stored
+let filePath = "unique_l1ardrive_users.json";
 
 async function main() {
   // The date to start looking for data
@@ -99,12 +97,51 @@ async function main() {
 
   start = addHoursToDate(start, hoursToQuery); // the end date for user collection
 
+  // Write the data to the file
+  // Add lastBlockScanned to the top
+  // Make JSON instead of txt file
   const data = {
     lastBlockScanned,
     totalUniqueArDriveUsers,
   };
-  const baseFileName = `output_l2`;
-  await saveDataToJsonFile(data, baseFileName, lastBlockScanned);
+  const jsonString = JSON.stringify(data, null, 2); // 2 is for pretty formatting
+  const fileName = `output_l1_${lastBlockScanned}.json`;
+
+  fs.writeFile(fileName, jsonString, (err) => {
+    if (err) {
+      console.error("Error writing to the file:", err);
+    } else {
+      console.log(`Data saved to ${filePath}`);
+    }
+  });
 }
 
 main();
+
+function loadLatestJsonFile() {
+  const files = fs.readdirSync("."); // Read current directory
+  const jsonFiles = files.filter(
+    (file) => file.startsWith("output_") && file.endsWith(".json")
+  );
+
+  let highestBlockScanned = 0;
+  let latestFile = "";
+
+  jsonFiles.forEach((file) => {
+    const blockScanned = parseInt(file.match(/output_(\d+)\.json/)?.[1] || "0");
+    if (blockScanned > highestBlockScanned) {
+      highestBlockScanned = blockScanned;
+      latestFile = file;
+    }
+  });
+
+  if (latestFile) {
+    const data = JSON.parse(fs.readFileSync(latestFile, "utf8"));
+    console.log("Loaded file:", latestFile);
+    console.log(data);
+    return data;
+  } else {
+    console.log("No relevant JSON files found.");
+    return null;
+  }
+}

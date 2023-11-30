@@ -3,7 +3,7 @@ import {
   asyncForEach,
   getMinBlock,
   uploaderAppNames,
-} from "./common";
+} from "./utilities";
 import { getAllAppL1Transactions } from "./gql_L1";
 import { sendBundlesToGraphite } from "./graphite";
 

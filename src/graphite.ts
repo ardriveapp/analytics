@@ -1,5 +1,5 @@
 import { stringToB64Url } from "arweave/node/lib/utils";
-import { asyncForEach, sleep } from "./common";
+import { asyncForEach, sleep } from "./utilities";
 import {
   ArDriveCommunityFee,
   ArFSFileDataTx,

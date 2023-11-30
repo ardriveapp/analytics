@@ -8,7 +8,7 @@ import {
   newArFSTipTx,
   newBundleTx,
   sleep,
-} from "./common";
+} from "./utilities";
 import {
   ArFSDriveTx,
   ArFSFileDataTx,

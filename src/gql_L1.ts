@@ -9,7 +9,7 @@ import {
   newArFSTipTx,
   newBundleTx,
   sleep,
-} from "./common";
+} from "./utilities";
 import {
   ArDriveCommunityFee,
   ArFSDriveTx,
@@ -40,7 +40,7 @@ export const L1gateways = ["http://vilenarios.com:3001"];
 let currentGateway: number = 0;
 
 // How many pages to get from a gql query
-let firstPage: number = 2500; // Max size of query for GQL
+let firstPage: number = 1000; // Max size of query for GQL
 
 // Switches to the next gateway in the L1gateways array
 function switchGateway() {
@@ -983,4 +983,242 @@ export async function getMyCommunityFees(
     console.log("Error collecting total amount of fees");
     return myFees;
   }
+}
+
+// Gets all drives in a given period
+export async function getAllAppL1Drives(
+  start: Date,
+  end: Date,
+  appName: string,
+  minBlock?: number
+): Promise<{ driveTxs: ArFSDriveTx[]; foundUsers: string[] }> {
+  let cursor: string = "";
+  let timeStamp = new Date(end);
+  let hasNextPage = true;
+  let lastBlock = 0;
+  let driveTxs: ArFSDriveTx[] = [];
+  let foundUsers: string[] = [];
+  let foundTxs: number = 0;
+
+  if (minBlock === undefined || minBlock === 0) {
+    minBlock = await getMinBlock(start);
+  }
+
+  let appPlatformQuery = "";
+  let appNameQuery;
+
+  console.log(
+    `   ...Querying for all ${appName} Drives starting at ${minBlock}`
+  );
+
+  while (hasNextPage) {
+    let tags: string;
+    if (appName === "ArDrive-App-Web") {
+      appNameQuery = "ArDrive-App";
+      appPlatformQuery = "Web";
+      tags = `[
+        { name: "App-Name", values: ["${appNameQuery}"]}
+        { name: "App-Platform", values: ["${appPlatformQuery}"]}
+        { name: "Content-Type", values: ["application/x.arweave-manifest+json"]}
+      ]`;
+    } else if (appName === "ArDrive-App-Android") {
+      appNameQuery = "ArDrive-App";
+      appPlatformQuery = "Android";
+      tags = `[
+        { name: "App-Name", values: ["${appNameQuery}"]}
+        { name: "App-Platform", values: ["${appPlatformQuery}"]}
+        { name: "Content-Type", values: ["application/x.arweave-manifest+json"]}
+      ]`;
+    } else if (appName === "ArDrive-App-iOS") {
+      appNameQuery = "ArDrive-App";
+      appPlatformQuery = "iOS";
+      tags = `[
+        { name: "App-Name", values: ["${appNameQuery}"]}
+        { name: "App-Platform", values: ["${appPlatformQuery}"]}
+        { name: "Content-Type", values: ["application/x.arweave-manifest+json"]}
+      ]`;
+    } else {
+      tags = `[
+        { name: "App-Name", values: ["${appName}"]}
+        { name: "Entity-Type", values: ["drive"]}
+      ]`;
+    }
+
+    const query = {
+      query: `query {
+          transactions(
+            tags: ${tags}
+            sort: HEIGHT_ASC
+            block: {min: ${minBlock}}
+            first: ${firstPage}
+            after: "${cursor}"
+          ) {
+            pageInfo {
+              hasNextPage
+            }
+            edges {
+              cursor
+              node {
+                id
+                bundledIn {
+                    id
+                }
+                owner {
+                    address
+                }
+                fee {
+                    ar
+                }
+                quantity {
+                    ar
+                }
+                tags {
+                    name
+                    value
+                }
+                data {
+                  size
+                }
+                block {
+                  height
+                  timestamp
+                }
+              }
+            }
+          }
+        }`,
+    };
+
+    try {
+      const transactions = await queryGateway(async (url: string) => {
+        const response = await arweave.api.post(url + "/graphql", query);
+        const { data } = response.data;
+        if (data === undefined) {
+          console.log(response.statusText);
+          console.log(response);
+          console.log(
+            "Get All L2 Drive Transactions... Undefined data returned from Gateway"
+          );
+          return 0;
+        } else {
+          const { transactions } = data;
+          return transactions;
+        }
+      });
+      if (transactions === 0) {
+        console.log("%s Gateway returned an empty JSON ", timeStamp);
+        await sleep(1000);
+      } else {
+        hasNextPage = transactions.pageInfo.hasNextPage;
+        const { edges } = transactions;
+        // console.log("Edges found %s", edges.length);
+        for (let i = 0; i < edges.length; i += 1) {
+          cursor = edges[i].cursor;
+          const { node } = edges[i];
+          const { block } = node;
+          if (block !== null) {
+            timeStamp = new Date(block.timestamp * 1000);
+            if (
+              start.getTime() <= timeStamp.getTime() &&
+              end.getTime() >= timeStamp.getTime()
+            ) {
+              /*console.log(
+                "Block: %s Tx: %s at Time: %s",
+                lastBlock,
+                node.id,
+                timeStamp.toLocaleString()
+              ); */
+              // Prepare our files
+              lastBlock = block.height;
+              const { tags } = node;
+              const { data } = node;
+              const { fee } = node;
+              let driveTx = newArFSDriveTx();
+              let encrypted = false;
+              let contentType = "";
+              let appVersion = "";
+              let appPlatform;
+              let appPlatformVersion;
+              let clientName = "";
+              let bundledIn = "";
+              let arFsVersion = "";
+
+              tags.forEach((tag: any) => {
+                const key = tag.name;
+                const { value } = tag;
+                switch (key) {
+                  case "Cipher-IV":
+                    encrypted = true;
+                    break;
+                  case "Content-Type":
+                    contentType = value;
+                    break;
+                  case "App-Platform":
+                    appPlatform = value;
+                    break;
+                  case "App-Platform-Version":
+                    appPlatformVersion = value;
+                    break;
+                  case "App-Version":
+                    appVersion = value;
+                    break;
+                  case "ArDrive-Client":
+                    clientName = value;
+                    break;
+                  case "ArFS":
+                    arFsVersion = value;
+                    break;
+                  default:
+                    break;
+                }
+              });
+
+              if (clientName.includes("ArConnect")) {
+                appName = "ArConnect";
+              }
+
+              driveTx.dataSize = +data.size;
+              driveTx.appName = appName;
+              driveTx.appVersion = appVersion;
+              driveTx.arfsVersion = arFsVersion;
+              driveTx.appPlatform = appPlatform;
+              driveTx.appPlatformVersion = appPlatformVersion;
+              driveTx.owner = node.owner.address;
+              driveTx.private = encrypted;
+              driveTx.fee = +fee.ar;
+              driveTx.contentType = contentType;
+              driveTx.bundledIn = bundledIn;
+              driveTx.id = node.id;
+              driveTx.blockHeight = block.height;
+              driveTx.blockTime = block.timestamp;
+              driveTx.friendlyDate = timeStamp.toLocaleString();
+              driveTxs.push(driveTx);
+
+              foundUsers.push(node.owner.address);
+              foundTxs += 1;
+            } else if (timeStamp.getTime() > end.getTime()) {
+              //console.log("Result too early %s", timeStamp);
+              hasNextPage = false; // if it is ASC
+              i = edges.length;
+            } else if (timeStamp.getTime() < start.getTime()) {
+              // console.log("Result too old %s", timeStamp);
+              // hasNextPage = false; // if it is DESC
+            } else {
+              //console.log(
+              //  "Block is null so we skip this transaction %s",
+              //  node.Id
+              //);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.log(err);
+      console.log("Error getting transactions at Blockheight: %s", lastBlock);
+      hasNextPage = false;
+    }
+  }
+
+  console.log("Found Txs %s", foundTxs);
+  return { driveTxs, foundUsers };
 }

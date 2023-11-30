@@ -1,4 +1,4 @@
-import { countDistinct } from "./common";
+import { countDistinct } from "./utilities";
 import { getAllAppL2Transactions } from "./gql_L2";
 
 export async function main() {

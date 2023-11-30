@@ -1,4 +1,4 @@
-import { appNames, asyncForEach, getMinBlock } from "./common";
+import { appNames, asyncForEach, getMinBlock } from "./utilities";
 import { getAllAppL2Manifests } from "./gql_L2";
 import { ArFSFileDataTx } from "./types";
 const fs = require("fs");

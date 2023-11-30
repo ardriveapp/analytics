@@ -1,4 +1,4 @@
-import { getMinBlock } from "./common";
+import { getMinBlock } from "./utilities";
 import { getAllObservationReports } from "./gql_L2";
 const fs = require("fs");
 export type User = {
@@ -14,7 +14,7 @@ export type User = {
 };
 
 async function main() {
-  const appName = 'AR-IO Observer'
+  const appName = "AR-IO Observer";
   const today = new Date().toISOString().slice(0, 10);
   const name = "AR.IO_Observation_Reports_" + today + ".csv";
   // The date to start looking for data

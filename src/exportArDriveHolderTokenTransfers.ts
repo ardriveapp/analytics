@@ -1,4 +1,4 @@
-import { getArDriveTokenTransfers } from "./common";
+import { getArDriveTokenTransfers } from "./utilities";
 
 export async function main() {
   const today = new Date().toISOString().slice(0, 10);

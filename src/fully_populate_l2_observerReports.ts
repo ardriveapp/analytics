@@ -1,4 +1,4 @@
-import { addHoursToDate, getMinBlock } from "./common";
+import { addHoursToDate, getMinBlock } from "./utilities";
 import { getAllObservationReports } from "./gql_L2";
 import { sendMessageToGraphite } from "./graphite";
 

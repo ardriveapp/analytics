@@ -3,7 +3,7 @@ import {
   formatGatewayUrl,
   formatObserverHealthCheckUrl,
   getMinBlock,
-} from "./common";
+} from "./utilities";
 import { getAllObservationReports } from "./gql_L2";
 const fs = require("fs");
 export type User = {

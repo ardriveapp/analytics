@@ -1,4 +1,4 @@
-import { appNames, asyncForEach, getMinBlock } from "./common";
+import { appNames, asyncForEach, getMinBlock } from "./utilities";
 import { getAllAppL1Transactions } from "./gql_L1";
 const fs = require("fs");
 export type User = {

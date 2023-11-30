@@ -1,4 +1,4 @@
-import { addHoursToDate, appNames, asyncForEach } from "./common";
+import { addHoursToDate, appNames, asyncForEach } from "./utilities";
 import { getAllAppL1Transactions } from "./gql_L1";
 import { sendMessageToGraphite } from "./graphite";
 

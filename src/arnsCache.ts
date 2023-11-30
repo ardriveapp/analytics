@@ -1,4 +1,4 @@
-import { formatObserverHealthCheckUrl, retryFetch } from "./common";
+import { formatObserverHealthCheckUrl, retryFetch } from "./utilities";
 import axios from "axios";
 
 export async function fetchJoinedGateways(

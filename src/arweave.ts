@@ -1,5 +1,5 @@
 import Arweave from "arweave";
-import { asyncForEach, retryFetch, sleep } from "./common";
+import { asyncForEach, retryFetch, sleep } from "./utilities";
 import { BlockInfo, BlockDate } from "./types";
 
 const fetch = require("node-fetch");

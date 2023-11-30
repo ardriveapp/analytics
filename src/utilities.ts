@@ -37,6 +37,7 @@ import {
   ArFSSnapshotTx,
   Uploader,
 } from "./types";
+const fs = require("fs");
 
 export const communityWallets: string[] = [
   "i325n3L2UvgcavEM8UnFfY0OWBiyf2RrbNsLStPI73o", // vested community usage mining
@@ -771,4 +772,53 @@ export function formatObserverHealthCheckUrl(gateway: any): string {
 export function formatGatewayUrl(gateway: any): string {
   const gatewayUrl = `${gateway.settings.protocol}://${gateway.settings.fqdn}:${gateway.settings.port}`;
   return gatewayUrl;
+}
+
+export function loadLatestJsonFile() {
+  const files = fs.readdirSync("."); // Read current directory
+  const jsonFiles = files.filter(
+    (file) => file.startsWith("output_") && file.endsWith(".json")
+  );
+
+  let highestBlockScanned = 0;
+  let latestFile = "";
+
+  jsonFiles.forEach((file) => {
+    const blockScanned = parseInt(file.match(/output_(\d+)\.json/)?.[1] || "0");
+    if (blockScanned > highestBlockScanned) {
+      highestBlockScanned = blockScanned;
+      latestFile = file;
+    }
+  });
+
+  if (latestFile) {
+    const data = JSON.parse(fs.readFileSync(latestFile, "utf8"));
+    console.log("Loaded file:", latestFile);
+    console.log(data);
+    return data;
+  } else {
+    console.log("No relevant JSON files found.");
+    return null;
+  }
+}
+
+export async function saveDataToJsonFile(
+  data: any,
+  baseFileName: string,
+  uniqueIdentifier: number
+): Promise<string> {
+  const fileName = `${baseFileName}_${uniqueIdentifier}.json`;
+  const jsonString = JSON.stringify(data, null, 2); // Pretty formatting
+
+  return new Promise((resolve, reject) => {
+    fs.writeFile(fileName, jsonString, (err) => {
+      if (err) {
+        console.error(`Error writing to the file: ${err}`);
+        reject(err);
+      } else {
+        console.log(`Data saved to ${fileName}`);
+        resolve(fileName);
+      }
+    });
+  });
 }

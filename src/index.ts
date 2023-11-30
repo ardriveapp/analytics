@@ -11,8 +11,10 @@ import {
   getArDriveCommunityWalletARBalances,
   getMinBlock,
   getOtherWalletARBalances,
+  loadLatestJsonFile,
+  saveDataToJsonFile,
   uploaderAppNames,
-} from "./common";
+} from "./utilities";
 import { getAllAppL1Transactions } from "./gql_L1";
 import { getAllAppL2Transactions, getAllObservationReports } from "./gql_L2";
 import {
@@ -189,21 +191,21 @@ export async function dailyArDriveUserAnalyticsL1() {
     end.toLocaleString()
   );
 
-  let dailyWallets: string[] = [];
+  let dailyUploaders: string[] = [];
   await asyncForEach(appNames, async (appName: string) => {
     const l1Results = await getAllAppL1Transactions(start, end, appName);
 
-    dailyWallets.push(...l1Results.foundUsers);
-    const appUniqueUsers = new Set(l1Results.foundUsers).size;
-    console.log(`${appUniqueUsers} users found for ${appName}`);
+    dailyUploaders.push(...l1Results.foundUsers);
+    const appUniqueUploaders = new Set(l1Results.foundUsers).size;
+    console.log(`${appUniqueUploaders} users found for ${appName}`);
     let graphiteMessage = message + appName + "." + daysToQuery;
-    await sendMessageToGraphite(graphiteMessage, appUniqueUsers, end);
+    await sendMessageToGraphite(graphiteMessage, appUniqueUploaders, end);
   });
 
-  const uniqueDailyUserCount = new Set(dailyWallets).size;
+  const uniqueDailyUploaderCount = new Set(dailyUploaders).size;
   let graphiteMessage = message + daysToQuery;
-  await sendMessageToGraphite(graphiteMessage, uniqueDailyUserCount, end);
-  console.log(`Unique daily ArDrive users found: ${uniqueDailyUserCount}`);
+  await sendMessageToGraphite(graphiteMessage, uniqueDailyUploaderCount, end);
+  console.log(`Unique daily ArDrive users found: ${uniqueDailyUploaderCount}`);
 
   console.log(
     "Completed unique daily user analytics from %s to %s",
@@ -232,10 +234,10 @@ export async function dailyArDriveUserAnalyticsL1() {
     const l1Results = await getAllAppL1Transactions(start, end, appName);
 
     thirtyDayWallets.push(...l1Results.foundUsers);
-    const appUniqueUsers = new Set(l1Results.foundUsers).size;
-    console.log(`${appUniqueUsers} users found for ${appName}`);
+    const appUniqueUploaders = new Set(l1Results.foundUsers).size;
+    console.log(`${appUniqueUploaders} users found for ${appName}`);
     let graphiteMessage = message + appName + "." + daysToQuery;
-    await sendMessageToGraphite(graphiteMessage, appUniqueUsers, end);
+    await sendMessageToGraphite(graphiteMessage, appUniqueUploaders, end);
   });
 
   const unique30DayUserCount = new Set(thirtyDayWallets).size;
@@ -264,26 +266,57 @@ export async function dailyArDriveUserAnalyticsL2() {
   end.setHours(end.getHours() - bufferHours);
 
   console.log(
-    "Collecting unique daily ArDrive L2 users from %s to %s",
+    "Collecting unique daily ArDrive L2 new users and uploaders from %s to %s",
     start.toLocaleString(),
     end.toLocaleString()
   );
 
-  let dailyWallets: string[] = [];
-  await asyncForEach(appNames, async (appName: string) => {
-    const l1Results = await getAllAppL2Transactions(start, end, appName);
+  const loadedData = loadLatestJsonFile();
+  let totalUniqueArDriveUsers: string[] =
+    loadedData?.totalUniqueArDriveUsers || [];
+  let blockHeight: number = loadedData?.lastBlockScanned || 0;
+  let lastBlockScanned: number = blockHeight;
+  const newDriveCreators: string[] = [];
+  let dailyUploaders: string[] = [];
 
-    dailyWallets.push(...l1Results.foundUsers);
-    const appUniqueUsers = new Set(l1Results.foundUsers).size;
-    console.log(`${appUniqueUsers} users found for ${appName}`);
+  await asyncForEach(appNames, async (appName: string) => {
+    const l2Results = await getAllAppL2Transactions(start, end, appName);
+    l2Results.driveTxs.forEach((tx) => {
+      if (tx.blockHeight > lastBlockScanned) {
+        lastBlockScanned = tx.blockHeight;
+      }
+      newDriveCreators.push(tx.owner);
+    });
+
+    dailyUploaders.push(...l2Results.foundUsers);
+    const appUniqueUploaders = new Set(l2Results.foundUsers).size;
+    console.log(`${appUniqueUploaders} uploaders found for ${appName}`);
     let graphiteMessage = message + appName + "." + daysToQuery;
-    await sendMessageToGraphite(graphiteMessage, appUniqueUsers, end);
+    await sendMessageToGraphite(graphiteMessage, appUniqueUploaders, end);
   });
 
-  const uniqueDailyUserCount = new Set(dailyWallets).size;
+  const uniqueNewDriveCreatorsSet = new Set(newDriveCreators);
+  const uniqueNewDriveCreators = [...uniqueNewDriveCreatorsSet];
+  console.log(`${uniqueNewDriveCreators.length} new drives created`);
+
+  const oldUserTotalCount = totalUniqueArDriveUsers.length;
+  const combinedUsers = totalUniqueArDriveUsers.concat(uniqueNewDriveCreators);
+  const combinedUsersSet = new Set(combinedUsers);
+  totalUniqueArDriveUsers = [...combinedUsersSet];
+  const newUsersAdded = totalUniqueArDriveUsers.length - oldUserTotalCount;
+  console.log("New users added: ", newUsersAdded);
+  console.log("Total users: ", totalUniqueArDriveUsers.length);
+  await sendMessageToGraphite(`${message}.newUsers`, newUsersAdded, end);
+  await sendMessageToGraphite(
+    `${message}.totalUniqueUsers`,
+    totalUniqueArDriveUsers.length,
+    end
+  );
+
+  const uniqueDailyUploaderCount = new Set(dailyUploaders).size;
   let graphiteMessage = message + daysToQuery;
-  await sendMessageToGraphite(graphiteMessage, uniqueDailyUserCount, end);
-  console.log(`Unique daily ArDrive users found: ${uniqueDailyUserCount}`);
+  await sendMessageToGraphite(graphiteMessage, uniqueDailyUploaderCount, end);
+  console.log(`Unique daily ArDrive users found: ${uniqueDailyUploaderCount}`);
 
   console.log(
     "Completed unique daily user L2 analytics from %s to %s",
@@ -291,43 +324,12 @@ export async function dailyArDriveUserAnalyticsL2() {
     end.toLocaleString()
   );
 
-  // collect unique users that have uploaded data in the previous 30 days
-  bufferHours = 24; // The amount of hours to buffer to ensure items have been fully indexed.
-  hoursToQuery = 24 * 30; // The amount of hours to search for in the period i.e. 12, 24 or other range
-  daysToQuery = hoursToQuery / 24; // users to name this graphite message
-
-  start = new Date(); // Set to today
-  start.setHours(start.getHours() - hoursToQuery - bufferHours);
-  end = new Date();
-  end.setHours(end.getHours() - bufferHours);
-
-  console.log(
-    "Collecting unique 30 day ArDrive L2 users from %s to %s",
-    start.toLocaleString(),
-    end.toLocaleString()
-  );
-
-  let thirtyDayWallets: string[] = [];
-  await asyncForEach(appNames, async (appName: string) => {
-    const l1Results = await getAllAppL2Transactions(start, end, appName);
-
-    thirtyDayWallets.push(...l1Results.foundUsers);
-    const appUniqueUsers = new Set(l1Results.foundUsers).size;
-    console.log(`${appUniqueUsers} users found for ${appName}`);
-    let graphiteMessage = message + appName + "." + daysToQuery;
-    await sendMessageToGraphite(graphiteMessage, appUniqueUsers, end);
-  });
-
-  const unique30DayUserCount = new Set(thirtyDayWallets).size;
-  graphiteMessage = message + daysToQuery;
-  await sendMessageToGraphite(graphiteMessage, unique30DayUserCount, end);
-  console.log(`Unique 30 day ArDrive users found: ${unique30DayUserCount}`);
-
-  console.log(
-    "Completed 30 day unique user L2 analytics from %s to %s",
-    start.toLocaleString(),
-    end.toLocaleString()
-  );
+  const data = {
+    lastBlockScanned,
+    totalUniqueArDriveUsers,
+  };
+  const baseFileName = `output_l2`;
+  await saveDataToJsonFile(data, baseFileName, lastBlockScanned);
 }
 
 export async function hourlyArDriveUsageAnalyticsL2(hours: number) {
