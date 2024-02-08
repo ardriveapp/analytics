@@ -25,7 +25,8 @@ import {
   sendFolderMetadataToGraphite,
   sendMessageToGraphite,
   sendSnapshotMetadataToGraphite,
-  sentL1CommunityTipsToGraphite,
+  sendL1CommunityTipsToGraphite,
+  sendLicenseAssertionsToGraphte,
 } from "./graphite";
 import { BlockInfo } from "./types";
 
@@ -135,7 +136,13 @@ export async function hourlyArDriveUsageAnalyticsL1(hours: number) {
     await sendFolderMetadataToGraphite(message, l1Results.folderTxs, end);
     await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
     await sendSnapshotMetadataToGraphite(message, l1Results.snapshotTxs, end);
-    await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
+    await sendL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
+    await sendLicenseAssertionsToGraphte(
+      message,
+      appName,
+      l1Results.fileDataTxs,
+      end
+    );
 
     const appAddresses: string[] = [];
     l1Results.bundleTxs.forEach((tx) => {
@@ -356,7 +363,13 @@ export async function hourlyArDriveUsageAnalyticsL2(hours: number) {
     await sendFolderMetadataToGraphite(message, l2Results.folderTxs, end);
     await sendDriveMetadataToGraphite(message, l2Results.driveTxs, end);
     await sendSnapshotMetadataToGraphite(message, l2Results.snapshotTxs, end);
-    await sentL1CommunityTipsToGraphite(message, l2Results.tipTxs, end);
+    await sendL1CommunityTipsToGraphite(message, l2Results.tipTxs, end);
+    await sendLicenseAssertionsToGraphte(
+      message,
+      appName,
+      l2Results.fileDataTxs,
+      end
+    );
 
     const appAddresses: string[] = [];
     l2Results.bundleTxs.forEach((tx) => {

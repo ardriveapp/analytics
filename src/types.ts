@@ -1,3 +1,5 @@
+import { Tags } from "warp-contracts";
+
 export interface InfernoStatus {
   jobStart: Date;
   jobEnd: Date;
@@ -216,6 +218,7 @@ export interface ArFSFileTx {
   blockHeight: number;
   blockTime: number;
   friendlyDate: string;
+  tags?: Tags;
 }
 
 export interface ArFSFolderTx {
@@ -235,6 +238,7 @@ export interface ArFSFolderTx {
   blockHeight: number;
   blockTime: number;
   friendlyDate: string;
+  tags?: Tags;
 }
 
 export interface ArFSSnapshotTx {
@@ -254,6 +258,7 @@ export interface ArFSSnapshotTx {
   blockHeight: number;
   blockTime: number;
   friendlyDate: string;
+  tags?: Tags;
 }
 
 export interface ArFSDriveTx {
@@ -273,6 +278,7 @@ export interface ArFSDriveTx {
   blockHeight: number;
   blockTime: number;
   friendlyDate: string;
+  tags?: Tags;
 }
 
 export interface ArFSFileDataTx {
@@ -292,6 +298,7 @@ export interface ArFSFileDataTx {
   blockHeight: number;
   blockTime: number;
   friendlyDate: string;
+  tags?: Tags;
 }
 
 export interface ArFSTipTx {
@@ -305,6 +312,7 @@ export interface ArFSTipTx {
   blockHeight: number;
   blockTime: number;
   friendlyDate: string;
+  tags?: Tags;
 }
 
 export interface BundleTx {
@@ -320,6 +328,7 @@ export interface BundleTx {
   timeStamp: number | string;
   bundledInTxId?: string;
   blockHeight?: number;
+  tags?: Tags;
 }
 
 export interface ResultSet {

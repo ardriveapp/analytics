@@ -7,7 +7,7 @@ import {
   sendFileMetadataToGraphite,
   sendFolderMetadataToGraphite,
   sendMessageToGraphite,
-  sentL1CommunityTipsToGraphite,
+  sendL1CommunityTipsToGraphite,
 } from "./graphite";
 
 const message = "ardrive.users.l2."; // this is where all of the logs will be stored
@@ -60,7 +60,7 @@ async function main() {
       await sendFileDataToGraphite(message, l2Results.fileDataTxs, end);
       await sendFolderMetadataToGraphite(message, l2Results.folderTxs, end);
       await sendDriveMetadataToGraphite(message, l2Results.driveTxs, end);
-      await sentL1CommunityTipsToGraphite(message, l2Results.tipTxs, end);
+      await sendL1CommunityTipsToGraphite(message, l2Results.tipTxs, end);
       if (l2Results.lastBlock > blockHeight) {
         nextBlockHeight = l2Results.lastBlock;
       }

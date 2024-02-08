@@ -306,6 +306,7 @@ export async function getAllAppL2Transactions(
                 bundleTx.fee = +fee.ar;
                 bundleTx.quantity = +node.quantity.ar;
                 bundleTx.owner = node.owner.address;
+                bundleTx.tags = tags;
                 bundleTxs.push(bundleTx);
               } else if (communityTip !== 0 && contentType === "") {
                 tipTx.appName = appName;
@@ -318,6 +319,7 @@ export async function getAllAppL2Transactions(
                 tipTx.blockHeight = block.height;
                 tipTx.blockTime = block.timestamp;
                 tipTx.friendlyDate = timeStamp.toLocaleString();
+                tipTx.tags = tags;
                 tipTxs.push(tipTx);
               } else if (entityType === "data" && arFsVersion === "") {
                 // This is file data since it has no entity tag
@@ -336,6 +338,7 @@ export async function getAllAppL2Transactions(
                 fileDataTx.blockHeight = block.height;
                 fileDataTx.blockTime = block.timestamp;
                 fileDataTx.friendlyDate = timeStamp.toLocaleString();
+                fileDataTx.tags = tags;
                 fileDataTxs.push(fileDataTx);
               } else if (entityType === "file") {
                 fileTx.dataSize = +data.size;
@@ -353,6 +356,7 @@ export async function getAllAppL2Transactions(
                 fileTx.blockHeight = block.height;
                 fileTx.blockTime = block.timestamp;
                 fileTx.friendlyDate = timeStamp.toLocaleString();
+                fileTx.tags = tags;
                 fileTxs.push(fileTx);
               } else if (entityType === "folder") {
                 folderTx.dataSize = +data.size;
@@ -370,6 +374,7 @@ export async function getAllAppL2Transactions(
                 folderTx.blockHeight = block.height;
                 folderTx.blockTime = block.timestamp;
                 folderTx.friendlyDate = timeStamp.toLocaleString();
+                folderTx.tags = tags;
                 folderTxs.push(folderTx);
               } else if (entityType === "drive") {
                 driveTx.dataSize = +data.size;
@@ -387,6 +392,7 @@ export async function getAllAppL2Transactions(
                 driveTx.blockHeight = block.height;
                 driveTx.blockTime = block.timestamp;
                 driveTx.friendlyDate = timeStamp.toLocaleString();
+                driveTx.tags = tags;
                 driveTxs.push(driveTx);
               } else if (entityType === "snapshot") {
                 snapshotTx.dataSize = +data.size;
@@ -404,6 +410,7 @@ export async function getAllAppL2Transactions(
                 snapshotTx.blockHeight = block.height;
                 snapshotTx.blockTime = block.timestamp;
                 snapshotTx.friendlyDate = timeStamp.toLocaleString();
+                snapshotTx.tags = tags;
                 snapshotTxs.push(snapshotTx);
               }
 

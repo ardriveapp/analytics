@@ -11,7 +11,7 @@ import {
   sendFileDataToGraphite,
   sendFolderMetadataToGraphite,
   sendDriveMetadataToGraphite,
-  sentL1CommunityTipsToGraphite,
+  sendL1CommunityTipsToGraphite,
   sendMessageToGraphite,
   sendSnapshotMetadataToGraphite,
 } from "./graphite";
@@ -66,7 +66,7 @@ async function main() {
       await sendFolderMetadataToGraphite(message, l1Results.folderTxs, end);
       await sendDriveMetadataToGraphite(message, l1Results.driveTxs, end);
       await sendSnapshotMetadataToGraphite(message, l1Results.snapshotTxs, end);
-      await sentL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
+      await sendL1CommunityTipsToGraphite(message, l1Results.tipTxs, end);
 
       const appAddresses: string[] = [];
       l1Results.bundleTxs.forEach((tx) => {

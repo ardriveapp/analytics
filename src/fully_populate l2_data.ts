@@ -6,7 +6,7 @@ import {
   sendFileDataToGraphite,
   sendFolderMetadataToGraphite,
   sendDriveMetadataToGraphite,
-  sentL1CommunityTipsToGraphite,
+  sendL1CommunityTipsToGraphite,
   sendMessageToGraphite,
   sendSnapshotMetadataToGraphite,
 } from "./graphite";
@@ -61,7 +61,7 @@ async function main() {
       await sendFolderMetadataToGraphite(message, l2Results.folderTxs, end);
       await sendDriveMetadataToGraphite(message, l2Results.driveTxs, end);
       await sendSnapshotMetadataToGraphite(message, l2Results.snapshotTxs, end);
-      await sentL1CommunityTipsToGraphite(message, l2Results.tipTxs, end);
+      await sendL1CommunityTipsToGraphite(message, l2Results.tipTxs, end);
       if (l2Results.lastBlock > blockHeight) {
         nextBlockHeight = l2Results.lastBlock;
       }

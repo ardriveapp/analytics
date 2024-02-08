@@ -1065,7 +1065,7 @@ export async function sendSnapshotMetadataToGraphite(
   });
 }
 
-export async function sentL1CommunityTipsToGraphite(
+export async function sendL1CommunityTipsToGraphite(
   message: string,
   txs: ArFSTipTx[],
   end: Date
@@ -1095,6 +1095,58 @@ export async function sentL1CommunityTipsToGraphite(
     graphiteMessage = message + appName + ".v2CommunityTip.averageTipSize";
     await sendMessageToGraphite(graphiteMessage, averageTipSize, end);
   });
+}
+
+export async function sendLicenseAssertionsToGraphte(
+  message: string,
+  appName: string,
+  txs: ArFSFileDataTx[],
+  end: Date
+) {
+  // console.log("Sending License Assertion Txs to Graphite", end);
+  const udlType = ".contentTypes.licenseAssertion.UDL-1-0";
+  const ccType = ".contentTypes.licenseAssertion.CC-BY-4-0";
+
+  // Filter transactions that have both "App-Name" tags with specific values
+  const filteredTransactions = txs.filter((tx) => {
+    const hasLicenseAssertion = tx.tags?.some(
+      (tag) => tag.name === "App-Name" && tag.value === "License-Assertion"
+    );
+    const hasArDriveApp = tx.tags?.some(
+      (tag) => tag.name === "App-Name" && tag.value === "ArDrive-App"
+    );
+    return hasLicenseAssertion && hasArDriveApp;
+  });
+  // CC-BY License TX: rz2DNzn9pnYOU6049Wm6V7kr0BhyfWE6ZD_mqrXMv5A
+  const txsCC = filteredTransactions.filter((tx) =>
+    tx.tags?.some(
+      (tag) =>
+        tag.name === "License" &&
+        tag.value === "rz2DNzn9pnYOU6049Wm6V7kr0BhyfWE6ZD_mqrXMv5A"
+    )
+  );
+
+  const tallyCCPrivate = txsCC.filter((tx) => tx.private === true).length;
+  let graphiteMessage = message + appName + ccType + ".private" + ".totalTxs";
+  await sendMessageToGraphite(graphiteMessage, tallyCCPrivate, end);
+  const tallyCCPublic = txsCC.filter((tx) => tx.private === false).length;
+  graphiteMessage = message + appName + ccType + ".public" + ".totalTxs";
+  await sendMessageToGraphite(graphiteMessage, tallyCCPublic, end);
+
+  // UDL License TX: yRj4a5KMctX_uOmKWCFJIjmY8DeJcusVk6-HzLiM_t8
+  const txsUDL = filteredTransactions.filter((tx) =>
+    tx.tags?.some(
+      (tag) =>
+        tag.name === "License" &&
+        tag.value === "yRj4a5KMctX_uOmKWCFJIjmY8DeJcusVk6-HzLiM_t8"
+    )
+  );
+  const tallyUDLPrivate = txsUDL.filter((tx) => tx.private === true).length;
+  graphiteMessage = message + appName + udlType + ".private" + ".totalTxs";
+  await sendMessageToGraphite(graphiteMessage, tallyUDLPrivate, end);
+  const tallyUDLPublic = txsUDL.filter((tx) => tx.private === false).length;
+  graphiteMessage = message + appName + udlType + ".public" + ".totalTxs";
+  await sendMessageToGraphite(graphiteMessage, tallyUDLPublic, end);
 }
 
 export async function sendResultsToGraphite(results: Results) {

@@ -356,6 +356,7 @@ export async function getAllAppL1Transactions(
                 fileTx.blockHeight = block.height;
                 fileTx.blockTime = block.timestamp;
                 fileTx.friendlyDate = timeStamp.toLocaleString();
+                fileTx.tags = tags;
                 fileTxs.push(fileTx);
               } else if (entityType === "folder") {
                 folderTx.dataSize = +data.size;
