@@ -1457,7 +1457,7 @@ export async function getAllObservationReports(
 
   while (hasNextPage) {
     let tags = `[
-      { name: "App-Name", values: ["${appName}"]}
+      { name: "AR-IO-Component", values: ["observer"]}
     ]`;
 
     const query = {
@@ -1572,17 +1572,38 @@ export async function getAllObservationReports(
 
               // This is file data since it has no entity tag
               fileDataTx.dataSize = +data.size;
+              console.log(`Data Size: ${fileDataTx.dataSize}`);
+
               fileDataTx.appName = appName;
+
               fileDataTx.appVersion = appVersion;
+
               fileDataTx.owner = node.owner.address;
+              console.log(`Owner: ${fileDataTx.owner}`);
+
               fileDataTx.quantity = +node.quantity.ar;
+
               fileDataTx.fee = +fee.ar;
+              console.log(`Fee: ${fileDataTx.fee}`);
+
               fileDataTx.contentType = contentType;
+              console.log(`Content Type: ${fileDataTx.contentType}`);
+
               fileDataTx.bundledIn = bundledIn.id || "";
+              console.log(`Bundled In: ${fileDataTx.bundledIn}`);
+
               fileDataTx.id = node.id;
+              console.log(`ID: ${fileDataTx.id}`);
+
               fileDataTx.blockHeight = block.height;
+              console.log(`Block Height: ${fileDataTx.blockHeight}`);
+
               fileDataTx.blockTime = block.timestamp;
+              console.log(`Block Time: ${fileDataTx.blockTime}`);
+
               fileDataTx.friendlyDate = timeStamp.toLocaleString();
+              console.log(`Friendly Date: ${fileDataTx.friendlyDate}`);
+
               fileDataTxs.push(fileDataTx);
 
               foundUsers.push(node.owner.address);
