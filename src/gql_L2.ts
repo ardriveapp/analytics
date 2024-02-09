@@ -1589,7 +1589,11 @@ export async function getAllObservationReports(
               fileDataTx.contentType = contentType;
               console.log(`Content Type: ${fileDataTx.contentType}`);
 
-              fileDataTx.bundledIn = bundledIn.id || "";
+              try {
+                fileDataTx.bundledIn = bundledIn.id;
+              } catch (err) {
+                fileDataTx.bundledIn = "";
+              }
               console.log(`Bundled In: ${fileDataTx.bundledIn}`);
 
               fileDataTx.id = node.id;
