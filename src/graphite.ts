@@ -1117,12 +1117,24 @@ export async function sendLicenseAssertionsToGraphte(
     );
     return hasLicenseAssertion && hasArDriveApp;
   });
-  // CC-BY License TX: rz2DNzn9pnYOU6049Wm6V7kr0BhyfWE6ZD_mqrXMv5A
+
   const txsCC = filteredTransactions.filter((tx) =>
     tx.tags?.some(
       (tag) =>
-        tag.name === "License" &&
-        tag.value === "rz2DNzn9pnYOU6049Wm6V7kr0BhyfWE6ZD_mqrXMv5A"
+        (tag.name === "License" &&
+          tag.value === "nF6Mjy_Yy_Gv-DYLq7QPxz5PdXUQ4rtOpbJZdcaFEKw") || // CC-0
+        (tag.name === "License" &&
+          tag.value === "mSOFUrl5mUQvG7VBP36DD39kzJASv9FDe3GxHpcCvRA") || // CC-BY 4.0 License
+        (tag.name === "License" &&
+          tag.value === "9jG6a1fWgQ_wE4R6OGA2Xg9vGRAwpkrQIMC83nC3kvI") || // CC-BY-NC 4.0
+        (tag.name === "License" &&
+          tag.value === "OlTlW1xEw75UC0cdmNqvxc3j6iAmFXrS4usWIBfu_3E") || // CC-BY-NC-ND 4.0
+        (tag.name === "License" &&
+          tag.value === "2PO2MDRNZLJjgA_0hNGUAD7yXg9nneq-3fxTTLP-uo8") || // CC-BY-NC-SA 4.0
+        (tag.name === "License" &&
+          tag.value === "XaIMRBMNqTUlHa_hzypkopfRFyAKqit-AWo-OxwIxoo") || // CC-BY-ND 4.0
+        (tag.name === "License" &&
+          tag.value === "sKz-PZ96ApDoy5RTBspxhs1GP-cHommw4_9hEiZ6K3c") // CC-BY-SA 4.0
     )
   );
 
@@ -1133,14 +1145,17 @@ export async function sendLicenseAssertionsToGraphte(
   graphiteMessage = message + appName + ccType + ".public" + ".totalTxs";
   await sendMessageToGraphite(graphiteMessage, tallyCCPublic, end);
 
-  // UDL License TX: yRj4a5KMctX_uOmKWCFJIjmY8DeJcusVk6-HzLiM_t8
+  // UDL
   const txsUDL = filteredTransactions.filter((tx) =>
     tx.tags?.some(
       (tag) =>
-        tag.name === "License" &&
-        tag.value === "yRj4a5KMctX_uOmKWCFJIjmY8DeJcusVk6-HzLiM_t8"
+        (tag.name === "License" &&
+          tag.value === "yRj4a5KMctX_uOmKWCFJIjmY8DeJcusVk6-HzLiM_t8") || // UDL 1.0
+        (tag.name === "License" &&
+          tag.value === "IVjAM1C3x3GFdc3t9EqMnbtGnpgTuJbaiYZa1lk09_8") // UDL 2.0
     )
   );
+
   const tallyUDLPrivate = txsUDL.filter((tx) => tx.private === true).length;
   graphiteMessage = message + appName + udlType + ".private" + ".totalTxs";
   await sendMessageToGraphite(graphiteMessage, tallyUDLPrivate, end);
